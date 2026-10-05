@@ -19,6 +19,19 @@
   "App": {
     "signedInAs": "Prijavljen si kot",
     "superadmin": "Super admin",
-    "signOut": "Odjava"
+    "signOut": "Odjava",
+    "organization": "Organizacija:",
+    "noOrg": "Še nisi član nobene organizacije.",
+    "orgSuspended": "Organizacija je začasno onemogočena.",
+    "roles": {
+      "owner": "lastnik",
+      "editor": "urednik"
+    },
+    "plans": {
+      "trial": "preizkus",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "brezplačno"
+    }
   }
 }

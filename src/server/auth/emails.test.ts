@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeEmail, parseEmailList } from "./emails";
-import { canSignUp } from "./auth";
+import { isSuperadminEmail } from "./auth";
 
 describe("parseEmailList", () => {
   it("splits on commas and whitespace, lower-cases, trims, dedupes", () => {
@@ -13,14 +13,14 @@ describe("parseEmailList", () => {
   });
 });
 
-describe("canSignUp", () => {
+describe("isSuperadminEmail", () => {
   const deps = { superadminEmails: parseEmailList("boss@datavallis.com") };
   it("allows a superadmin email regardless of case and spaces", () => {
-    expect(canSignUp("  Boss@DataVallis.com ", deps)).toBe(true);
+    expect(isSuperadminEmail("  Boss@DataVallis.com ", deps)).toBe(true);
   });
   it("rejects everyone else", () => {
-    expect(canSignUp("boss@datavallis.co", deps)).toBe(false);
-    expect(canSignUp("", deps)).toBe(false);
+    expect(isSuperadminEmail("boss@datavallis.co", deps)).toBe(false);
+    expect(isSuperadminEmail("", deps)).toBe(false);
   });
   it("normalizeEmail", () => expect(normalizeEmail(" X@Y.Z ")).toBe("x@y.z"));
 });

@@ -1,6 +1,6 @@
 # Auth
 
-Status: **Built** (TASK-003a). Live on dev after the PR is merged and deployed.
+Status: **Live on dev** (TASK-003a, since 2026-10-05; first real sign-in by the owner).
 
 ## How sign-in works
 1. `/login` → email → `POST /api/auth/sign-in/magic-link` (Better Auth, magic-link plugin).
@@ -13,7 +13,7 @@ Status: **Built** (TASK-003a). Live on dev after the PR is merged and deployed.
 | Who | How |
 |---|---|
 | Super admins | email listed in `SUPERADMIN_EMAILS` (comma separated, case-insensitive) → `role = superadmin` |
-| Org members | invitation (TASK-003b) |
+| Org members | pending, unexpired invitation (accepted automatically at sign-in, see tenancy.md) |
 | Anyone else | no account, no mail |
 
 `role` is a Better Auth additional field with `input: false` — it cannot be set through any client endpoint (tested).

@@ -27,6 +27,8 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Organization plugin: the org the user works in. Always re-verified against `member` (getOrgContext).
+    activeOrganizationId: text("active_organization_id"),
   },
   (t) => [index("session_user_id_idx").on(t.userId)],
 );
