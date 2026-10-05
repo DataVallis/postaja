@@ -203,7 +203,7 @@ Persona posts add the DNA block and scene description; passport images go to the
 | Env | Host | Notes |
 |---|---|---|
 | local | docker compose: Postgres+pgvector, MinIO (S3 stand-in) | `pnpm dev` + `pnpm worker` |
-| dev | Hetzner CX22 (shared at start), `dev-postaja.inzenirji.si` | auto-deploy on merge to `dev` |
+| dev | Owner's Hetzner VM (4 vCPU / 8 GB), shared with other apps (ADR-025), `dev-postaja.inzenirji.si` | auto-deploy on merge to `dev` |
 | uat | same VM, separate Kamal destination + DB | when there is a second user |
 | prod | separate Hetzner VM (or the same CX at start, decided before launch), `postaja.inzenirji.si` | manual deploy from `main` |
 

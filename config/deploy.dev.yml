@@ -1,0 +1,29 @@
+# Destination: dev — https://dev-postaja.inzenirji.si (auto-deploy on merge to `dev`).
+# Host is shared with other apps (ADR-025): one kamal-proxy, separate service names, no published DB ports.
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch("DEV_HOST") %>
+
+proxy:
+  host: dev-postaja.inzenirji.si
+
+env:
+  clear:
+    APP_URL: https://dev-postaja.inzenirji.si
+
+accessories:
+  db:
+    image: pgvector/pgvector:pg16
+    host: <%= ENV.fetch("DEV_HOST") %>
+    # No `port:` → Postgres is reachable only on the internal `kamal` Docker network as postaja-db:5432.
+    env:
+      clear:
+        POSTGRES_USER: postaja
+        POSTGRES_DB: postaja_dev
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - postaja-dev-db:/var/lib/postgresql/data
+    options:
+      memory: 1g

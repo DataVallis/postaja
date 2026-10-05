@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postaja
+          POSTGRES_PASSWORD: postaja
+          POSTGRES_DB: postaja_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postaja"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgres://postaja:postaja@127.0.0.1:5432/postaja_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Integration tests (real Postgres, migrations from zero)
+        run: pnpm test:int
+      - name: Build
+        run: pnpm build
+      - name: E2E + accessibility
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          psql "postgres://postaja:postaja@127.0.0.1:5432/postgres" -c "create database postaja_e2e"
+          DATABASE_URL=postgres://postaja:postaja@127.0.0.1:5432/postaja_e2e RUN_MIGRATIONS=1 GIT_SHA=${{ github.sha }} pnpm test:e2e
+      - name: Docker build + container health
+        run: |
+          docker build --build-arg GIT_SHA=${{ github.sha }} -t postaja:ci .
+          psql "postgres://postaja:postaja@127.0.0.1:5432/postgres" -c "create database postaja_docker"
+          docker run -d --name app --network host \
+            -e DATABASE_URL=postgres://postaja:postaja@127.0.0.1:5432/postaja_docker \
+            -e RUN_MIGRATIONS=1 -e PORT=3300 postaja:ci
+          for i in $(seq 1 30); do
+            body=$(curl -fsS http://127.0.0.1:3300/api/health || true)
+            if [ -n "$body" ]; then echo "$body"; break; fi
+            sleep 2
+          done
+          echo "$body" | grep -q "\"sha\":\"${{ github.sha }}\"" || { docker logs app; exit 1; }
+          echo "$body" | grep -q '"db":"ok"' || { docker logs app; exit 1; }
+          test "$(docker exec app id -u)" = "1001"
+
+  kamal-config:
+    name: Kamal config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Placeholders only: proves the config parses and renders. No real host or secret.
+      DEV_HOST: 203.0.113.10
+      KAMAL_REGISTRY_USERNAME: placeholder
+      KAMAL_REGISTRY_PASSWORD: placeholder
+      DATABASE_URL: postgres://u:p@postaja-db:5432/x
+      POSTGRES_PASSWORD: placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - run: gem install kamal -v "~> 2.7" --no-document
+      - name: Render dev config
+        run: kamal config -d dev | tee /tmp/kamal.txt && grep -q "dev-postaja.inzenirji.si" /tmp/kamal.txt
