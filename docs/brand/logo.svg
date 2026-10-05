@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 320" width="880" height="320">
+  <g transform="translate(24,32) scale(0.5)">
+  <rect width="512" height="512" rx="112" fill="#12172B"/>
+  <g transform="translate(-34,0)">
+    <rect x="150" y="128" width="64" height="272" rx="32" fill="#F4EFE6"/>
+    <circle cx="276" cy="210" r="96" fill="#FF5A1F"/>
+    <circle cx="276" cy="210" r="38" fill="#12172B"/>
+    <circle cx="300" cy="372" r="18" fill="#F4EFE6"/>
+    <circle cx="356" cy="372" r="18" fill="#F4EFE6" opacity=".6"/>
+    <circle cx="412" cy="372" r="18" fill="#F4EFE6" opacity=".3"/>
+  </g>
+  </g>
+  <text x="318" y="212" font-family="Inter Display, Inter, sans-serif" font-weight="700" font-size="150" letter-spacing="-5" fill="#12172B">postaja</text>
+  <circle cx="826" cy="199" r="15" fill="#FF5A1F"/>
+</svg>
