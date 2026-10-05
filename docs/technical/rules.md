@@ -8,7 +8,7 @@ Status: **Live on dev** (TASK-004, PR #9). Used by generation and the editor fro
 | `platform_rules` | `platform` | counting (graphemes / x_weighted), caption max, visible chars before "more", hashtags/mentions max, clickable links, thread part/parts max, slides min/max |
 | `format_presets` | `key` (e.g. `ig_feed_portrait`) | platform, placement, width × height, media (image/video/pdf), max bytes, video duration range, safe zone `{top,right,bottom,left}` px, enabled |
 
-Every row has `source`, `confidence`, `notes`, `verified_at` (ADR-030). Seed: `drizzle/0005_seed_platform_data.sql` (idempotent, never overwrites edits). View: `/admin/platform` (read-only; editing = TASK-004b).
+Every row has `source`, `confidence`, `notes`, `verified_at` (ADR-030). Seed: `drizzle/0005_seed_platform_data.sql` (idempotent, never overwrites edits). View and edit: `/admin/platform`, `/admin/platform/rules/<platform>`, `/admin/platform/presets/<key>` (super admin; TASK-004b, ADR-032). Edits go through `src/server/rules/admin.ts` (validation, row lock, audit). Rows verified ≥ 90 days ago are due for re-verification (`src/server/rules/verification.ts`, `countDueForReverification` in `repo.ts`).
 
 ## Engine — `src/lib/rules` (pure TypeScript, server + browser)
 - `measure(text, counting)`: graphemes (č = 1, 👍🏽 = 1) or X weighted (URL = 23, emoji = 2, CJK = 2).
@@ -30,3 +30,5 @@ Every row has `source`, `confidence`, `notes`, `verified_at` (ADR-030). Seed: `d
 ## Tests
 Unit (`src/lib/rules/*.test.ts`): exact boundaries (limit / ±1), diacritics, emoji/ZWJ, URLs, layer merging, safe area edges.
 Integration (`src/server/rules/repo.int.test.ts`): seed complete and sourced, idempotent without overwriting edits, CHECK constraints, DB rules through the engine.
+Integration (`src/server/rules/admin.int.test.ts`): edits change what the engine enforces, audit diff per field, unchanged save writes nothing (incl. jsonb key order), non-super-admin refused, boundaries (date today/tomorrow, 0/−1, caption 1/0, equal min/max, safe zone 1 px left), 10 concurrent edits form one unbroken audit chain, disabled preset is untargetable, due count at 89/90/91 days.
+Unit (`src/server/rules/verification.test.ts`): 90-day boundary, DST, leap year, UTC date.
