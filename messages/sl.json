@@ -6,5 +6,19 @@
   },
   "Meta": {
     "description": "Postaja — AI studio za objave na družbenih omrežjih za več brandov."
+  },
+  "Login": {
+    "intro": "Vpiši e-pošto. Poslali ti bomo povezavo za prijavo.",
+    "emailLabel": "E-pošta",
+    "submit": "Pošlji povezavo",
+    "sending": "Pošiljam …",
+    "sent": "Če imaš dostop, si dobil e-pošto s povezavo za prijavo. Povezava velja 10 minut.",
+    "error": "Pošiljanje ni uspelo. Poskusi znova čez minuto.",
+    "linkInvalid": "Povezava je neveljavna ali je potekla. Zahtevaj novo."
+  },
+  "App": {
+    "signedInAs": "Prijavljen si kot",
+    "superadmin": "Super admin",
+    "signOut": "Odjava"
   }
 }

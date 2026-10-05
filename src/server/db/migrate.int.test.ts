@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb } from "./client";
@@ -5,6 +7,8 @@ import { runMigrations } from "./migrate";
 import { checkHealth } from "../health/health";
 
 const url = process.env.TEST_DATABASE_URL!;
+const journal = JSON.parse(fs.readFileSync(path.join(process.cwd(), "drizzle/meta/_journal.json"), "utf8"));
+const MIGRATIONS = journal.entries.length as number;
 const admin = postgres(url, { max: 1, onnotice: () => {} });
 
 async function resetDb() {
@@ -16,19 +20,20 @@ afterAll(async () => { await admin.end({ timeout: 5 }); });
 
 describe("migrations", () => {
   it("apply from zero and enable pgvector", async () => {
+    expect(MIGRATIONS).toBeGreaterThanOrEqual(2);
     const before = await admin`select count(*)::int as n from pg_extension where extname = 'vector'`;
     expect(before[0].n).toBe(0);
     await runMigrations(url);
     const after = await admin`select count(*)::int as n from pg_extension where extname = 'vector'`;
     expect(after[0].n).toBe(1);
     const applied = await admin`select count(*)::int as n from drizzle.__drizzle_migrations`;
-    expect(applied[0].n).toBe(1);
+    expect(applied[0].n).toBe(MIGRATIONS);
   });
 
   it("are idempotent (second run applies nothing)", async () => {
     await runMigrations(url);
     const applied = await admin`select count(*)::int as n from drizzle.__drizzle_migrations`;
-    expect(applied[0].n).toBe(1);
+    expect(applied[0].n).toBe(MIGRATIONS);
   });
 
   it("vector type works after migration", async () => {

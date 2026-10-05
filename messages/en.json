@@ -6,5 +6,19 @@
   },
   "Meta": {
     "description": "Postaja — multi-brand AI social content studio."
+  },
+  "Login": {
+    "intro": "Enter your email. We will send you a sign-in link.",
+    "emailLabel": "Email",
+    "submit": "Send link",
+    "sending": "Sending …",
+    "sent": "If you have access, you received an email with a sign-in link. The link is valid for 10 minutes.",
+    "error": "Sending failed. Try again in a minute.",
+    "linkInvalid": "The link is invalid or expired. Request a new one."
+  },
+  "App": {
+    "signedInAs": "Signed in as",
+    "superadmin": "Super admin",
+    "signOut": "Sign out"
   }
 }

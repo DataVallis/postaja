@@ -13,7 +13,7 @@ Decisions referenced as ADR-XXX live in `03-DECISIONS.md`.
 | UI | Tailwind CSS + shadcn/ui, design tokens, next-intl (sl, en) |
 | DB | PostgreSQL 16 + pgvector (ADR-003) |
 | ORM / migrations | Drizzle ORM + drizzle-kit |
-| Auth | Better Auth — email/password + magic link, **organization** plugin, **admin** plugin (ADR-004) |
+| Auth | Better Auth — magic link, **organization** plugin; super admin as `user.role` (ADR-004, ADR-028) |
 | Background jobs | pg-boss on Postgres, separate `worker` process from the same image (ADR-007) |
 | LLM | Anthropic Claude API behind an `llm` adapter; JSON output validated with zod (ADR-010) |
 | Images / video | fal.ai (`@fal-ai/client`) queue API + webhooks behind a `media` adapter; model registry (ADR-011) |
@@ -229,7 +229,7 @@ EMBEDDINGS_PROVIDER / EMBEDDINGS_API_KEY
 FAL_KEY
 META_AD_LIBRARY_TOKEN        # competitor ads (phase 1b)
 S3_ENDPOINT / S3_REGION / S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY
-EMAIL_PROVIDER_API_KEY / EMAIL_FROM
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / EMAIL_FROM   # ADR-028
 SUPERADMIN_EMAILS            # bootstrap only: these emails get role superadmin on first login
 SENTRY_DSN                   # optional
 ```
