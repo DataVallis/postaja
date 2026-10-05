@@ -4,13 +4,17 @@ import { microToUsd } from "@/lib/money/usd";
 import { requireSuperadmin } from "@/server/admin/guard";
 import { listOrganizations } from "@/server/admin/queries";
 import { getDb } from "@/server/db/client";
+import { countDueForReverification } from "@/server/rules/repo";
+import { ReverifyBanner } from "./reverify-banner";
 
 export default async function AdminHome() {
   await requireSuperadmin();
   const t = await getTranslations("Admin");
-  const orgs = await listOrganizations(getDb());
+  const [orgs, due] = await Promise.all([listOrganizations(getDb()), countDueForReverification(getDb())]);
   return (
-    <main>
+    <main className="grid gap-6">
+      <ReverifyBanner rules={due.rules} presets={due.presets} link />
+      <div>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("organizations")}</h1>
         <Link href="/admin/orgs/new" className="rounded-lg bg-signal px-4 py-2 font-semibold text-ink">
@@ -52,6 +56,7 @@ export default async function AdminHome() {
           </table>
         </div>
       )}
+      </div>
     </main>
   );
 }

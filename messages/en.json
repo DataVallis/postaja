@@ -114,7 +114,56 @@
       "medium": "medium",
       "low": "low"
     },
-    "sourceNotes": "Source and notes"
+    "sourceNotes": "Source and notes",
+    "edit": {
+      "ruleTitle": "Rules: {platform}",
+      "presetTitle": "Format: {key}",
+      "editLabel": "Edit {name}",
+      "intro": "Changes apply immediately to every organization and are written to the audit log. Update the source and date whenever you re-check.",
+      "emptyMeansNone": "An empty field means the platform has no such limit.",
+      "counting": "Character counting",
+      "countings": {
+        "graphemes": "characters (graphemes)",
+        "x_weighted": "weighted like X (link = 23, emoji = 2)"
+      },
+      "captionMax": "Max characters",
+      "hashtagsMax": "Max hashtags",
+      "mentionsMax": "Max mentions",
+      "threadPartMax": "Characters per thread part",
+      "threadPartsMax": "Max thread parts",
+      "slidesMin": "Min slides",
+      "slidesMax": "Max slides",
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "maxBytes": "Max size (bytes)",
+      "minDurationS": "Min duration (s)",
+      "maxDurationS": "Max duration (s)",
+      "safeZone": "Safe zone (px from the edge)",
+      "top": "Top",
+      "right": "Right",
+      "bottom": "Bottom",
+      "left": "Left",
+      "enabled": "Format enabled (disabled formats cannot be chosen for new posts)",
+      "disabled": "disabled",
+      "provenance": "Source and verification",
+      "source": "Source (URL or description)",
+      "verifiedAt": "Verified on",
+      "notes": "Notes",
+      "errors": {
+        "invalid": "Check the values: whole numbers, visible ≤ max characters, min ≤ max, safe zone smaller than the size, date not in the future.",
+        "failed": "Saving failed."
+      },
+      "ok": {
+        "saved": "Saved and logged.",
+        "unchanged": "No changes — nothing written."
+      }
+    },
+    "reverify": {
+      "title": "Due for re-verification: {rules, plural, one {# rule} other {# rules}} and {presets, plural, one {# format} other {# formats}}",
+      "body": "This data was last verified 90 or more days ago. Check it against the source and update the date.",
+      "open": "Open platforms →",
+      "badge": "re-check"
+    }
   },
   "Brands": {
     "title": "Brands",
