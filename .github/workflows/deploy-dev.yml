@@ -30,6 +30,9 @@ jobs:
       KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SUPERADMIN_EMAILS: ${{ vars.SUPERADMIN_EMAILS }}
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1

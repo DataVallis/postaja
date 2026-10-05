@@ -24,6 +24,9 @@ Never values here — only names and where they live.
 | `DEV_SSH_KNOWN_HOSTS` | env `dev` secret | Environments → dev | pinned host key (`ssh-keyscan -t ed25519 <host>`) |
 | `POSTGRES_PASSWORD` | env `dev` secret | Environments → dev | DB accessory |
 | `DATABASE_URL` | env `dev` secret | Environments → dev | app → `postgres://postaja:<POSTGRES_PASSWORD>@postaja-db:5432/postaja_dev` |
+| `BETTER_AUTH_SECRET` | env `dev` secret | Environments → dev | signs sessions (`openssl rand -base64 32`) |
+| `SMTP_PASSWORD` | env `dev` secret | Environments → dev | password of hello@inzenirji.si on mail.datavallis.com |
+| `SUPERADMIN_EMAILS` | repo variable | Actions → Variables | emails that may bootstrap as super admin (comma separated) |
 | `GITHUB_TOKEN` | automatic | — | push image to GHCR |
 
 Keep your own copy of every secret (GitHub never shows it again).

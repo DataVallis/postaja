@@ -80,6 +80,9 @@ jobs:
       KAMAL_REGISTRY_PASSWORD: placeholder
       DATABASE_URL: postgres://u:p@postaja-db:5432/x
       POSTGRES_PASSWORD: placeholder
+      BETTER_AUTH_SECRET: placeholder
+      SMTP_PASSWORD: placeholder
+      SUPERADMIN_EMAILS: admin@example.test
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1

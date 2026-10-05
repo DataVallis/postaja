@@ -14,6 +14,17 @@ proxy:
 env:
   clear:
     APP_URL: https://dev-postaja.inzenirji.si
+    BETTER_AUTH_URL: https://dev-postaja.inzenirji.si
+    SMTP_HOST: mail.datavallis.com
+    SMTP_PORT: "465"
+    SMTP_USER: hello@inzenirji.si
+    EMAIL_FROM: "Postaja <hello@inzenirji.si>"
+    # Bootstrap super admins (ADR-028). Comes from the GitHub variable SUPERADMIN_EMAILS — not committed.
+    SUPERADMIN_EMAILS: "<%= ENV.fetch("SUPERADMIN_EMAILS") %>"
+  secret:
+    - DATABASE_URL
+    - BETTER_AUTH_SECRET
+    - SMTP_PASSWORD
 
 accessories:
   db:
