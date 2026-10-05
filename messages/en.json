@@ -33,7 +33,10 @@
       "pro": "pro",
       "comped": "free"
     },
-    "adminLink": "Admin"
+    "adminLink": "Admin",
+    "nav": "Main navigation",
+    "home": "Home",
+    "brands": "Brands"
   },
   "Admin": {
     "nav": "Admin navigation",
@@ -111,5 +114,106 @@
       "medium": "medium",
       "low": "low"
     }
+  },
+  "Brands": {
+    "title": "Brands",
+    "new": "New brand",
+    "emptyOwner": "No brands yet. Create the first one.",
+    "emptyEditor": "No brands in this organization yet.",
+    "name": "Name",
+    "slug": "Slug",
+    "website": "Website",
+    "languages": "Post languages",
+    "create": "Create",
+    "profile": "Profile (CGP)",
+    "cgp": "CGP — instructions for the AI",
+    "cgpHint": "Who we are, audience, voice, do and don't. Later the AI will build it from your documents.",
+    "pillars": "Content pillars",
+    "pillarsHint": "One line per pillar: Name | share % | description. Total at most 100%.",
+    "bannedWords": "Banned words",
+    "ctaPhrases": "CTA phrases",
+    "commaSeparated": "Comma separated.",
+    "onePerLine": "One per line.",
+    "hashtagsMax": "Max hashtags",
+    "emojiMax": "Max emoji",
+    "captionMax": "Max characters",
+    "linksAllowed": "Links in caption",
+    "platformDefault": "platform default",
+    "yes": "allowed",
+    "no": "not allowed",
+    "mustEndWithCta": "Post must end with a CTA",
+    "colors": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "background": "Background",
+      "text": "Text",
+      "accent": "Accent"
+    },
+    "imageStyle": "Image style (prompt)",
+    "negativePrompt": "Never in images",
+    "note": "Version note",
+    "saveVersion": "Save new version",
+    "readOnly": "As an editor you can read the profile; the owner edits it.",
+    "savedVersion": "Saved as version {v}.",
+    "currentVersion": "version {v}",
+    "archive": "Archive",
+    "channels": "Channels",
+    "noChannels": "No channels yet.",
+    "remove": "Remove",
+    "platform": "Platform",
+    "handle": "Profile (@name)",
+    "language": "Language",
+    "postsPerDay": "Posts per day",
+    "defaultPreset": "Default format",
+    "weekdays": "Posting days",
+    "allowedTypes": "Post types",
+    "addChannel": "Add channel",
+    "perDay": "{n} per day",
+    "effective": "Effective",
+    "chars": "{n} chars",
+    "hashtags": "{n} hashtags",
+    "noLinks": "no links",
+    "linksOk": "links OK",
+    "versions": "Profile versions",
+    "days": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    },
+    "types": {
+      "text": "text",
+      "single_image": "image",
+      "carousel": "carousel",
+      "animation": "animation",
+      "video": "video",
+      "ad": "ad"
+    },
+    "lang": {
+      "sl": "Slovenian",
+      "en": "English",
+      "de": "German",
+      "hr": "Croatian",
+      "it": "Italian"
+    },
+    "errors": {
+      "invalid": "Check the entered values.",
+      "duplicate": "Already exists (slug or channel).",
+      "forbidden": "You are not allowed to do this.",
+      "not_found": "Not found.",
+      "limit_reached": "Your plan's brand limit is reached.",
+      "preset_mismatch": "The format does not match the platform.",
+      "archived": "The brand is archived.",
+      "failed": "Saving failed."
+    },
+    "ok": {
+      "channelAdded": "Channel added."
+    },
+    "chHashtagsMax": "Max hashtags on this channel",
+    "linksNotClickable": "links not clickable",
+    "createdNote": "created"
   }
 }
