@@ -87,4 +87,11 @@ jobs:
           ruby-version: "3.3"
       - run: gem install kamal -v "~> 2.7" --no-document
       - name: Render dev config
-        run: kamal config -d dev | tee /tmp/kamal.txt && grep -q "dev-postaja.inzenirji.si" /tmp/kamal.txt
+        run: |
+          if ! kamal config -d dev > /tmp/kamal.txt 2>&1; then
+            # Surface the error as annotations (readable without log access).
+            tail -n 15 /tmp/kamal.txt | while IFS= read -r l; do echo "::error title=kamal config::$l"; done
+            exit 1
+          fi
+          cat /tmp/kamal.txt
+          grep -q "dev-postaja.inzenirji.si" /tmp/kamal.txt
