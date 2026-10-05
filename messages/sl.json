@@ -264,6 +264,67 @@
     },
     "chHashtagsMax": "Največ hashtagov na kanalu",
     "linksNotClickable": "povezave niso klikljive",
-    "createdNote": "ustvarjen"
+    "createdNote": "ustvarjen",
+    "files": {
+      "title": "Datoteke branda",
+      "intro": "Logotip, fonti in viri, iz katerih bo AI sestavil profil. Datoteke so zasebne in vidne samo članom te organizacije.",
+      "logos": "Logotipi",
+      "fonts": "Fonti",
+      "sources": "Viri (dokumenti, tabele, slike)",
+      "noLogos": "Še ni logotipa.",
+      "noFonts": "Še ni fontov.",
+      "noSources": "Še ni virov.",
+      "logoAlt": "Logotip {name}",
+      "delete": "Izbriši {name}",
+      "allGlyphs": "vsi šumniki (č š ž ć đ) so na voljo",
+      "missingGlyphs": "manjka: {chars}",
+      "file": "Datoteka",
+      "kind": "Vrsta",
+      "size": "Velikost",
+      "added": "Dodano",
+      "status": "Stanje",
+      "actions": "Dejanja",
+      "kinds": {
+        "pdf": "PDF",
+        "docx": "Word",
+        "xlsx": "Excel",
+        "csv": "CSV",
+        "pptx": "PowerPoint",
+        "text": "besedilo",
+        "image": "slika"
+      },
+      "statuses": {
+        "uploaded": "naloženo",
+        "extracting": "v obdelavi",
+        "extracted": "prebrano",
+        "failed": "napaka"
+      },
+      "choose": {
+        "logo": "Naloži logotip",
+        "font": "Naloži fonte",
+        "source": "Naloži vire"
+      },
+      "hint": {
+        "logo": "PNG, JPEG ali WebP, do {mb} MB. SVG ni podprt.",
+        "font": "TTF ali OTF, do {mb} MB. Font mora imeti č š ž ć đ (velike in male).",
+        "source": "PDF, Word, Excel, PowerPoint, CSV, TXT/MD ali slike, do {mb} MB na datoteko."
+      },
+      "upload": "Naloži",
+      "uploading": "Nalagam …",
+      "uploaded": "naloženo.",
+      "errors": {
+        "TOO_LARGE": "datoteka je večja od {mb} MB.",
+        "UNSUPPORTED_TYPE": "ta vrsta datoteke tukaj ni podprta.",
+        "INVALID_FILE": "datoteka je poškodovana ali ni prave vrste.",
+        "MISSING_GLYPHS": "font nima znakov: {detail}.",
+        "DUPLICATE": "ta datoteka je že naložena.",
+        "LIMIT_REACHED": "doseženo je največje število datotek.",
+        "ARCHIVED": "brand je arhiviran.",
+        "EMPTY": "datoteka je prazna.",
+        "FORBIDDEN": "datoteke nalaga lastnik.",
+        "NOT_FOUND": "brand ne obstaja.",
+        "failed": "nalaganje ni uspelo."
+      }
+    }
   }
 }

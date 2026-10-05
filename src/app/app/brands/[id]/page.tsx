@@ -2,11 +2,13 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { effectiveRules } from "@/lib/rules";
 import { requireOrgPage } from "@/server/auth/require";
+import { listBrandFiles } from "@/server/brands/files";
 import { BrandError, getBrandDetail, listProfileVersions } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
 import { getPlatformRuleSet, listPlatformRules, listPresets } from "@/server/rules/repo";
 import { archiveBrandAction, removeChannelAction } from "../actions";
 import { ChannelForm, ProfileForm } from "../forms";
+import { FilesSection } from "./files-section";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
     throw e;
   });
   const { brand, profile, channels } = detail;
-  const [versions, presets, platformRows] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db)]);
+  const [versions, presets, platformRows, files] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id)]);
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
   const f = await getFormatter();
@@ -61,6 +63,8 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
           visual={profile?.visual ?? { colors: {}, imageStyle: "", negativePrompt: "" }}
         />
       </section>
+
+      <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} />
 
       <section aria-labelledby="channels-h">
         <h2 id="channels-h" className="mb-4 text-lg font-semibold">{t("channels")}</h2>

@@ -7,6 +7,8 @@ import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
 import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
+import { deleteBrandFile } from "@/server/brands/files";
+import { getStorage } from "@/server/files/storage";
 
 export type ActionState = { error?: string; ok?: string } | undefined;
 
@@ -123,4 +125,13 @@ export async function archiveBrandAction(f: FormData): Promise<void> {
   await setBrandArchived(getDb(), ctx, str(f, "brandId"), true).catch(() => undefined);
   revalidatePath("/app/brands");
   redirect("/app/brands");
+}
+
+/** Owner only (checked in the service); the row goes first, then the S3 object (ADR-033). */
+export async function deleteBrandFileAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const table = str(f, "table") === "asset" ? "asset" : "source";
+  await deleteBrandFile(getDb(), getStorage(), ctx, table, str(f, "fileId")).catch(() => undefined);
+  revalidatePath(`/app/brands/${str(f, "brandId")}`);
 }

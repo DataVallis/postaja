@@ -264,6 +264,67 @@
     },
     "chHashtagsMax": "Max hashtags on this channel",
     "linksNotClickable": "links not clickable",
-    "createdNote": "created"
+    "createdNote": "created",
+    "files": {
+      "title": "Brand files",
+      "intro": "Logo, fonts and the sources the AI will build the profile from. Files are private and visible only to members of this organization.",
+      "logos": "Logos",
+      "fonts": "Fonts",
+      "sources": "Sources (documents, sheets, images)",
+      "noLogos": "No logo yet.",
+      "noFonts": "No fonts yet.",
+      "noSources": "No sources yet.",
+      "logoAlt": "Logo {name}",
+      "delete": "Delete {name}",
+      "allGlyphs": "all diacritics (č š ž ć đ) available",
+      "missingGlyphs": "missing: {chars}",
+      "file": "File",
+      "kind": "Type",
+      "size": "Size",
+      "added": "Added",
+      "status": "Status",
+      "actions": "Actions",
+      "kinds": {
+        "pdf": "PDF",
+        "docx": "Word",
+        "xlsx": "Excel",
+        "csv": "CSV",
+        "pptx": "PowerPoint",
+        "text": "text",
+        "image": "image"
+      },
+      "statuses": {
+        "uploaded": "uploaded",
+        "extracting": "processing",
+        "extracted": "read",
+        "failed": "failed"
+      },
+      "choose": {
+        "logo": "Upload logo",
+        "font": "Upload fonts",
+        "source": "Upload sources"
+      },
+      "hint": {
+        "logo": "PNG, JPEG or WebP, up to {mb} MB. SVG is not supported.",
+        "font": "TTF or OTF, up to {mb} MB. The font must include č š ž ć đ (upper and lower case).",
+        "source": "PDF, Word, Excel, PowerPoint, CSV, TXT/MD or images, up to {mb} MB per file."
+      },
+      "upload": "Upload",
+      "uploading": "Uploading …",
+      "uploaded": "uploaded.",
+      "errors": {
+        "TOO_LARGE": "file is larger than {mb} MB.",
+        "UNSUPPORTED_TYPE": "this file type is not supported here.",
+        "INVALID_FILE": "the file is damaged or not what it claims to be.",
+        "MISSING_GLYPHS": "font lacks: {detail}.",
+        "DUPLICATE": "this file is already uploaded.",
+        "LIMIT_REACHED": "the maximum number of files is reached.",
+        "ARCHIVED": "the brand is archived.",
+        "EMPTY": "the file is empty.",
+        "FORBIDDEN": "only the owner uploads files.",
+        "NOT_FOUND": "brand not found.",
+        "failed": "upload failed."
+      }
+    }
   }
 }
