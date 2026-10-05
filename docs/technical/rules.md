@@ -1,6 +1,6 @@
 # Platform rules, formats and the rule engine
 
-Status: **Built** (TASK-004). Used by generation and the editor from TASK-005+.
+Status: **Live on dev** (TASK-004, PR #9). Used by generation and the editor from TASK-005+.
 
 ## Data (global, not tenant-scoped)
 | Table | Key | Content |

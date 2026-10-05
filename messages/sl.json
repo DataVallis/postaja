@@ -33,7 +33,10 @@
       "pro": "pro",
       "comped": "brezplačno"
     },
-    "adminLink": "Admin"
+    "adminLink": "Admin",
+    "nav": "Glavna navigacija",
+    "home": "Domov",
+    "brands": "Brandi"
   },
   "Admin": {
     "nav": "Admin navigacija",
@@ -111,5 +114,106 @@
       "medium": "srednja",
       "low": "nizka"
     }
+  },
+  "Brands": {
+    "title": "Brandi",
+    "new": "Nov brand",
+    "emptyOwner": "Še nimaš brandov. Ustvari prvega.",
+    "emptyEditor": "V organizaciji še ni brandov.",
+    "name": "Ime",
+    "slug": "Kratko ime (slug)",
+    "website": "Spletna stran",
+    "languages": "Jeziki objav",
+    "create": "Ustvari",
+    "profile": "Profil (CGP)",
+    "cgp": "CGP — navodila za AI",
+    "cgpHint": "Kdo smo, publika, ton, kaj delamo in česa ne. Kasneje ga bo AI sestavil iz tvojih dokumentov.",
+    "pillars": "Stebri vsebine",
+    "pillarsHint": "Ena vrstica na steber: Ime | delež % | opis. Skupaj največ 100 %.",
+    "bannedWords": "Prepovedane besede",
+    "ctaPhrases": "CTA fraze",
+    "commaSeparated": "Ločene z vejico.",
+    "onePerLine": "Ena na vrstico.",
+    "hashtagsMax": "Največ hashtagov",
+    "emojiMax": "Največ emojijev",
+    "captionMax": "Največ znakov",
+    "linksAllowed": "Povezave v opisu",
+    "platformDefault": "kot platforma",
+    "yes": "dovoljene",
+    "no": "prepovedane",
+    "mustEndWithCta": "Objava se mora končati s CTA",
+    "colors": {
+      "primary": "Primarna",
+      "secondary": "Sekundarna",
+      "background": "Ozadje",
+      "text": "Tekst",
+      "accent": "Poudarek"
+    },
+    "imageStyle": "Slog slik (prompt)",
+    "negativePrompt": "Česa na slikah ne sme biti",
+    "note": "Opomba k verziji",
+    "saveVersion": "Shrani novo verzijo",
+    "readOnly": "Kot urednik profil lahko bereš, ureja ga lastnik.",
+    "savedVersion": "Shranjeno kot verzija {v}.",
+    "currentVersion": "verzija {v}",
+    "archive": "Arhiviraj",
+    "channels": "Kanali",
+    "noChannels": "Brand še nima kanalov.",
+    "remove": "Odstrani",
+    "platform": "Platforma",
+    "handle": "Profil (@ime)",
+    "language": "Jezik",
+    "postsPerDay": "Objav na dan",
+    "defaultPreset": "Privzeti format",
+    "weekdays": "Dnevi objav",
+    "allowedTypes": "Tipi objav",
+    "addChannel": "Dodaj kanal",
+    "perDay": "{n} na dan",
+    "effective": "Velja",
+    "chars": "{n} znakov",
+    "hashtags": "{n} hashtagov",
+    "noLinks": "brez povezav",
+    "linksOk": "povezave OK",
+    "versions": "Verzije profila",
+    "days": {
+      "1": "pon",
+      "2": "tor",
+      "3": "sre",
+      "4": "čet",
+      "5": "pet",
+      "6": "sob",
+      "7": "ned"
+    },
+    "types": {
+      "text": "tekst",
+      "single_image": "slika",
+      "carousel": "carousel",
+      "animation": "animacija",
+      "video": "video",
+      "ad": "oglas"
+    },
+    "lang": {
+      "sl": "slovenščina",
+      "en": "angleščina",
+      "de": "nemščina",
+      "hr": "hrvaščina",
+      "it": "italijanščina"
+    },
+    "errors": {
+      "invalid": "Preveri vnesene podatke.",
+      "duplicate": "To že obstaja (kratko ime ali kanal).",
+      "forbidden": "Za to nimaš pravic.",
+      "not_found": "Ne obstaja.",
+      "limit_reached": "Dosežena je omejitev števila brandov za tvoj plan.",
+      "preset_mismatch": "Format ne ustreza platformi.",
+      "archived": "Brand je arhiviran.",
+      "failed": "Shranjevanje ni uspelo."
+    },
+    "ok": {
+      "channelAdded": "Kanal je dodan."
+    },
+    "chHashtagsMax": "Največ hashtagov na kanalu",
+    "linksNotClickable": "povezave niso klikljive",
+    "createdNote": "ustvarjen"
   }
 }

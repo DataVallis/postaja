@@ -43,6 +43,13 @@
       "when": 1791220787303,
       "tag": "0005_seed_platform_data",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791221738565,
+      "tag": "0006_brands",
+      "breakpoints": true
     }
   ]
 }

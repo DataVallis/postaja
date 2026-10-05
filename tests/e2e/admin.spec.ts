@@ -35,7 +35,7 @@ test("super admin creates an organization, sets the plan, invites an editor; inv
   const editor = `editor-${Date.now()}@example.test`;
 
   await signIn(page, admin);
-  await page.getByRole("link", { name: "Admin" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Admin" }).click();
   await expect(page.getByRole("heading", { name: "Organizacije" })).toBeVisible();
   expect(await axe(page)).toEqual([]);
 
