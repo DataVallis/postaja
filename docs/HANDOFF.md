@@ -23,32 +23,34 @@ docker compose up -d            # Postgres+pgvector (5432), MinIO (9000/9001)
 pnpm db:migrate && pnpm dev     # http://localhost:3000
 pnpm lint && pnpm typecheck && pnpm test && pnpm test:int && pnpm test:e2e
 ```
-(Commands become valid once TASK-001 is merged.)
+No Docker Hub access in some agent sandboxes: run Postgres 16 + pgvector natively and set `TEST_DATABASE_URL`;
+for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 
 ## Repo / environments
 | Env | URL | Deploys from | Status |
 |---|---|---|---|
-| local | http://localhost:3000 | working tree | Planned (TASK-001) |
+| local | http://localhost:3000 | working tree | Built (TASK-001) |
 | dev | https://dev-postaja.inzenirji.si | `dev` (auto) | Planned (TASK-002) |
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
-- 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…024, manifest, brand identity (logo), brand CGP template.
+- 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
+- 2026-10-05: TASK-001 scaffold — PR `feat/TASK-001-scaffold` → `dev`.
 
 ## Owner's open actions
 1. GitHub → `DataVallis/postaja` → Settings → General → Default branch → **dev**.
 2. GitHub → Settings → Branches → protect `dev` and `main`: require PR + status check **CI** to pass.
-3. For TASK-002 (first deploy), prepare:
-   - Hetzner Cloud VM (CX32, Ubuntu 24.04) with your SSH key; send the **IP** (not keys).
-   - DNS: `A dev-postaja.inzenirji.si → <IP>`.
-   - Docker on the VM is installed by Kamal; port 22/80/443 open only.
+3. TASK-002 owner steps — `docs/tasks/TASK-002-first-deploy-dev.md` (server check first: are ports 80/443 already taken by the existing app?).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
 
 ## Next
-TASK-001 — `docs/tasks/TASK-001-scaffold.md` (in progress).
-Latest numbers: TASK-006 (planned list), ADR-024.
+TASK-002 — first deploy to dev (owner steps), then TASK-003 auth + orgs.
+Latest numbers: TASK-006 (planned list), ADR-025.
+
+## Servers
+- dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: an existing app (must keep running) and later volil.si (ADR-025).
 
 ## Open items
 - ADR-008 embedding provider (Open).

@@ -1,0 +1,37 @@
+# Kamal 2 — shared settings. Per-environment values live in config/deploy.<destination>.yml.
+# Secrets come only from .kamal/secrets-common and .kamal/secrets.<destination>, which read the environment.
+service: postaja
+image: datavallis/postaja
+
+registry:
+  server: ghcr.io
+  username:
+    - KAMAL_REGISTRY_USERNAME
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+  args:
+    GIT_SHA: <%= ENV.fetch("GITHUB_SHA") { `git rev-parse HEAD`.strip } %>
+
+ssh:
+  user: deploy
+
+proxy:
+  ssl: true
+  app_port: 3000
+  healthcheck:
+    path: /api/health
+    interval: 3
+    timeout: 5
+
+env:
+  clear:
+    RUN_MIGRATIONS: "1"
+    NODE_ENV: production
+  secret:
+    - DATABASE_URL
+
+# Keep a few old images for rollback, prune the rest (shared host — ADR-025).
+retain_containers: 3

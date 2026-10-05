@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Brand tokens — docs/brand/BRAND.md. Components use only these. */
+:root {
+  --color-ink: #12172b;
+  --color-signal: #ff5a1f;
+  --color-paper: #f4efe6;
+  --color-surface: #ffffff;
+  --color-fg: var(--color-ink);
+  --color-bg: var(--color-surface);
+  --color-muted: #4a5068;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-fg: var(--color-paper);
+    --color-bg: var(--color-ink);
+    --color-muted: #b9b4aa;
+  }
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-signal: var(--color-signal);
+  --color-paper: var(--color-paper);
+  --color-fg: var(--color-fg);
+  --color-bg: var(--color-bg);
+  --color-muted: var(--color-muted);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
