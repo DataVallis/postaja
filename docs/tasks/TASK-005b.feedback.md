@@ -1,5 +1,5 @@
 # TASK-005b feedback
-Status: **PARTIAL** — part 1 (server side) done in this PR; part 2 (upload UI + E2E) next.
+Status: **DONE** pending the owner's upload check on dev — part 1 (server side) PR #14 (merged, deployed: Deploy dev for 38b9508 green); part 2 (upload UI + routes + E2E) PR #15.
 
 ## What I implemented (part 1)
 - `src/server/files/storage.ts` S3 client (lazy, env-driven), presign ≤ 15 min (default 5), RFC 6266 file names.
@@ -69,3 +69,59 @@ build exit 0 (after the env type fix; rerun 20:36)
 ## Open questions / risks
 - Hetzner path-style vs virtual-host addressing: dev uses the SDK default (virtual-host); if the first real upload fails with a DNS/addressing error, set `S3_FORCE_PATH_STYLE=1` in `config/deploy.dev.yml`.
 - Brand rows are archived, not deleted; if a brand/org row is ever hard-deleted, the cascade removes rows but not S3 objects (cleanup job later).
+
+
+---
+
+# Part 2 — upload UI and routes
+
+## What I implemented
+- `src/server/brands/files-http.ts`: upload handler (same-origin check, 401, slot, Content-Length gate before parsing, error → status) and download handler (302 to a 5-minute presigned URL; other org 404, anonymous 401).
+- Routes `POST /api/brands/[id]/files`, `GET /api/brand-files/[table]/[id]` (wiring only).
+- Brand page section "Datoteke branda" (`files-section.tsx`): logo previews, fonts with diacritics status, sources table; `upload-form.tsx` (multi-file, per-file result); `deleteBrandFileAction`. sl + en strings.
+
+## Found by tests
+- axe: `role="status"/"alert"` directly on `<li>` broke list semantics (`list` violation) — moved into a `<span>` inside the item.
+- E2E: Chromium exposes `<input type=file>` as a button named by its label ("Naloži logotip"), so a non-exact "Naloži" button locator hit the file input — locators use exact names.
+
+## Deviations
+- Route context typed explicitly (`{ params: Promise<…> }`) instead of the generated `RouteContext` helper — `pnpm typecheck` runs before `next build` in CI, when the generated types don't exist yet.
+- No `docs/guides/` exists yet; the owner-visible steps are in HANDOFF "Owner's open actions".
+
+## Test results (real outputs, this session)
+```
+2026-10-05T21:36:04+02:00
+$ pnpm lint
+lint problems: 0
+$ pnpm typecheck
+typecheck: ok
+$ pnpm test
+ Test Files  10 passed (10)
+      Tests  86 passed (86)
+$ pnpm test:int
+ Test Files  9 passed (9)
+      Tests  111 passed (111)
+$ pnpm build
+build exit 0
+$ pnpm test:e2e
+  4 skipped
+  26 passed (55.6s)
+```
+
+## Deliberate breaks (2026-10-05T21:38)
+```
+## Break A: no Origin check
+     × cross-site or missing Origin → 403 before anything else; anonymous → 401
+      Tests  1 failed | 5 passed (6)
+## Break B: size gate removed (body read regardless of Content-Length)
+     × size is refused from the header before the body is read: limit + overhead + 1 → 413, real small body → 201
+      Tests  1 failed | 5 passed (6)
+## Break C: download without login check (404 instead of 401)
+     × another org gets 404 (no URL leaks), anonymous 401, unknown table 404
+      Tests  1 failed | 5 passed (6)
+## Restored
+      Tests  6 passed (6)
+```
+
+## NOT RUN
+- Real Hetzner bucket — first real upload is the owner's check on dev (HANDOFF, owner's open actions).
