@@ -59,7 +59,7 @@ Postgres is never exposed publicly (internal Docker network only).
 
 ## 3. Multi-tenancy (ADR-005)
 
-- Shared database. Every tenant table has `org_id uuid not null` (FK, indexed).
+- Shared database. Every tenant table has `org_id text not null` (FK to `organization.id`, indexed) — Better Auth ids are text (ADR-029).
 - Active organization comes from the Better Auth session; membership and role are verified server-side on **every** request. `org_id` is never taken from the client.
 - All tenant data access goes through `src/server/db/scoped.ts` (`forOrg(ctx)`), which adds `org_id` to every query and every insert.
 - Super admin: `user.role = 'superadmin'` (admin plugin). `/admin` has its own layout and guard; every action writes `audit_log`.

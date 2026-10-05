@@ -19,6 +19,19 @@
   "App": {
     "signedInAs": "Signed in as",
     "superadmin": "Super admin",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "organization": "Organization:",
+    "noOrg": "You are not a member of any organization yet.",
+    "orgSuspended": "This organization is suspended.",
+    "roles": {
+      "owner": "owner",
+      "editor": "editor"
+    },
+    "plans": {
+      "trial": "trial",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "free"
+    }
   }
 }

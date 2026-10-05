@@ -41,6 +41,7 @@ test("superadmin signs in with a magic link and signs out", async ({ page }, inf
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByTestId("user-email")).toHaveText(email);
   await expect(page.getByText("Super admin", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("no-org")).toHaveText("Še nisi član nobene organizacije.");
   await page.screenshot({ path: info.outputPath("app-signed-in.png") });
 
   await page.getByRole("button", { name: "Odjava" }).click();
