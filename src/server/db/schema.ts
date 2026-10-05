@@ -4,3 +4,4 @@ export * from "./schema/org";
 export * from "./schema/audit";
 export * from "./schema/platform";
 export * from "./schema/brands";
+export * from "./schema/brand-files";

@@ -26,6 +26,7 @@ git clone https://github.com/DataVallis/postaja && cd postaja && git checkout de
 corepack enable && pnpm install --frozen-lockfile
 cp .env.example .env            # fill local values only
 docker compose up -d            # Postgres+pgvector (5432), MinIO (9000/9001)
+# or, without Docker: pip install "moto[server]==5.2.3" && moto_server -H 127.0.0.1 -p 9000  (S3 stand-in, same as CI)
 pnpm db:migrate && pnpm dev     # http://localhost:3000
 pnpm lint && pnpm typecheck && pnpm test && pnpm test:int && pnpm test:e2e
 ```
@@ -43,6 +44,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
 - 2026-10-05: Hetzner Cloud Firewall on the dev server (asisto 5432/6379/3000 were public; now closed). DNS for dev-postaja/postaja set.
 - 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green.
+- 2026-10-05: TASK-005b part 1 (server side: S3 storage, brand_sources/brand_assets, sniffing, fonts, sharp, tenant separation) — PR (see tasks/README). Part 2 = upload UI.
 - 2026-10-05: **S3 ready (owner, 19:48)**: Hetzner Object Storage, location **fsn1**, endpoint `https://fsn1.your-objectstorage.com`, bucket **`postaja-dev`** (private); secrets `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` set in GitHub environment `dev`. Owner requirement: files of each organization strictly separated.
 - 2026-10-05: TASK-005a brands, versioned CGP, channels — PR #10, deployed. Fix: platform sources/notes visible in /admin/platform — PR #11, deployed.
 - 2026-10-05: TASK-004 platform rules + presets + rule engine — PR #9, deployed.
