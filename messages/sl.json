@@ -114,7 +114,56 @@
       "medium": "srednja",
       "low": "nizka"
     },
-    "sourceNotes": "Vir in opombe"
+    "sourceNotes": "Vir in opombe",
+    "edit": {
+      "ruleTitle": "Pravila: {platform}",
+      "presetTitle": "Format: {key}",
+      "editLabel": "Uredi {name}",
+      "intro": "Spremembe veljajo takoj za vse organizacije in se zapišejo v revizijski dnevnik. Ob vsaki preverbi posodobi vir in datum.",
+      "emptyMeansNone": "Prazno polje pomeni, da platforma te omejitve nima.",
+      "counting": "Štetje znakov",
+      "countings": {
+        "graphemes": "znaki (grafemi)",
+        "x_weighted": "utežno kot X (povezava = 23, emoji = 2)"
+      },
+      "captionMax": "Največ znakov",
+      "hashtagsMax": "Največ hashtagov",
+      "mentionsMax": "Največ omemb",
+      "threadPartMax": "Znakov na del niti",
+      "threadPartsMax": "Največ delov niti",
+      "slidesMin": "Najmanj slajdov",
+      "slidesMax": "Največ slajdov",
+      "width": "Širina (px)",
+      "height": "Višina (px)",
+      "maxBytes": "Največja velikost (bajti)",
+      "minDurationS": "Najkrajše trajanje (s)",
+      "maxDurationS": "Najdaljše trajanje (s)",
+      "safeZone": "Varna cona (px od roba)",
+      "top": "Zgoraj",
+      "right": "Desno",
+      "bottom": "Spodaj",
+      "left": "Levo",
+      "enabled": "Format je vklopljen (izklopljenega ni mogoče izbrati za nove objave)",
+      "disabled": "izklopljen",
+      "provenance": "Vir in preverba",
+      "source": "Vir (URL ali opis)",
+      "verifiedAt": "Preverjeno dne",
+      "notes": "Opombe",
+      "errors": {
+        "invalid": "Preveri vrednosti: cela števila, vidni znaki ≤ največ znakov, najmanj ≤ največ, varna cona manjša od velikosti, datum ne v prihodnosti.",
+        "failed": "Shranjevanje ni uspelo."
+      },
+      "ok": {
+        "saved": "Shranjeno in zapisano v dnevnik.",
+        "unchanged": "Ni sprememb — nič ni zapisano."
+      }
+    },
+    "reverify": {
+      "title": "Za ponovno preverjanje: {rules, plural, one {# pravilo} two {# pravili} few {# pravila} other {# pravil}} in {presets, plural, one {# format} two {# formata} few {# formati} other {# formatov}}",
+      "body": "Podatki so bili nazadnje preverjeni pred 90 dnevi ali več. Preveri jih pri viru in posodobi datum.",
+      "open": "Odpri platforme →",
+      "badge": "preveri"
+    }
   },
   "Brands": {
     "title": "Brandi",

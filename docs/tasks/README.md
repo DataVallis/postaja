@@ -10,7 +10,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-003b | Organizations, `org_settings`, `forOrg`, cross-tenant harness, invitations | TASK-003a | Live on dev (PR #7) |
 | TASK-003c | Super admin `/admin` basics + audit log; create Data Vallis (comped) there | TASK-003b | Live on dev (PR #8) |
 | TASK-004 | Platform rules + format presets (tables, sourced seed, rule engine with boundary tests, admin view) | TASK-003 | Live on dev (PR #9) |
-| TASK-004b | Super admin edits platform rules / presets (audited) + quarterly re-verification reminder | TASK-004 | Planned |
+| TASK-004b | Super admin edits platform rules / presets (audited) + quarterly re-verification reminder | TASK-004 | In review |
 | TASK-005a | Brands, profile versions, channels, effective rules (no uploads) | TASK-004 | Live on dev (PR #10) |
 | TASK-005b | S3 storage + uploads: logo, fonts (diacritics check), brand sources; strict per-org separation | TASK-005a | **Next — ready** (S3 bucket + keys set 2026-10-05) |
 | TASK-006 | Brand ingestion: extract + synthesize proposal + review/accept | TASK-005 | Planned |
