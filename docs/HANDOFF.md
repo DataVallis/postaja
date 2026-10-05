@@ -44,7 +44,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green, Deploy dev skipped (not enabled yet).
 
 ## Owner's open actions
-1. **Security on the shared server (asisto, not Postaja):** `asisto-postgres` (5432), `asisto-redis` (6379) and `asisto-api` (3000) are published on `0.0.0.0`.
+1. **Today — Hetzner Cloud Firewall (TASK-002 Step A)**, confirmed open: 5432, 6379 (Redis without password), 3000. Background: `asisto-postgres` (5432), `asisto-redis` (6379) and `asisto-api` (3000) are published on `0.0.0.0`.
    Unless a Hetzner Cloud Firewall or ufw blocks them, they are reachable from the internet. Check from your laptop:
    `nc -zv -w3 91.99.191.8 5432; nc -zv -w3 91.99.191.8 6379; nc -zv -w3 91.99.191.8 3000` — any "succeeded" = open.
 2. TASK-002 owner steps — `docs/tasks/TASK-002-first-deploy-dev.md` (server check first: are ports 80/443 already taken by the existing app?).
@@ -54,10 +54,10 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 
 ## Next
 TASK-002 — first deploy to dev (owner steps), then TASK-003 auth + orgs.
-Latest numbers: TASK-006 (planned list), ADR-025.
+Latest numbers: TASK-006 (planned list), ADR-026.
 
 ## Servers
-- dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: an existing app (must keep running) and later volil.si (ADR-025).
+- dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge plan: kamal-proxy owns 80/443, asisto moves under it (ADR-026).
 
 ## Open items
 - ADR-008 embedding provider (Open).
