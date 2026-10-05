@@ -21,10 +21,16 @@ env:
     EMAIL_FROM: "Postaja <hello@inzenirji.si>"
     # Bootstrap super admins (ADR-028). Comes from the GitHub variable SUPERADMIN_EMAILS — not committed.
     SUPERADMIN_EMAILS: "<%= ENV.fetch("SUPERADMIN_EMAILS") %>"
+    # Object storage (ADR-006, ADR-033): Hetzner Object Storage, private bucket.
+    S3_ENDPOINT: https://fsn1.your-objectstorage.com
+    S3_REGION: fsn1
+    S3_BUCKET: postaja-dev
   secret:
     - DATABASE_URL
     - BETTER_AUTH_SECRET
     - SMTP_PASSWORD
+    - S3_ACCESS_KEY_ID
+    - S3_SECRET_ACCESS_KEY
 
 accessories:
   db:
