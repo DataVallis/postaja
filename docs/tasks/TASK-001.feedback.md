@@ -1,5 +1,5 @@
 # TASK-001 feedback
-Status: **PARTIAL** — all local checks pass; Docker build/run and Kamal config render are proven only in CI (registries blocked in the agent sandbox). Becomes DONE when CI is green on the PR.
+Status: **DONE** (awaiting owner merge) — local checks pass; Docker build/run and Kamal config proven in CI on PR #1.
 
 ## What I implemented
 - Next.js 16 app (App Router, TS strict, standalone output), Tailwind v4 with brand tokens, self-hosted Inter, next-intl (sl default, en by cookie), home page with logo.
@@ -69,6 +69,12 @@ $ pnpm test:e2e (fresh DB, RUN_MIGRATIONS=1)
 $ migrations applied by server start on fresh DB:
 1 migration(s), vector=1
 ```
+
+## CI evidence (PR #1, head d159962)
+- Job **CI** (run job 111793546298): Install, Lint, Typecheck, Unit tests, Integration tests (real Postgres, migrations from zero), Build, E2E + accessibility, **Docker build + container health** — all `success`.
+  The Docker step asserts health `sha` = commit SHA, `db:"ok"`, container uid 1001.
+- Job **Kamal config** (111793545972): `success`; rendered `:primary_host: 203.0.113.10` (placeholder), `:absolute_image: ghcr.io/datavallis/postaja:<sha>`.
+- Two CI-only fix commits: the first Kamal job failed on my own `grep` for the proxy host (`kamal config` summary does not print it); now asserts the host IP and surfaces errors/output as annotations.
 
 ## Deliberate breaks
 ```
