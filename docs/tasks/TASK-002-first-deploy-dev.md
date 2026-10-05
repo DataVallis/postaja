@@ -18,7 +18,33 @@ without disturbing the existing app on the shared server.
   **unless a host-level web server (nginx/Caddy/Apache) listens there** — still to confirm (`sudo ss` needed a password).
 - No conflict with Postaja: our DB accessory publishes no port, the app port is internal to the `kamal` network.
 - Risk (asisto, outside Postaja): 5432, 6379 and 3000 bound to `0.0.0.0` → owner checks Hetzner/ufw firewall (HANDOFF, owner action 1).
-- Memory/disk output not captured (command stopped at the sudo prompt).
+- Follow-up check: **host nginx is active on 80/443** (proxies the asisto API domain to `localhost:3000`); 7.6 GB RAM (6.4 GB available), 35 GB disk free, no swap; `deploy` is in `docker` and `sudo`.
+- Redis has **no password** and was reachable from the internet; `dir=/data`, `dbfilename=dump.rdb` (no sign of the known config-rewrite abuse).
+- Decision: ADR-026 — kamal-proxy takes over 80/443, nginx is retired, asisto moves under kamal-proxy.
+
+## Plan (in this order)
+### Step A — close the open ports (owner, today, reversible)
+Hetzner Console → Firewalls → Create: inbound TCP 22, 80, 443 + ICMP only → apply to the server.
+Docker-published ports bypass ufw, so the cloud firewall is the reliable fix. nginx reaches the API via localhost, so asisto keeps working.
+Verify from your laptop: `nc -zv -w3 91.99.191.8 5432; nc -zv -w3 91.99.191.8 6379; nc -zv -w3 91.99.191.8 3000` → all must fail.
+
+### Step B — swap (owner, 1 min)
+```
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+### Step C — cutover to kamal-proxy (owner runs, agent prepares exact commands; ~5 min asisto downtime)
+1. Backup: `sudo tar czf ~/nginx-backup-$(date +%F).tgz /etc/nginx /etc/letsencrypt` and `docker exec asisto-postgres pg_dumpall -U <user> > ~/asisto-$(date +%F).sql`.
+2. `sudo systemctl stop nginx && sudo systemctl disable nginx`.
+3. `kamal setup -d dev` (from your Mac or CI) — boots kamal-proxy on 80/443, the Postaja DB accessory and the app.
+4. Put asisto-api behind kamal-proxy (transitional, until asisto has its own Kamal config):
+   `docker network connect kamal asisto-api`
+   `docker exec kamal-proxy kamal-proxy deploy asisto-api --target asisto-api:3000 --host <asisto api domain> --tls --health-check-path /api/v1/health`
+5. Check both domains in the browser. **Rollback**: `docker stop kamal-proxy && sudo systemctl enable --now nginx` (≈1 min).
+
+### Step D — asisto as a proper Kamal app (separate task in the asisto repo)
+`config/deploy.yml` for asisto-api (image already on GHCR), Postgres/Redis as accessories with **no published ports** and Redis with a password; data moved with pg_dump/restore. Needed: access to the asisto repo and the list of its domains.
 
 ## Owner steps (agent never touches the server or secrets)
 1. **Check the shared server** (run on the server as `deploy`, paste output — no secrets in it):
@@ -27,8 +53,7 @@ without disturbing the existing app on the shared server.
    systemctl is-active nginx caddy apache2   # "inactive" for all = no host web server
    groups deploy; free -h; df -h /
    ```
-   - If ports 80/443 are held by something other than `kamal-proxy` (e.g. nginx, Caddy, Traefik), stop: the CTO proposes how to put the
-     existing app behind kamal-proxy or route through the existing proxy. Do not change anything yet.
+   - Done 2026-10-05 — see results above and the plan (Steps A–D).
    - `deploy` must be in the `docker` group (`groups deploy`).
 2. **DNS**: `A dev-postaja.inzenirji.si → 91.99.191.8`.
 3. **Deploy key**: on your machine `ssh-keygen -t ed25519 -f postaja_deploy -C postaja-ci` → add `postaja_deploy.pub` to `~deploy/.ssh/authorized_keys` on the server.
