@@ -32,6 +32,58 @@
       "starter": "starter",
       "pro": "pro",
       "comped": "brezplačno"
+    },
+    "adminLink": "Admin"
+  },
+  "Admin": {
+    "nav": "Admin navigacija",
+    "organizations": "Organizacije",
+    "audit": "Revizijski dnevnik",
+    "backToApp": "← Aplikacija",
+    "newOrg": "Nova organizacija",
+    "noOrgs": "Še ni organizacij.",
+    "name": "Ime",
+    "slug": "Kratko ime (slug)",
+    "plan": "Plan",
+    "status": "Stanje",
+    "members": "Člani",
+    "pending": "Vabila",
+    "cap": "Limit / mesec",
+    "capUsd": "Mesečni limit porabe (USD)",
+    "ownerEmail": "E-pošta lastnika",
+    "create": "Ustvari",
+    "save": "Shrani",
+    "settings": "Nastavitve",
+    "email": "E-pošta",
+    "role": "Vloga",
+    "invite": "Povabi",
+    "invitedUntil": "povabljen do",
+    "noMembers": "Ni članov.",
+    "noAudit": "Dnevnik je prazen.",
+    "plans": {
+      "trial": "preizkus",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "brezplačno (comped)"
+    },
+    "statuses": {
+      "active": "aktivna",
+      "suspended": "onemogočena"
+    },
+    "roles": {
+      "owner": "lastnik",
+      "editor": "urednik"
+    },
+    "errors": {
+      "invalid": "Preveri vnesene podatke.",
+      "duplicate": "Organizacija s tem kratkim imenom že obstaja.",
+      "amount": "Znesek ni veljaven (npr. 50 ali 12.5).",
+      "failed": "Shranjevanje ni uspelo."
+    },
+    "ok": {
+      "saved": "Shranjeno.",
+      "member": "Uporabnik je dodan kot član.",
+      "invited": "Vabilo je poslano."
     }
   }
 }

@@ -32,6 +32,58 @@
       "starter": "starter",
       "pro": "pro",
       "comped": "free"
+    },
+    "adminLink": "Admin"
+  },
+  "Admin": {
+    "nav": "Admin navigation",
+    "organizations": "Organizations",
+    "audit": "Audit log",
+    "backToApp": "← App",
+    "newOrg": "New organization",
+    "noOrgs": "No organizations yet.",
+    "name": "Name",
+    "slug": "Slug",
+    "plan": "Plan",
+    "status": "Status",
+    "members": "Members",
+    "pending": "Invites",
+    "cap": "Cap / month",
+    "capUsd": "Monthly spend cap (USD)",
+    "ownerEmail": "Owner email",
+    "create": "Create",
+    "save": "Save",
+    "settings": "Settings",
+    "email": "Email",
+    "role": "Role",
+    "invite": "Invite",
+    "invitedUntil": "invited until",
+    "noMembers": "No members.",
+    "noAudit": "The log is empty.",
+    "plans": {
+      "trial": "trial",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "free (comped)"
+    },
+    "statuses": {
+      "active": "active",
+      "suspended": "suspended"
+    },
+    "roles": {
+      "owner": "owner",
+      "editor": "editor"
+    },
+    "errors": {
+      "invalid": "Check the entered values.",
+      "duplicate": "An organization with this slug already exists.",
+      "amount": "Invalid amount (e.g. 50 or 12.5).",
+      "failed": "Saving failed."
+    },
+    "ok": {
+      "saved": "Saved.",
+      "member": "User added as a member.",
+      "invited": "Invitation sent."
     }
   }
 }

@@ -1,6 +1,6 @@
 # Organizations and tenancy
 
-Status: **Built** (TASK-003b).
+Status: **Live on dev** (TASK-003b, PR #7).
 
 ## Model
 | Table | Notes |
