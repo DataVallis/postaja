@@ -23,7 +23,7 @@ export default async function PlatformPage() {
           <table className="w-full text-left text-sm" data-testid="platform-rules">
             <thead className="text-muted">
               <tr>
-                {["platformCol", "captionMax", "visibleChars", "hashtagsMax", "slides", "links", "confidence", "verified"].map((k) => (
+                {["platformCol", "captionMax", "visibleChars", "hashtagsMax", "slides", "links", "confidence", "verified", "sourceNotes"].map((k) => (
                   <th key={k} className="py-2 pr-4 font-medium">{t(k)}</th>
                 ))}
               </tr>
@@ -38,7 +38,11 @@ export default async function PlatformPage() {
                   <td className="py-2 pr-4">{r.slidesMin === null && r.slidesMax === null ? "—" : `${r.slidesMin ?? "—"}–${r.slidesMax ?? "—"}`}</td>
                   <td className="py-2 pr-4">{r.linksClickable ? t("yes") : t("no")}</td>
                   <td className="py-2 pr-4">{t(`conf.${r.confidence}`)}</td>
-                  <td className="py-2 pr-4" title={`${r.source}${r.notes ? ` — ${r.notes}` : ""}`}>{r.verifiedAt}</td>
+                  <td className="py-2 pr-4">{r.verifiedAt}</td>
+                  <td className="min-w-64 py-2 pr-4 text-xs">
+                    <span className="block text-muted">{r.source}</span>
+                    {r.notes ? <span className="mt-1 block">{r.notes}</span> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -52,7 +56,7 @@ export default async function PlatformPage() {
           <table className="w-full text-left text-sm" data-testid="presets">
             <thead className="text-muted">
               <tr>
-                {["key", "size", "media", "maxSize", "duration", "safeZone", "confidence"].map((k) => (
+                {["key", "size", "media", "maxSize", "duration", "safeZone", "confidence", "sourceNotes"].map((k) => (
                   <th key={k} className="py-2 pr-4 font-medium">{t(k)}</th>
                 ))}
               </tr>
@@ -60,13 +64,17 @@ export default async function PlatformPage() {
             <tbody>
               {presets.map((p) => (
                 <tr key={p.key} className={`border-t border-muted/20 ${p.enabled ? "" : "opacity-50"}`}>
-                  <td className="py-2 pr-4 font-mono text-xs" title={`${p.source}${p.notes ? ` — ${p.notes}` : ""}`}>{p.key}</td>
+                  <td className="py-2 pr-4 font-mono text-xs">{p.key}</td>
                   <td className="py-2 pr-4">{p.width}×{p.height}</td>
                   <td className="py-2 pr-4">{p.media}</td>
                   <td className="py-2 pr-4">{mb(p.maxBytes)}</td>
                   <td className="py-2 pr-4">{p.media === "video" ? `${p.minDurationS ?? 0}–${p.maxDurationS ?? "∞"} s` : "—"}</td>
                   <td className="py-2 pr-4 text-xs">{`${p.safeZone.top}/${p.safeZone.right}/${p.safeZone.bottom}/${p.safeZone.left}`}</td>
                   <td className="py-2 pr-4">{t(`conf.${p.confidence}`)}</td>
+                  <td className="min-w-64 py-2 pr-4 text-xs">
+                    <span className="block text-muted">{p.source} · {p.verifiedAt}</span>
+                    {p.notes ? <span className="mt-1 block">{p.notes}</span> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
