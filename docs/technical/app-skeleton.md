@@ -37,5 +37,7 @@ Job **CI**: frozen install → lint → typecheck → unit → integration (pgve
 Job **Kamal config**: renders `kamal config -d dev` with placeholder values.
 
 ## Deploy (`.github/workflows/deploy-dev.yml`, Kamal 2)
-On push to `dev`, only when repo variable `DEPLOY_DEV_ENABLED=true`: `kamal deploy -d dev` (builds amd64 image, pushes to GHCR, boots via kamal-proxy with TLS) → smoke check (health SHA = pushed SHA, `/` = 200).
-Config: `config/deploy.yml` + `config/deploy.dev.yml`. DB is the accessory `postaja-db` (pgvector/pg16, volume `postaja-dev-db`, no published port, 1 GB memory limit). Shared host rules: ADR-025.
+On push to `dev` when repo variable `DEPLOY_DEV_ENABLED=true`, or manually: `kamal deploy -d dev` (builds amd64 image, pushes to GHCR, switches traffic in kamal-proxy) → smoke check (health SHA = pushed SHA, `/` = 200).
+Manual run with `setup=true` (first time on a host): `kamal proxy boot_config set --http-port 8080 --https-port 8443 --publish-host-ip 127.0.0.1` + `kamal setup -d dev`.
+Edge on the shared dev host (ADR-027): host nginx terminates TLS (certbot) and proxies `dev-postaja.inzenirji.si` to kamal-proxy on `127.0.0.1:8080` (`ops/nginx/dev-postaja.inzenirji.si.conf`); Kamal `proxy.ssl: false`, `forward_headers: true`.
+Config: `config/deploy.yml` + `config/deploy.dev.yml`. DB is the accessory `postaja-db` (pgvector/pg16, volume `postaja-dev-db`, no published port, 1 GB memory limit). Shared host rules: ADR-025, ADR-027.

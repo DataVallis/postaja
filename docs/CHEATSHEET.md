@@ -13,7 +13,7 @@ Never values here — only names and where they live.
 ## Hosts
 | Env | Host | SSH user | Notes |
 |---|---|---|---|
-| dev | Hetzner VM (IP in GitHub variable `DEV_HOST`) | `deploy` | shared with an existing app and later volil.si (ADR-025) |
+| dev | Hetzner VM `asisto-api-prod` (IP in GitHub variable `DEV_HOST`) | `deploy` | shared with asisto and later volil.si; host nginx → kamal-proxy 127.0.0.1:8080 (ADR-027); Hetzner Cloud Firewall 22/80/443 |
 
 ## Secrets and variables (GitHub → Settings → Environments → `dev` / Variables)
 | Name | Kind | Where | Used by |
@@ -36,3 +36,5 @@ Keep your own copy of every secret (GitHub never shows it again).
 | **Rollback** | `kamal app containers -d dev` (find previous version) → `kamal rollback <version> -d dev` |
 | DB shell | `kamal accessory exec db -d dev --interactive --reuse "psql -U postaja postaja_dev"` |
 | Start DB accessory first time | `kamal accessory boot db -d dev` |
+| First setup via CI | Actions → Deploy dev → Run workflow → setup = true |
+| nginx block for dev | `ops/nginx/dev-postaja.inzenirji.si.conf` (+ `sudo certbot --nginx -d dev-postaja.inzenirji.si`) |
