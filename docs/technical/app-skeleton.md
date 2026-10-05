@@ -1,6 +1,6 @@
 # App skeleton
 
-Status: **Built** (in the repo, CI-tested). Not yet **Live** on any environment (TASK-002).
+Status: **Live on dev** — https://dev-postaja.inzenirji.si (since 2026-10-05, first deploy 8445e2d).
 
 ## Runtime
 - Next.js 16 (App Router, Turbopack build), React 19, TypeScript strict, `output: "standalone"`.
