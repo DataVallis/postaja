@@ -4,12 +4,18 @@
 **Mode B (autonomous) — partially.** Owner granted push access to `DataVallis/postaja` on 2026-10-05
 ("tukaj pa maš git, sem ti dal dostop … začni").
 - Agent may: create `feat/*`, `fix/*`, `docs/*` branches, push them, open PRs to `dev`.
-- Merging to `dev`: **owner merges** until he confirms "agent may merge green PRs to dev" (then record it here with date and words).
+- **Standing permission (2026-10-05, owner): agent merges PRs to `dev` itself when every check is green**
+  ("grema po pravilu ti sam mergaj ko je zeleno"). Squash merge via REST API; then verify CI + Deploy for the merge SHA.
 - Agent never: touches `uat`/`main`, servers, DNS, secrets, GitHub settings.
 - Ask the owner only for: keys/secrets, accounts, server actions, product decisions, uat/prod, irreversible steps.
 
 ## Git and CI specifics
-- Default branch should be `dev` (owner action, see below). `main` = production releases only.
+- Default branch is `dev` (set by owner 2026-10-05). `main` = production releases only.
+- Branch protection is **not available** (private repo on the free GitHub plan). The green-only merge rule is enforced by the agent:
+  before merging, check that every check run on the PR head SHA is `completed/success`.
+- `gh pr create` (GraphQL) is blocked in agent sessions — create PRs with `gh api repos/DataVallis/postaja/pulls --input <json>`,
+  merge with `gh api -X PUT repos/DataVallis/postaja/pulls/<n>/merge -f merge_method=squash`. Job logs are not readable from the sandbox;
+  failing steps are visible via `gh api repos/.../actions/jobs/<id>` and annotations.
 - Bootstrap exception: the repo was empty; the first docs commit was pushed directly to `main` and `dev` was created from it.
   From now on everything goes through PRs.
 - Waiting for CI: one polling command every ~30 s.
@@ -29,18 +35,19 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 ## Repo / environments
 | Env | URL | Deploys from | Status |
 |---|---|---|---|
-| local | http://localhost:3000 | working tree | Built (TASK-001) |
+| local | http://localhost:3000 | working tree | Built (TASK-001, merged) |
 | dev | https://dev-postaja.inzenirji.si | `dev` (auto) | Planned (TASK-002) |
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
 - 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
-- 2026-10-05: TASK-001 scaffold — PR `feat/TASK-001-scaffold` → `dev`.
+- 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green, Deploy dev skipped (not enabled yet).
 
 ## Owner's open actions
-1. GitHub → `DataVallis/postaja` → Settings → General → Default branch → **dev**.
-2. GitHub → Settings → Branches → protect `dev` and `main`: require PR + status check **CI** to pass.
-3. TASK-002 owner steps — `docs/tasks/TASK-002-first-deploy-dev.md` (server check first: are ports 80/443 already taken by the existing app?).
+1. **Security on the shared server (asisto, not Postaja):** `asisto-postgres` (5432), `asisto-redis` (6379) and `asisto-api` (3000) are published on `0.0.0.0`.
+   Unless a Hetzner Cloud Firewall or ufw blocks them, they are reachable from the internet. Check from your laptop:
+   `nc -zv -w3 91.99.191.8 5432; nc -zv -w3 91.99.191.8 6379; nc -zv -w3 91.99.191.8 3000` — any "succeeded" = open.
+2. TASK-002 owner steps — `docs/tasks/TASK-002-first-deploy-dev.md` (server check first: are ports 80/443 already taken by the existing app?).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
