@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <nav aria-label={t("nav")} className="flex gap-4 text-sm">
           <Link href="/admin" className="underline-offset-4 hover:underline">{t("organizations")}</Link>
+          <Link href="/admin/platform" className="underline-offset-4 hover:underline">{t("platform")}</Link>
           <Link href="/admin/audit" className="underline-offset-4 hover:underline">{t("audit")}</Link>
           <Link href="/app" className="underline-offset-4 hover:underline">{t("backToApp")}</Link>
         </nav>

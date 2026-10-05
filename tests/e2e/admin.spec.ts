@@ -68,6 +68,12 @@ test("super admin creates an organization, sets the plan, invites an editor; inv
   await expect(page.getByTestId("audit")).toContainText("member.invite");
   await expect(page.getByTestId("audit")).toContainText("org.create");
 
+  await page.goto("/admin/platform");
+  await expect(page.getByTestId("platform-rules")).toContainText("instagram");
+  await expect(page.getByTestId("presets")).toContainText("1080×1350");
+  expect(await axe(page)).toEqual([]);
+  await page.screenshot({ path: info.outputPath("admin-platform.png"), fullPage: true });
+
   await page.goto("/app");
   await expect(page.getByTestId("org")).toContainText("Data Vallis E2E");
 

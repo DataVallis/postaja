@@ -84,6 +84,32 @@
       "saved": "Saved.",
       "member": "User added as a member.",
       "invited": "Invitation sent."
+    },
+    "platform": "Platforms",
+    "platformIntro": "Limits and formats Postaja checks every post against. Where sources disagree, the stricter value applies. Hover the date or key for source and notes.",
+    "platformRules": "Platform rules",
+    "presets": "Formats",
+    "platformCol": "Platform",
+    "captionMax": "Chars",
+    "visibleChars": "Visible before “more”",
+    "hashtagsMax": "Hashtags",
+    "slides": "Slides",
+    "links": "Clickable links",
+    "confidence": "Confidence",
+    "verified": "Verified",
+    "key": "Key",
+    "size": "Size",
+    "media": "Type",
+    "maxSize": "Max",
+    "duration": "Duration",
+    "safeZone": "Safe zone (t/r/b/l)",
+    "yes": "yes",
+    "no": "no",
+    "xWeighted": "* X counts weighted: link = 23, emoji = 2.",
+    "conf": {
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
     }
   }
 }
