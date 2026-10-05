@@ -6,12 +6,26 @@ Read first: docs/CHEATSHEET.md, docs/technical/app-skeleton.md §Deploy, ADR-017
 `https://dev-postaja.inzenirji.si/api/health` returns `"status":"ok"` with the merged SHA, deployed automatically on every merge to `dev`,
 without disturbing the existing app on the shared server.
 
+## Server check — result 2026-10-05 (host `asisto-api-prod`)
+| Container | Image | Published ports |
+|---|---|---|
+| asisto-api | ghcr.io/davidtacer/asisto-api:latest | 0.0.0.0:3000 |
+| asisto-laravel | asisto-website-app | none (80, 9000 internal only) |
+| asisto-redis | redis:7-alpine | 0.0.0.0:6379 |
+| asisto-postgres | postgis/postgis:14-3.3-alpine | 0.0.0.0:5432 |
+
+- No container publishes 80/443, and asisto is not Kamal-managed (docker compose names) → kamal-proxy can likely take 80/443
+  **unless a host-level web server (nginx/Caddy/Apache) listens there** — still to confirm (`sudo ss` needed a password).
+- No conflict with Postaja: our DB accessory publishes no port, the app port is internal to the `kamal` network.
+- Risk (asisto, outside Postaja): 5432, 6379 and 3000 bound to `0.0.0.0` → owner checks Hetzner/ufw firewall (HANDOFF, owner action 1).
+- Memory/disk output not captured (command stopped at the sudo prompt).
+
 ## Owner steps (agent never touches the server or secrets)
 1. **Check the shared server** (run on the server as `deploy`, paste output — no secrets in it):
    ```
-   docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}'
-   sudo ss -tlnp | grep -E ':(80|443|5432)\b'
-   free -h; df -h /
+   ss -tln | grep -E ':(80|443)\b'          # no sudo needed; empty output = ports free
+   systemctl is-active nginx caddy apache2   # "inactive" for all = no host web server
+   groups deploy; free -h; df -h /
    ```
    - If ports 80/443 are held by something other than `kamal-proxy` (e.g. nginx, Caddy, Traefik), stop: the CTO proposes how to put the
      existing app behind kamal-proxy or route through the existing proxy. Do not change anything yet.
