@@ -26,6 +26,7 @@ Never values here — only names and where they live.
 | `DATABASE_URL` | env `dev` secret | Environments → dev | app → `postgres://postaja:<POSTGRES_PASSWORD>@postaja-db:5432/postaja_dev` |
 | `BETTER_AUTH_SECRET` | env `dev` secret | Environments → dev | signs sessions (`openssl rand -base64 32`) |
 | `SMTP_PASSWORD` | env `dev` secret | Environments → dev | password of hello@inzenirji.si on mail.datavallis.com |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | env `dev` secret | Environments → dev | Hetzner Object Storage, bucket `postaja-dev`, endpoint `https://fsn1.your-objectstorage.com` |
 | `SUPERADMIN_EMAILS` | repo variable | Actions → Variables | emails that may bootstrap as super admin (comma separated) |
 | `GITHUB_TOKEN` | automatic | — | push image to GHCR |
 

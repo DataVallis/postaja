@@ -1,6 +1,6 @@
 # Brands, profile versions, channels
 
-Status: **Built** (TASK-005a). File uploads (logo, fonts, brand sources) follow in TASK-005b (needs S3).
+Status: **Live on dev** (TASK-005a, PR #10). File uploads follow in TASK-005b.
 
 ## Model (tenant tables, all with `org_id`, accessed only through `forOrg`)
 | Table | Notes |
