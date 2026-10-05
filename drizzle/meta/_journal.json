@@ -29,6 +29,20 @@
       "when": 1791219089531,
       "tag": "0003_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791220786181,
+      "tag": "0004_platform_rules_presets",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791220787303,
+      "tag": "0005_seed_platform_data",
+      "breakpoints": true
     }
   ]
 }

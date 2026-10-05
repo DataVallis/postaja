@@ -1,6 +1,6 @@
 # Super admin (`/admin`)
 
-Status: **Built** (TASK-003c).
+Status: **Live on dev** (TASK-003c, PR #8).
 
 ## Access
 - Only users with `user.role = superadmin` (bootstrap: `SUPERADMIN_EMAILS`, ADR-028).
@@ -14,6 +14,7 @@ Status: **Built** (TASK-003c).
 | `/admin` | organizations: plan, status, members, pending invites, monthly cap |
 | `/admin/orgs/new` | create: name, slug, owner email, plan, cap (USD) |
 | `/admin/orgs/[id]` | settings (plan, status, cap), members + pending invitations, invite owner/editor |
+| `/admin/platform` | platform rules and format presets with source, confidence, verified date (read-only) |
 | `/admin/audit` | last 100 audit rows, newest first |
 
 ## Audit log (`audit_log`)

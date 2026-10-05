@@ -84,6 +84,32 @@
       "saved": "Shranjeno.",
       "member": "Uporabnik je dodan kot član.",
       "invited": "Vabilo je poslano."
+    },
+    "platform": "Platforme",
+    "platformIntro": "Omejitve in formati, po katerih Postaja preverja vsako objavo. Kjer si viri nasprotujejo, velja strožja vrednost. Z miško nad datumom ali ključem vidiš vir in opombe.",
+    "platformRules": "Pravila platform",
+    "presets": "Formati",
+    "platformCol": "Platforma",
+    "captionMax": "Znakov",
+    "visibleChars": "Vidno pred »več«",
+    "hashtagsMax": "Hashtagov",
+    "slides": "Slajdov",
+    "links": "Klikljive povezave",
+    "confidence": "Zanesljivost",
+    "verified": "Preverjeno",
+    "key": "Ključ",
+    "size": "Velikost",
+    "media": "Vrsta",
+    "maxSize": "Največ",
+    "duration": "Trajanje",
+    "safeZone": "Varna cona (zg/de/sp/le)",
+    "yes": "da",
+    "no": "ne",
+    "xWeighted": "* X šteje utežno: povezava = 23, emoji = 2.",
+    "conf": {
+      "high": "visoka",
+      "medium": "srednja",
+      "low": "nizka"
     }
   }
 }

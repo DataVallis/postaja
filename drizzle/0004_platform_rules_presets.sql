@@ -1,0 +1,42 @@
+CREATE TABLE "format_presets" (
+	"key" text PRIMARY KEY NOT NULL,
+	"platform" text NOT NULL,
+	"placement" text NOT NULL,
+	"width" integer NOT NULL,
+	"height" integer NOT NULL,
+	"media" text NOT NULL,
+	"max_bytes" bigint,
+	"min_duration_s" integer,
+	"max_duration_s" integer,
+	"safe_zone" jsonb DEFAULT '{"top":0,"right":0,"bottom":0,"left":0}'::jsonb NOT NULL,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"source" text NOT NULL,
+	"confidence" text NOT NULL,
+	"notes" text,
+	"verified_at" date NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "format_presets_media_ck" CHECK ("format_presets"."media" in ('image','video','pdf')),
+	CONSTRAINT "format_presets_size_ck" CHECK ("format_presets"."width" > 0 and "format_presets"."height" > 0),
+	CONSTRAINT "format_presets_confidence_ck" CHECK ("format_presets"."confidence" in ('high','medium','low'))
+);
+--> statement-breakpoint
+CREATE TABLE "platform_rules" (
+	"platform" text PRIMARY KEY NOT NULL,
+	"counting" text DEFAULT 'graphemes' NOT NULL,
+	"caption_max" integer,
+	"visible_chars" integer,
+	"hashtags_max" integer,
+	"mentions_max" integer,
+	"links_clickable" boolean DEFAULT true NOT NULL,
+	"thread_part_max" integer,
+	"thread_parts_max" integer,
+	"slides_min" integer,
+	"slides_max" integer,
+	"source" text NOT NULL,
+	"confidence" text NOT NULL,
+	"notes" text,
+	"verified_at" date NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "platform_rules_counting_ck" CHECK ("platform_rules"."counting" in ('graphemes','x_weighted')),
+	CONSTRAINT "platform_rules_confidence_ck" CHECK ("platform_rules"."confidence" in ('high','medium','low'))
+);

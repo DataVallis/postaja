@@ -2,3 +2,4 @@
 export * from "./schema/auth";
 export * from "./schema/org";
 export * from "./schema/audit";
+export * from "./schema/platform";
