@@ -25,7 +25,9 @@ export default defineConfig({
     env: {
       BETTER_AUTH_URL: `http://127.0.0.1:${PORT}`,
       BETTER_AUTH_SECRET: "e2e-only-secret-e2e-only-secret-0123456789",
-      SUPERADMIN_EMAILS: "e2e-admin@example.test",
+      SUPERADMIN_EMAILS: "e2e-admin@example.test,e2e-root@example.test",
+      // E2E signs in many times per minute from one IP; servers keep the default of 5.
+      AUTH_MAGIC_LINK_RATE_MAX: "1000",
       EMAIL_TRANSPORT: "file",
       MAIL_DIR: MAIL_DIR,
     },

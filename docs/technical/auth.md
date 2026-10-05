@@ -7,7 +7,8 @@ Status: **Live on dev** (TASK-003a, since 2026-10-05; first real sign-in by the 
 2. `sendMagicLink` sends a mail **only** if the user exists or may sign up (`canSignUp`); otherwise it silently does nothing. The API answer is identical either way (no account enumeration).
 3. The link `GET /api/auth/magic-link/verify?token=…` is valid **10 minutes**, **single use**; the token is stored **hashed** in `verification`.
 4. On first use for an allowed email the user is created; the `user.create.before` DB hook rejects every email that may not sign up, and sets `role`.
-5. Session cookie `better-auth.session_token` (30 days, refreshed daily). Server code reads identity only via `getCurrentUser()` (`src/server/auth/session.ts`).
+5. Rate limit: 5 magic-link requests per IP per minute (tested; `AUTH_MAGIC_LINK_RATE_MAX` raises it for E2E only).
+6. Session cookie `better-auth.session_token` (30 days, refreshed daily). Server code reads identity only via `getCurrentUser()` (`src/server/auth/session.ts`).
 
 ## Who may sign up (ADR-028)
 | Who | How |

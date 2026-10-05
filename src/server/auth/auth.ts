@@ -23,6 +23,8 @@ export type AuthDeps = {
   baseURL: string;
   superadminEmails: Set<string>;
   magicLinkTtlSeconds?: number;
+  /** Magic-link requests per IP per minute (default 5). Raised only in E2E via AUTH_MAGIC_LINK_RATE_MAX. */
+  magicLinkRateMax?: number;
 };
 
 /** Org roles (spec §2): owner manages members/invitations and settings; editor works on content. */
@@ -84,6 +86,7 @@ export function createAuth(deps: AuthDeps) {
       magicLink({
         expiresIn: deps.magicLinkTtlSeconds ?? MAGIC_LINK_TTL_SECONDS,
         storeToken: "hashed",
+        rateLimit: { window: 60, max: deps.magicLinkRateMax ?? 5 },
         sendMagicLink: async ({ email, url }, ctx) => {
           // Only send to existing users or people allowed to sign up. Unknown emails get no mail,
           // but the API answers the same way (no account enumeration).
@@ -127,6 +130,7 @@ export function getAuth(): Auth {
     secret,
     baseURL,
     superadminEmails: parseEmailList(process.env.SUPERADMIN_EMAILS),
+    magicLinkRateMax: process.env.AUTH_MAGIC_LINK_RATE_MAX ? Number(process.env.AUTH_MAGIC_LINK_RATE_MAX) : undefined,
   });
   return cached;
 }

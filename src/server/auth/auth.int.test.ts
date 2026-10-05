@@ -127,3 +127,20 @@ describe("magic link sign-in", () => {
     expect((await sql`select role from "user"`)[0].role).toBe("superadmin");
   });
 });
+
+describe("rate limit", () => {
+  it("default allows 5 magic-link requests per minute per IP, the 6th is refused", async () => {
+    const limited = createAuth({
+      db, mailer, baseURL, secret: "test-secret-test-secret-test-secret-123",
+      superadminEmails: parseEmailList("Boss@DataVallis.com"),
+    });
+    const h = () => new Headers({ origin: baseURL, "content-type": "application/json", "x-forwarded-for": "203.0.113.7" });
+    const call = () =>
+      limited.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, {
+        method: "POST", headers: h(), body: JSON.stringify({ email: "boss@datavallis.com", callbackURL: "/app" }),
+      }));
+    const codes: number[] = [];
+    for (let i = 0; i < 6; i++) codes.push((await call()).status);
+    expect(codes).toEqual([200, 200, 200, 200, 200, 429]);
+  });
+});
