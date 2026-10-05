@@ -4,6 +4,11 @@ on:
   push:
     branches: [dev]
   workflow_dispatch:
+    inputs:
+      setup:
+        description: "First run on a host: set kamal-proxy ports (127.0.0.1:8080) and run kamal setup"
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-dev
@@ -11,8 +16,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Off until TASK-002: owner sets repository variable DEPLOY_DEV_ENABLED=true.
-    if: vars.DEPLOY_DEV_ENABLED == 'true' && github.ref == 'refs/heads/dev'
+    # Push deploys are off until TASK-002 is done (repo variable DEPLOY_DEV_ENABLED=true). Manual runs always allowed on dev.
+    if: github.ref == 'refs/heads/dev' && (github.event_name == 'workflow_dispatch' || vars.DEPLOY_DEV_ENABLED == 'true')
     runs-on: ubuntu-24.04
     environment: dev
     timeout-minutes: 25
@@ -38,7 +43,13 @@ jobs:
           install -m 700 -d ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           echo "${{ secrets.DEV_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: First-time setup (proxy behind host nginx, accessories, app)
+        if: github.event_name == 'workflow_dispatch' && inputs.setup
+        run: |
+          kamal proxy boot_config set --http-port 8080 --https-port 8443 --publish-host-ip 127.0.0.1 -d dev
+          kamal setup -d dev
       - name: Deploy
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.setup) }}
         run: kamal deploy -d dev
       - name: Smoke check
         run: |

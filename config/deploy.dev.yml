@@ -1,5 +1,6 @@
 # Destination: dev — https://dev-postaja.inzenirji.si (auto-deploy on merge to `dev`).
-# Host is shared with other apps (ADR-025): one kamal-proxy, separate service names, no published DB ports.
+# Host is shared with other apps (ADR-025). Host nginx terminates TLS and proxies to kamal-proxy on 127.0.0.1:8080 (ADR-027).
+# kamal-proxy ports are set once per host: kamal proxy boot_config set --http-port 8080 --https-port 8443 --publish-host-ip 127.0.0.1 -d dev
 servers:
   web:
     hosts:
@@ -7,6 +8,8 @@ servers:
 
 proxy:
   host: dev-postaja.inzenirji.si
+  ssl: false            # TLS is done by host nginx (ADR-027)
+  forward_headers: true # trust X-Forwarded-* from nginx
 
 env:
   clear:

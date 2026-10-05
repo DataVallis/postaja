@@ -20,7 +20,9 @@ without disturbing the existing app on the shared server.
 - Risk (asisto, outside Postaja): 5432, 6379 and 3000 bound to `0.0.0.0` → owner checks Hetzner/ufw firewall (HANDOFF, owner action 1).
 - Follow-up check: **host nginx is active on 80/443** (proxies the asisto API domain to `localhost:3000`); 7.6 GB RAM (6.4 GB available), 35 GB disk free, no swap; `deploy` is in `docker` and `sudo`.
 - Redis has **no password** and was reachable from the internet; `dir=/data`, `dbfilename=dump.rdb` (no sign of the known config-rewrite abuse).
-- Decision: ADR-026 — kamal-proxy takes over 80/443, nginx is retired, asisto moves under kamal-proxy.
+- Decision: ADR-026 (kamal-proxy takes 80/443) was **superseded by ADR-027** after reading the asisto repo: `asisto.app` and
+  `portal.asisto.app` are Laravel on host PHP-FPM. Host nginx stays the edge; kamal-proxy listens on 127.0.0.1:8080 behind it.
+- Firewall (Step A) done 2026-10-05: 5432/6379/3000 now time out from outside. DNS `dev-postaja` and `postaja` A → 91.99.191.8 (Cloudflare proxy off) done.
 
 ## Plan (in this order)
 ### Step A — close the open ports (owner, today, reversible)
@@ -34,17 +36,23 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-### Step C — cutover to kamal-proxy (owner runs, agent prepares exact commands; ~5 min asisto downtime)
-1. Backup: `sudo tar czf ~/nginx-backup-$(date +%F).tgz /etc/nginx /etc/letsencrypt` and `docker exec asisto-postgres pg_dumpall -U <user> > ~/asisto-$(date +%F).sql`.
-2. `sudo systemctl stop nginx && sudo systemctl disable nginx`.
-3. `kamal setup -d dev` (from your Mac or CI) — boots kamal-proxy on 80/443, the Postaja DB accessory and the app.
-4. Put asisto-api behind kamal-proxy (transitional, until asisto has its own Kamal config):
-   `docker network connect kamal asisto-api`
-   `docker exec kamal-proxy kamal-proxy deploy asisto-api --target asisto-api:3000 --host <asisto api domain> --tls --health-check-path /api/v1/health`
-5. Check both domains in the browser. **Rollback**: `docker stop kamal-proxy && sudo systemctl enable --now nginx` (≈1 min).
+### Step C — GitHub environment `dev` (owner, guided)
+See "Owner steps" 3–4 below. Nothing on the server changes yet.
 
-### Step D — asisto as a proper Kamal app (separate task in the asisto repo)
-`config/deploy.yml` for asisto-api (image already on GHCR), Postgres/Redis as accessories with **no published ports** and Redis with a password; data moved with pg_dump/restore. Needed: access to the asisto repo and the list of its domains.
+### Step D — nginx block + TLS for dev-postaja (owner, ~3 min, no effect on asisto)
+```
+# on the server, from a checkout or by pasting the file content of ops/nginx/dev-postaja.inzenirji.si.conf
+sudo nano /etc/nginx/sites-available/dev-postaja.inzenirji.si.conf
+sudo ln -s ../sites-available/dev-postaja.inzenirji.si.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d dev-postaja.inzenirji.si
+```
+Until Step E the site answers 502 (nothing on 8080 yet) — expected.
+
+### Step E — first deploy (agent triggers, owner watches)
+GitHub → Actions → **Deploy dev** → Run workflow → branch `dev`, **setup = true**.
+It sets kamal-proxy to `127.0.0.1:8080/8443`, boots `postaja-db`, deploys the app, then smoke-checks https://dev-postaja.inzenirji.si/api/health.
+Then repo variable `DEPLOY_DEV_ENABLED=true` → every merge to `dev` deploys.
 
 ## Owner steps (agent never touches the server or secrets)
 1. **Check the shared server** (run on the server as `deploy`, paste output — no secrets in it):
@@ -55,7 +63,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
    ```
    - Done 2026-10-05 — see results above and the plan (Steps A–D).
    - `deploy` must be in the `docker` group (`groups deploy`).
-2. **DNS**: `A dev-postaja.inzenirji.si → 91.99.191.8`.
+2. **DNS**: `A dev-postaja.inzenirji.si → 91.99.191.8` — done.
 3. **Deploy key**: on your machine `ssh-keygen -t ed25519 -f postaja_deploy -C postaja-ci` → add `postaja_deploy.pub` to `~deploy/.ssh/authorized_keys` on the server.
    Pinned host key: `ssh-keyscan -t ed25519 91.99.191.8`.
 4. **GitHub** (DataVallis/postaja → Settings):
@@ -63,16 +71,16 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
      `POSTGRES_PASSWORD` (long random), `DATABASE_URL` (`postgres://postaja:<same password>@postaja-db:5432/postaja_dev`).
    - Actions → Variables → `DEV_HOST` = `91.99.191.8`.
    - Packages: after the first push, set the `postaja` package visibility/access so the server can pull (Kamal logs in with the registry credentials, so private is fine).
-5. **First boot** (from your machine with Kamal 2 installed and the same env vars exported, or let CI do it):
-   `kamal setup -d dev` once (installs/joins kamal-proxy, boots `postaja-db`, deploys the app).
-6. Set variable `DEPLOY_DEV_ENABLED=true` → every merge to `dev` deploys.
+5. Steps D and E above.
 
 ## Agent steps
 - Review the server check output and confirm the plan for ports 80/443 before step 5.
 - After the first deploy: verify the Deploy run for the merge SHA, open the health URL, flip `app-skeleton.md` status to **Live on dev**, update HANDOFF.
 
 ## Acceptance criteria
-- `curl https://dev-postaja.inzenirji.si/api/health` → `{"status":"ok","sha":"<merge sha>","db":"ok"}`; `/` = 200 with valid TLS.
+- `curl https://dev-postaja.inzenirji.si/api/health` → `{"status":"ok","sha":"<merge sha>","db":"ok"}`; `/` = 200 with valid TLS (certbot).
+- `asisto.app`, `portal.asisto.app`, `api.asisto.app` still answer as before.
+- kamal-proxy is not reachable from outside (`nc -zv -w3 91.99.191.8 8080` times out).
 - The existing app on the server still works (owner confirms its URL).
 - Postgres is not reachable from outside (`nc -zv 91.99.191.8 5432` fails).
 - Rollback practised once: `kamal rollback <previous version> -d dev`, output pasted.
