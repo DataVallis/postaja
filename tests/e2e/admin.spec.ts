@@ -71,6 +71,8 @@ test("super admin creates an organization, sets the plan, invites an editor; inv
   await page.goto("/admin/platform");
   await expect(page.getByTestId("platform-rules")).toContainText("instagram");
   await expect(page.getByTestId("presets")).toContainText("1080×1350");
+  await expect(page.getByTestId("platform-rules")).toContainText("Hashtags: sources say 30 (older) or 5 (since Jun 2026) -> 5.");
+  await expect(page.getByTestId("presets")).toContainText("billo.app Meta safe zones");
   expect(await axe(page)).toEqual([]);
   await page.screenshot({ path: info.outputPath("admin-platform.png"), fullPage: true });
 

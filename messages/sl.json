@@ -89,7 +89,7 @@
       "invited": "Vabilo je poslano."
     },
     "platform": "Platforme",
-    "platformIntro": "Omejitve in formati, po katerih Postaja preverja vsako objavo. Kjer si viri nasprotujejo, velja strožja vrednost. Z miško nad datumom ali ključem vidiš vir in opombe.",
+    "platformIntro": "Omejitve in formati, po katerih Postaja preverja vsako objavo. Kjer si viri nasprotujejo, velja strožja vrednost — vir in opombe so v zadnjem stolpcu.",
     "platformRules": "Pravila platform",
     "presets": "Formati",
     "platformCol": "Platforma",
@@ -113,7 +113,8 @@
       "high": "visoka",
       "medium": "srednja",
       "low": "nizka"
-    }
+    },
+    "sourceNotes": "Vir in opombe"
   },
   "Brands": {
     "title": "Brandi",

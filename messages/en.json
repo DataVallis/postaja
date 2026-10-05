@@ -89,7 +89,7 @@
       "invited": "Invitation sent."
     },
     "platform": "Platforms",
-    "platformIntro": "Limits and formats Postaja checks every post against. Where sources disagree, the stricter value applies. Hover the date or key for source and notes.",
+    "platformIntro": "Limits and formats Postaja checks every post against. Where sources disagree, the stricter value applies — source and notes are in the last column.",
     "platformRules": "Platform rules",
     "presets": "Formats",
     "platformCol": "Platform",
@@ -113,7 +113,8 @@
       "high": "high",
       "medium": "medium",
       "low": "low"
-    }
+    },
+    "sourceNotes": "Source and notes"
   },
   "Brands": {
     "title": "Brands",
