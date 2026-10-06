@@ -65,7 +65,7 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
             {files.fonts.map((ft) => {
               const missing = ft.meta.missingGlyphs ?? [];
               return (
-                <li key={ft.id} className="grid gap-1 border-b border-muted/20 pb-3">
+                <li key={ft.id} className="grid gap-1 border-b border-line pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <strong className="truncate">{ft.meta.family ?? ft.filename}</strong>
                     {isOwner ? <Delete brandId={brandId} table="asset" id={ft.id} label={t("delete", { name: ft.filename })} /> : null}
@@ -89,7 +89,7 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm" data-testid="sources">
               <thead className="text-muted">
-                <tr className="border-b border-muted/25">
+                <tr className="border-b border-line">
                   <th className="py-2 pr-4 font-medium">{t("file")}</th>
                   <th className="py-2 pr-4 font-medium">{t("kind")}</th>
                   <th className="py-2 pr-4 text-right font-medium">{t("size")}</th>
@@ -100,9 +100,9 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
               </thead>
               <tbody>
                 {files.sources.map((s) => (
-                  <tr key={s.id} className="border-b border-muted/15 last:border-0">
+                  <tr key={s.id} className="border-b border-line last:border-0">
                     <td className="max-w-64 truncate py-2 pr-4"><a href={href("source", s.id)} className="underline underline-offset-4">{s.filename}</a></td>
-                    <td className="py-2 pr-4"><span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs dark:bg-paper/10">{t(`kinds.${s.kind}`)}</span></td>
+                    <td className="py-2 pr-4"><span className="rounded-full bg-raised px-2 py-0.5 text-xs ">{t(`kinds.${s.kind}`)}</span></td>
                     <td className="py-2 pr-4 text-right tabular-nums">{size(s.sizeBytes)}</td>
                     <td className="hidden py-2 pr-4 sm:table-cell">{f.dateTime(s.createdAt, { dateStyle: "medium" })}</td>
                     <td className="py-2 pr-4 text-muted" data-testid="source-text">

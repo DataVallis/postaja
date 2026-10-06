@@ -2,9 +2,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 for (const scheme of ["light", "dark"] as const) {
-  test(`home renders with no serious a11y violations (${scheme})`, async ({ page }) => {
-    await page.emulateMedia({ colorScheme: scheme });
+  test(`home renders with no serious a11y violations (${scheme})`, async ({ page, context, baseURL }) => {
+    // Theme comes from the postaja-theme cookie (dark by default, TASK-011), not the OS setting.
+    if (scheme === "light") await context.addCookies([{ name: "postaja-theme", value: "light", url: baseURL! }]);
     const res = await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", scheme);
     expect(res?.status()).toBe(200);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("postaja.");
     const results = await new AxeBuilder({ page }).analyze();

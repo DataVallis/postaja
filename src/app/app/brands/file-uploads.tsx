@@ -36,7 +36,7 @@ function ResultLine({ r }: { r: Result }) {
       <span role="status" className="flex items-center gap-2">
         <Icon d="M5 12.5 10 17 19 7" className="size-4 text-signal" />
         <span className="truncate">{r.name}</span>
-        <span className="shrink-0 rounded-full bg-ink/5 px-2 py-0.5 text-xs dark:bg-paper/10">{t(`went.${r.slot}`)}</span>
+        <span className="shrink-0 rounded-full bg-raised px-2 py-0.5 text-xs ">{t(`went.${r.slot}`)}</span>
       </span>
     );
   const msg = t.has(`errors.${r.error}`) ? t(`errors.${r.error}`, { detail: r.detail ?? "" }) : t("errors.failed");
@@ -82,7 +82,7 @@ export function Dropzone({ brandId, needsDiacritics }: { brandId: string; needsD
         onDrop={(e) => { e.preventDefault(); setOver(false); void upload([...e.dataTransfer.files]); }}
         onClick={(e) => { if (e.target === e.currentTarget) input.current?.click(); }}
         className={`grid cursor-pointer justify-items-start gap-4 rounded-2xl border-2 border-dashed px-6 py-8 transition-colors sm:px-8 ${
-          over ? "border-signal bg-signal/10" : "border-ink/20 bg-paper/60 hover:border-ink/40 dark:border-paper/25 dark:bg-paper/5"
+          over ? "border-signal bg-signal/10" : "border-line bg-raised/40 hover:border-muted"
         }`}
       >
         <div className="pointer-events-none flex items-center gap-3">
@@ -106,10 +106,10 @@ export function Dropzone({ brandId, needsDiacritics }: { brandId: string; needsD
       </div>
 
       {rows.length ? (
-        <ul className="grid gap-2 rounded-xl border border-muted/25 p-4 text-sm" aria-live="polite" data-testid="upload-log">
+        <ul className="grid gap-2 rounded-xl border border-line p-4 text-sm" aria-live="polite" data-testid="upload-log">
           {rows.flatMap((row) =>
             row.state !== "done"
-              ? [<li key={row.key} className="flex items-center gap-2 text-muted"><span className="size-4 animate-spin rounded-full border-2 border-muted/30 border-t-signal motion-reduce:animate-none" aria-hidden="true" />{row.name} — {row.state === "uploading" ? t("uploading") : t("waiting")}</li>]
+              ? [<li key={row.key} className="flex items-center gap-2 text-muted"><span className="size-4 animate-spin rounded-full border-2 border-line border-t-signal motion-reduce:animate-none" aria-hidden="true" />{row.name} — {row.state === "uploading" ? t("uploading") : t("waiting")}</li>]
               : row.results.map((r, i) => <li key={`${row.key}-${i}`}><ResultLine r={r} /></li>),
           )}
         </ul>

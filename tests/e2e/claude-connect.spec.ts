@@ -115,6 +115,8 @@ test("owner connects Claude, Claude proposes a CGP, the owner saves it, then dis
 
   // The owner sees the proposal on the brand page; the active CGP is unchanged until saved.
   await p.goto(brandUrl);
+  await expect(p.getByTestId("draft-notice")).toContainText("Claude je predlagal CGP");
+  await p.getByRole("link", { name: "Odpri predlog" }).click();
   const banner = p.getByRole("region", { name: "Claude je predlagal CGP" });
   await expect(banner).toContainText("Iz projekta Inženirji");
   await expect(p.getByLabel("CGP — navodila za AI")).toHaveValue("");

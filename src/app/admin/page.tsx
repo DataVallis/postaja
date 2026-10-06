@@ -12,7 +12,7 @@ export default async function AdminHome() {
   const t = await getTranslations("Admin");
   const [orgs, due] = await Promise.all([listOrganizations(getDb()), countDueForReverification(getDb())]);
   return (
-    <main className="grid gap-6">
+    <div className="grid gap-6">
       <ReverifyBanner rules={due.rules} presets={due.presets} link />
       <div>
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -38,7 +38,7 @@ export default async function AdminHome() {
             </thead>
             <tbody>
               {orgs.map((o) => (
-                <tr key={o.id} className="border-t border-muted/20">
+                <tr key={o.id} className="border-t border-line">
                   <td className="py-2 pr-4">
                     <Link href={`/admin/orgs/${o.id}`} className="font-semibold underline-offset-4 hover:underline">
                       {o.name}
@@ -57,6 +57,6 @@ export default async function AdminHome() {
         </div>
       )}
       </div>
-    </main>
+    </div>
   );
 }

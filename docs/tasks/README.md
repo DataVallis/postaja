@@ -19,6 +19,12 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-008 | CGP from a document: upload DOCX/PDF/MD/TXT → text copied verbatim into the CGP editor, owner saves a version | TASK-005c | Done (PR #19, deployed) |
 | TASK-009 | Knowledge base: PDF/DOCX/XLSX/PPTX/TXT/CSV text read at upload into `brand_sources.extract`; per post the passages matching the brief (BM25) | TASK-008 | In review |
 | TASK-010a | Claude → Postaja over MCP: OAuth 2.1 (DCR, PKCE, consent), `/api/mcp` with `list_brands`, `get_brand`, `propose_cgp` (draft), `add_material`; `/app/connect` | TASK-008 | Live on dev (PR #20; owner tried it) |
+| TASK-011 | App frame: sidebar + top bar, dark/light theme, UI kit, dashboard, all-posts table with filters, brands table, brand tabs (ADR-040) | — | In review |
+| TASK-012 | **Plan import**: upload any content plan (XLSX/CSV/DOCX, any columns or sections, relative dates) → AI maps it to planned posts (date/time, platform, channel, format, topic, text, slides, image prompt, overlay text, hashtags, CTA, status); owner reviews the mapping before saving; already published rows go to history | TASK-011 | Planned |
+| TASK-013 | **Plan and history**: planned posts with date/time per channel; table + calendar (week/month) across all brands; history of published posts | TASK-012 | Planned |
+| TASK-014 | **Bulk creation**: create all planned posts of one brand, or of every brand for a chosen day, in the background (pg-boss worker), progress + cost cap | TASK-013 | Planned |
+| TASK-015 | **Images**: AI background from the image prompt (fal.ai, `FAL_KEY` from owner) + brand templates for text/logo overlays (Satori) matching the owner's examples; carousels slide by slide | TASK-013 | Planned |
+| TASK-016 | **One-click download**: a post (images + caption with hashtags) or a whole day as ZIP | TASK-015 | Planned |
 | TASK-010b | ~~MCP post tools~~ → **Graphics and files from Claude** into the brand (images as references/logos, documents) — how Claude hands over the bytes is open (owner question) | TASK-010a | Planned (ADR-039) |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

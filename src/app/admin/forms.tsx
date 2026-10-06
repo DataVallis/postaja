@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { createOrgAction, inviteMemberAction, updateSettingsAction, type ActionState } from "./actions";
 
 const PLANS = ["trial", "starter", "pro", "comped"] as const;
-const input = "rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal";
+const input = "rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal";
 const button = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink disabled:opacity-60";
 
 function Feedback({ state }: { state: ActionState }) {

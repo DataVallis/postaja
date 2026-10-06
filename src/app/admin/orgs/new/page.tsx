@@ -6,9 +6,9 @@ export default async function NewOrgPage() {
   await requireSuperadmin();
   const t = await getTranslations("Admin");
   return (
-    <main>
+    <div>
       <h1 className="mb-6 text-2xl font-bold">{t("newOrg")}</h1>
       <CreateOrgForm />
-    </main>
+    </div>
   );
 }

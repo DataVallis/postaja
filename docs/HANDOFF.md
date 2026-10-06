@@ -41,6 +41,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-06: Owner sent his real content plans (CHERR.IO X, AI Builders 30 days, inzenirji.si 100 days IG, davidtacer LinkedIn DOCX), dashboard layout references (TeleCRM) and past posts as the quality bar. Roadmap TASK-011…016 in docs/tasks/README.md. Owner: start with the new dashboard, dark default.
+- 2026-10-06: TASK-011 app frame (sidebar, dark/light, UI kit, dashboard, posts/brands tables, brand tabs; ADR-040) — PR #22. TASK-009 merged (PR #21).
 - 2026-10-06: TASK-009 knowledge base (PDF/Word/Excel/PowerPoint text read at upload, passages matching the brief go into the post prompt; ADR-039) — PR #21.
 - 2026-10-06: Owner tried the MCP connection ("zgleda da dela"). Direction (ADR-039): posts are made only in Postaja; Claude fills the knowledge base and graphics; MCP post tools dropped.
 - 2026-10-06: TASK-010a Claude → Postaja over MCP (OAuth 2.1 + `/api/mcp`, CGP drafts, `/app/connect`; ADR-038) — PR #20, deployed (Deploy dev 3223763 green).
@@ -63,13 +65,14 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: ADR-027 (dev behind host nginx) — PR #4. First deploy: Deploy dev run 37334467728 (setup=true) green; health ok with SHA 8445e2d.
 
 ## Owner's open actions
-1. **Knowledge base on dev** (after PR #21 deploys): a brand → "Datoteke branda": each document shows "N znakov besedila" (older uploads are read on the next post). Ask for a post about something that is only in a PDF/Excel/PowerPoint and check the facts are used.
-2. **Connect Claude on dev** (done 2026-10-06, works): https://dev-postaja.inzenirji.si/app/connect → copy the URL → Claude: Settings → Connectors → add a custom connector named Postaja with that URL → Connect → sign in with your email (open the mail link in the same browser) → Dovoli. Then in a Claude conversation: "Pošlji ta CGP v Postajo za brand <slug>". The brand page shows "Claude je predlagal CGP" → Vstavi v urejevalnik → Shrani novo verzijo.
-3. **Try CGP import on dev** (after PR #19 deploys): a brand → Profil (CGP) → "Uvozi iz dokumenta" → your CGP as Word or PDF → the text appears in the field → "Shrani novo verzijo".
-4. **Try post generation on dev** (after PR #18 deploys): a brand with a CGP and an Instagram channel → section "Objave" → write a request → "Ustvari objavo". Expect a post in a few seconds with status "pripravljena" or "za pregled" and a cost line. If it says the AI key is not set, check the secret name `ANTHROPIC_API_KEY` in environment `dev`.
-5. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
-6. Swap 2 GB (TASK-002 Step B) — optional.
-7. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
+1. **New dashboard on dev** (after PR #22 deploys): sidebar, dark theme (sun icon = light), Objave table with filters, brand tabs. Say what still looks off.
+2. **Knowledge base on dev** (after PR #21 deploys): a brand → "Datoteke branda": each document shows "N znakov besedila" (older uploads are read on the next post). Ask for a post about something that is only in a PDF/Excel/PowerPoint and check the facts are used.
+3. **Connect Claude on dev** (done 2026-10-06, works): https://dev-postaja.inzenirji.si/app/connect → copy the URL → Claude: Settings → Connectors → add a custom connector named Postaja with that URL → Connect → sign in with your email (open the mail link in the same browser) → Dovoli. Then in a Claude conversation: "Pošlji ta CGP v Postajo za brand <slug>". The brand page shows "Claude je predlagal CGP" → Vstavi v urejevalnik → Shrani novo verzijo.
+4. **Try CGP import on dev** (after PR #19 deploys): a brand → Profil (CGP) → "Uvozi iz dokumenta" → your CGP as Word or PDF → the text appears in the field → "Shrani novo verzijo".
+5. **Try post generation on dev** (after PR #18 deploys): a brand with a CGP and an Instagram channel → section "Objave" → write a request → "Ustvari objavo". Expect a post in a few seconds with status "pripravljena" or "za pregled" and a cost line. If it says the AI key is not set, check the secret name `ANTHROPIC_API_KEY` in environment `dev`.
+6. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
+7. Swap 2 GB (TASK-002 Step B) — optional.
+8. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
@@ -77,9 +80,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 ## Next
 **Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
 Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
-Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). TASK-009 in review (PR #21).
-Next: TASK-010b graphics/files from Claude (open question: how Claude hands over images), then images/carousels in Postaja (worker + fal).
-Latest numbers: TASK-010b, ADR-039. Latest PR: #21.
+Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22) → TASK-012 plan import → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (needs `FAL_KEY`) → TASK-016 download. TASK-010b (graphics from Claude) waits.
+Latest numbers: TASK-016, ADR-040. Latest PR: #22.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.

@@ -40,7 +40,7 @@ export function LoginForm({ callbackURL = "/app" }: { callbackURL?: string }) {
         autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal"
+        className="rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal"
       />
       <button
         type="submit"

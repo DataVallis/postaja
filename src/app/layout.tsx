@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
+import { resolveTheme, THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
 const inter = localFont({
@@ -21,8 +23,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
+  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang={locale} className={inter.variable}>
+    <html lang={locale} data-theme={theme} className={inter.variable}>
       <body className="antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>

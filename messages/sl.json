@@ -271,7 +271,7 @@
     "createdNote": "ustvarjen",
     "files": {
       "title": "Datoteke branda",
-      "intro": "Logotip, fonti in viri, iz katerih bo AI sestavil profil. Datoteke so zasebne in vidne samo članom te organizacije.",
+      "intro": "Logotipi, fonti in dokumenti branda. Besedilo dokumentov Postaja uporabi kot dejstva pri pisanju objav; logotip in fonti so za slike. Datoteke vidijo samo člani te organizacije.",
       "dropTitle": "Povleci datoteke ali ZIP sem",
       "dropNow": "Spusti za nalaganje",
       "dropBody": "Dokumenti (PDF, Word, Excel, PowerPoint, CSV, TXT), slike, fonti (TTF, OTF, WOFF, WOFF2) ali cel ZIP. Vsako datoteko razvrstimo sami: slike z »logo« v imenu gredo med logotipe, fonti med fonte, vse ostalo med vire.",
@@ -370,8 +370,31 @@
       "hint": "Aktivni CGP se ne spremeni, dokler predloga ne vstaviš v urejevalnik in ne shraniš nove verzije.",
       "insertedHint": "Predlog je v urejevalniku. Preglej ga in shrani novo verzijo, ali pa osveži stran za preklic.",
       "insert": "Vstavi v urejevalnik",
-      "discard": "Zavrzi predlog"
-    }
+      "discard": "Zavrzi predlog",
+      "waiting": "čaka na tvoj pregled v profilu.",
+      "open": "Odpri predlog"
+    },
+    "listDescription": "Projekti organizacije: vsak ima svoj CGP, kanale, datoteke in objave.",
+    "emptyTitle": "Še ni brandov",
+    "tabsLabel": "Razdelki branda",
+    "tabs": {
+      "posts": "Objave",
+      "files": "Datoteke",
+      "profile": "Profil (CGP)",
+      "channels": "Kanali",
+      "versions": "Verzije"
+    },
+    "table": {
+      "brand": "Brand",
+      "languages": "Jeziki",
+      "channels": "Kanali",
+      "posts": "Objave",
+      "waiting": "Čaka",
+      "lastPost": "Zadnja objava"
+    },
+    "versionCol": "Verzija",
+    "savedAt": "Shranjeno",
+    "noteCol": "Opomba"
   },
   "Posts": {
     "title": "Objave",
@@ -446,7 +469,12 @@
       "INVALID": "Preveri vnos (naročilo vsaj 3 znake).",
       "FORBIDDEN": "Nimaš dostopa.",
       "FAILED": "Nekaj ni uspelo. Poskusi znova."
-    }
+    },
+    "newTitle": "Nova objava",
+    "noChannelsPrefix": "Brand še nima kanala.",
+    "noChannelsLink": "Dodaj kanal",
+    "statusCol": "Stanje",
+    "createdCol": "Ustvarjeno"
   },
   "Connect": {
     "title": "Claude",
@@ -486,5 +514,68 @@
       "invalid": "Ta zahteva za povezavo je neveljavna ali je potekla. Začni znova v Claude.",
       "noOrg": "Nisi član nobene organizacije, zato Claude ne more dostopati do Postaje."
     }
+  },
+  "Shell": {
+    "nav": "Glavna navigacija",
+    "dashboard": "Nadzorna plošča",
+    "content": "Vsebina",
+    "posts": "Objave",
+    "brands": "Brandi",
+    "connections": "Povezave",
+    "claude": "Claude",
+    "admin": "Administracija",
+    "organizations": "Organizacije",
+    "platform": "Platforme",
+    "audit": "Revizijska sled",
+    "openMenu": "Odpri meni",
+    "closeMenu": "Zapri meni",
+    "language": "Jezik: preklopi na angleščino",
+    "toDark": "Temna tema",
+    "toLight": "Svetla tema",
+    "account": "Račun",
+    "signOut": "Odjava"
+  },
+  "Dashboard": {
+    "title": "Nadzorna plošča",
+    "allPosts": "Vse objave",
+    "superadminHint": "Kot super admin lahko ustvariš organizacijo.",
+    "noBrandsTitle": "Še ni brandov",
+    "noBrandsOwner": "Ustvari prvi brand, dodaj CGP in kanale, nato Postaja piše objave.",
+    "noBrandsEditor": "Lastnik organizacije še ni ustvaril branda.",
+    "createBrand": "Ustvari brand",
+    "recent": "Zadnje objave",
+    "seeAll": "Vse →",
+    "status": "Stanje",
+    "created": "Ustvarjeno",
+    "noPosts": "Še ni objav. Odpri brand in naroči prvo.",
+    "brands": "Brandi",
+    "stats": {
+      "ready": "Pripravljene",
+      "needsReview": "Za pregled",
+      "approved": "Odobrene",
+      "published": "Objavljene",
+      "thisMonth": "ta mesec",
+      "spend": "Poraba AI",
+      "ofCap": "od {cap} $ ta mesec"
+    }
+  },
+  "PostsList": {
+    "title": "Objave",
+    "description": "Vse objave organizacije. Išči po besedilu ali naročilu, filtriraj po brandu, stanju in platformi.",
+    "search": "Iskanje",
+    "allBrands": "Brand: vsi",
+    "allStatuses": "Stanje: vsa",
+    "allPlatforms": "Platforma: vse",
+    "status": "Stanje",
+    "platform": "Platforma",
+    "apply": "Filtriraj",
+    "clear": "Počisti",
+    "created": "Ustvarjeno",
+    "empty": "Še ni objav.",
+    "noMatch": "Nobena objava se ne ujema s filtri.",
+    "pagination": "Strani",
+    "pageOf": "Stran {page} od {pages} · {total} objav",
+    "prev": "← Prejšnja",
+    "next": "Naslednja →"
   }
 }

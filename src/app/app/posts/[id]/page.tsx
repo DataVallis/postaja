@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
+import { Badge, buttonClass, Card, PageHeader, STATUS_TONE } from "@/components/ui";
 import { microToUsd } from "@/lib/money/usd";
 import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
@@ -34,24 +35,18 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const cost = await postCost(db, org, post.id);
   const editable = post.status === "ready" || post.status === "needs_review" || post.status === "approved";
   return (
-    <main className="grid gap-8">
-      <div className="grid gap-2">
-        <Link href={`/app/brands/${post.brandId}`} className="text-sm text-muted underline-offset-4 hover:underline">← {ctx?.brand.name ?? t("brand")}</Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">{ctx ? `${ctx.channel.platform} · ${ctx.channel.handle}` : t("post")}</h1>
-          <span data-testid="status" className={`rounded-full px-3 py-1 text-sm font-semibold ${post.status === "ready" || post.status === "approved" || post.status === "published" ? "bg-ink text-paper dark:bg-paper dark:text-ink" : "bg-signal/20"}`}>
-            {t(`status.${post.status}`)}
-          </span>
-        </div>
-        <p className="max-w-2xl text-sm text-muted">{t("briefWas")}: {post.brief}</p>
-      </div>
-
+    <div className="grid gap-8">
+      <PageHeader
+        eyebrow={<Link href={`/app/brands/${post.brandId}`} className="hover:text-fg hover:underline">← {ctx?.brand.name ?? t("brand")}</Link>}
+        title={<span className="flex flex-wrap items-center gap-3">{ctx ? `${ctx.channel.platform} · ${ctx.channel.handle}` : t("post")}<span data-testid="status" className="text-base font-normal"><Badge tone={STATUS_TONE[post.status]} dot>{t(`status.${post.status}`)}</Badge></span></span>}
+        description={<>{t("briefWas")}: {post.brief}</>}
+      />
       {post.status === "failed" ? (
         <div role="alert" className="grid justify-items-start gap-3 rounded-xl border border-signal p-4">
           <p>{t(`errors.${post.error ?? "FAILED"}`)}</p>
           <form action={retryPostAction}>
             <input type="hidden" name="postId" value={post.id} />
-            <button type="submit" className="rounded-lg bg-signal px-4 py-2 font-semibold text-ink">{t("retry")}</button>
+            <button type="submit" className={buttonClass("primary")}>{t("retry")}</button>
           </form>
         </div>
       ) : null}
@@ -68,7 +63,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       ) : null}
 
       {post.content && ctx ? (
-        <PostEditor postId={post.id} caption={post.content.caption} parts={post.content.parts} rules={ctx.rules} readOnly={!editable} />
+        <Card className="p-5"><PostEditor postId={post.id} caption={post.content.caption} parts={post.content.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -76,7 +71,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
           <form key={to} action={setPostStatusAction}>
             <input type="hidden" name="postId" value={post.id} />
             <input type="hidden" name="to" value={to} />
-            <button type="submit" className="rounded-lg border border-fg/25 px-3 py-1.5 text-sm font-medium hover:border-fg/60">{t(`to.${to}`)}</button>
+            <button type="submit" className={buttonClass(to === "approved" ? "primary" : "secondary", "sm")}>{t(`to.${to}`)}</button>
           </form>
         ))}
       </div>
@@ -85,6 +80,6 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
         {f.dateTime(post.createdAt, { dateStyle: "medium", timeStyle: "short" })} · {post.model} · {t("cost", { usd: microToUsd(cost, 4) })}
         {post.fixAttempts ? ` · ${t("fixed")}` : ""}
       </p>
-    </main>
+    </div>
   );
 }

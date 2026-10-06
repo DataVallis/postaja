@@ -17,7 +17,7 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
   const details = await consentDetails(getDb(), query, (await getAuth().$context).secret);
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-8">
         <p className="mb-6 text-xl font-bold tracking-tight">
           postaja<span className="text-signal">.</span>
         </p>
@@ -29,7 +29,7 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
           <>
             <h1 className="mb-2 text-2xl font-bold">{t("title", { client: details.clientName })}</h1>
             <p className="mb-4 text-muted">{t("who", { email: ctx.user.email, org: ctx.org.orgName })}</p>
-            <ul className="mb-4 grid gap-1 rounded-xl border border-muted/30 p-4 text-sm">
+            <ul className="mb-4 grid gap-1 rounded-xl border border-line p-4 text-sm">
               <li>✓ {t("canRead")}</li>
               {ctx.org.role === "owner" ? <li>✓ {t("canPropose")}</li> : null}
               {ctx.org.role === "owner" ? <li>✓ {t("canAdd")}</li> : null}

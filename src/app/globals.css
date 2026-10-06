@@ -1,22 +1,45 @@
 @import "tailwindcss";
 
-/* Brand tokens — docs/brand/BRAND.md. Components use only these. */
-:root {
+/*
+ * Brand tokens — docs/brand/BRAND.md (ink #12172B, signal #FF5A1F, paper #F4EFE6). Components use only these.
+ * Theme: dark is the default (TASK-011); `data-theme="light"` on <html> switches. The `dark:` variant follows the
+ * attribute, not the OS setting, so the toggle in the top bar decides.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"] {
   --color-ink: #12172b;
   --color-signal: #ff5a1f;
   --color-paper: #f4efe6;
-  --color-surface: #ffffff;
-  --color-fg: var(--color-ink);
-  --color-bg: var(--color-surface);
-  --color-muted: #4a5068;
+  --color-bg: #0c1020;        /* page */
+  --color-sidebar: #0f1427;   /* navigation */
+  --color-surface: #141a30;   /* cards, tables */
+  --color-raised: #1b2240;    /* inputs, hover rows, table head */
+  --color-line: #262e4d;      /* borders */
+  --color-fg: #f4efe6;
+  --color-muted: #9da2b8;
+  --color-ok: #3ccf91;
+  --color-warn: #f0b429;
+  --color-danger: #ff6b6b;
+  --color-on-signal: #12172b;
+  --color-accent-text: #ff7a45; /* signal as text: AA on dark surfaces */
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-fg: var(--color-paper);
-    --color-bg: var(--color-ink);
-    --color-muted: #b9b4aa;
-  }
+[data-theme="light"] {
+  --color-bg: #f7f4ee;
+  --color-sidebar: #f4efe6;
+  --color-surface: #ffffff;
+  --color-raised: #f1ece2;
+  --color-line: #e2dbcd;
+  --color-fg: #12172b;
+  --color-muted: #555b73;
+  --color-ok: #1a7f55;
+  --color-warn: #8a6200;
+  --color-danger: #c52f2f;
+  --color-accent-text: #b8400f; /* signal as text: AA on white/paper */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -25,7 +48,16 @@
   --color-paper: var(--color-paper);
   --color-fg: var(--color-fg);
   --color-bg: var(--color-bg);
+  --color-sidebar: var(--color-sidebar);
+  --color-surface: var(--color-surface);
+  --color-raised: var(--color-raised);
+  --color-line: var(--color-line);
   --color-muted: var(--color-muted);
+  --color-ok: var(--color-ok);
+  --color-warn: var(--color-warn);
+  --color-danger: var(--color-danger);
+  --color-on-signal: var(--color-on-signal);
+  --color-accent-text: var(--color-accent-text);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -33,4 +65,9 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
 }

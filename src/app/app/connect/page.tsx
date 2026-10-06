@@ -21,7 +21,7 @@ export default async function ConnectPage() {
   const url = mcpResource(appUrl());
   const when = (d: Date | null) => (d ? f.dateTime(d, { dateStyle: "medium", timeStyle: "short" }) : "");
   return (
-    <main className="grid gap-10">
+    <div className="grid gap-10">
       <div>
         <h1 className="mb-2 text-2xl font-bold">{t("title")}</h1>
         <p className="max-w-2xl text-muted">{t("intro")}</p>
@@ -48,7 +48,7 @@ export default async function ConnectPage() {
         ) : (
           <ul className="grid gap-3" data-testid="connections">
             {connections.map((c) => (
-              <li key={c.clientId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-muted/30 p-4 text-sm">
+              <li key={c.clientId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-4 text-sm">
                 <span>
                   <strong>{c.name || "Claude"}</strong> · {c.redirectUris.some((u) => u.startsWith("https://claude.ai/")) ? "claude.ai" : t("claudeCode")} · {t("since", { when: when(c.since) })}
                 </span>
@@ -76,6 +76,6 @@ export default async function ConnectPage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }
