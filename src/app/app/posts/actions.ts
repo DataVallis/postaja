@@ -9,6 +9,8 @@ import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
+import { ImageJobError, requestImages, setImageText } from "@/server/images/service";
+import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
 
@@ -97,4 +99,35 @@ export async function writePlannedPostAction(f: FormData): Promise<void> {
   await generateForPost(getDb(), { llm: createAnthropicClient(), storage: getStorage() }, ctx, id).catch(() => undefined);
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}`);
+}
+
+/** "Ustvari slike" / "Nova ozadja" / "Osveži tekst" (TASK-015): queued for the worker; the page refreshes until done. */
+export async function requestImagesAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  const mode = f.get("mode") === "text" ? "text" : "new";
+  let error: string | null = null;
+  try {
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, mode);
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "FAILED";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
+}
+
+/** Text on the images, by hand (one block per slide). */
+export async function saveImageTextAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await setImageText(getDb(), ctx, id, String(f.get("imageText") ?? ""));
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "INVALID";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
 }

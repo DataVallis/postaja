@@ -39,13 +39,14 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
 
   const db = getDb();
   const range = viewRange(view, anchor);
-  const [brandList, items, unscheduled, history, runs, dayTodo] = await Promise.all([
+  const [brandList, items, unscheduled, history, runs, dayTodo, dayImageTodo] = await Promise.all([
     listBrands(db, org),
     tab === "calendar" ? calendarPosts(db, org, range.from, range.to, f) : Promise.resolve([] as PlanPost[]),
     unscheduledPosts(db, org, f, tab === "unscheduled" ? 200 : 0),
     historyPosts(db, org, { ...f, page: tab === "history" ? page : 1 }),
     listBulkRuns(db, org),
     tab === "calendar" && view === "day" ? bulkCandidates(db, org, { kind: "day", date: anchor, brandId: f.brandId ?? null }) : Promise.resolve([] as string[]),
+    tab === "calendar" && view === "day" ? bulkCandidates(db, org, { kind: "day", date: anchor, brandId: f.brandId ?? null }, "image") : Promise.resolve([] as string[]),
   ]);
   const tb = await getTranslations("Bulk");
   const activeRuns = runs.filter((r) => r.status === "queued" || r.status === "running").length;
@@ -138,18 +139,20 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             </nav>
           </div>
 
-          {view === "day" && dayTodo.length ? (
+          {view === "day" && (dayTodo.length || dayImageTodo.length) ? (
             <Card className="flex flex-wrap items-center justify-between gap-3 border-signal/40 p-4" data-testid="day-bulk">
               <div>
-                <p className="font-semibold">{tb("dayTitle", { n: dayTodo.length })}</p>
+                <p className="font-semibold">{dayTodo.length ? tb("dayTitle", { n: dayTodo.length }) : tb("dayImagesTitle", { n: dayImageTodo.length })}</p>
                 <p className="text-sm text-muted">{f.brandId ? tb("dayHintBrand") : tb("dayHint")}</p>
               </div>
-              <form action={startBulkAction}>
+              <form action={startBulkAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="kind" value="day" />
                 <input type="hidden" name="date" value={anchor} />
                 {f.brandId ? <input type="hidden" name="brandId" value={f.brandId} /> : null}
                 <input type="hidden" name="back" value={qs({})} />
-                <button type="submit" className={buttonClass("primary")}>{tb("dayButton", { n: dayTodo.length })}</button>
+                {dayTodo.length ? <button type="submit" name="steps" value="text" className={buttonClass("primary")}>{tb("dayButton", { n: dayTodo.length })}</button> : null}
+                {dayImageTodo.length ? <button type="submit" name="steps" value="image" className={buttonClass("secondary")}>{tb("dayImagesButton", { n: dayImageTodo.length })}</button> : null}
+                {dayTodo.length && dayImageTodo.length ? <button type="submit" name="steps" value="text,image" className={buttonClass("secondary")}>{tb("bothButton")}</button> : null}
               </form>
             </Card>
           ) : null}

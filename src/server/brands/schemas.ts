@@ -50,10 +50,25 @@ export const brandRulesSchema = z.object({
   mustEndWithCta: z.boolean().optional(),
 }).refine((r) => !r.mustEndWithCta || r.ctaPhrases.length > 0, "mustEndWithCta needs at least one CTA phrase");
 
+/** Image template (TASK-015, ADR-043). logoId: null = the brand's first logo, "none" = no logo; fontId: null = built-in. */
+export const templateSchema = z.object({
+  layout: z.enum(["card", "center", "photo"]).default("card"),
+  label: z.enum(["category", "none"]).default("category"),
+  accentLine: z.enum(["last", "first", "none"]).default("last"),
+  uppercase: z.boolean().default(false),
+  overlay: z.number().min(0).max(1).default(0.65),
+  footerText: shortText(60).default(""),
+  logoId: z.string().min(1).max(100).nullable().default(null),
+  fontId: z.string().min(1).max(100).nullable().default(null),
+  typeface: z.enum(["sans", "mono"]).default("sans"),
+  background: z.enum(["ai", "plain"]).default("ai"),
+});
+
 export const visualSchema = z.object({
   colors: z.object({ primary: hex.optional(), secondary: hex.optional(), background: hex.optional(), text: hex.optional(), accent: hex.optional() }).default({}),
   imageStyle: shortText(1000).default(""),
   negativePrompt: shortText(1000).default(""),
+  template: templateSchema.optional(),
 });
 
 export const profileInput = z.object({

@@ -85,7 +85,9 @@ test("bulk: a day across brands, a brand's plan, a single planned post", async (
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("bulk-runs.png"), fullPage: true });
   await p.goto("/app/plan?view=day");
-  await expect(p.getByTestId("day-bulk")).toHaveCount(0);
+  // Texts are done; only images are left to make for the day (TASK-015).
+  await expect(p.getByTestId("day-bulk").getByRole("button", { name: /Ustvari besedila/ })).toHaveCount(0);
+  await expect(p.getByTestId("day-bulk").getByRole("button", { name: "Ustvari slike (2)" })).toBeVisible();
   await expect(p.getByTestId("plan-day")).toContainText("Topic: Server soba. Link v bio");
   await expect(p.getByTestId("plan-day")).toContainText("Topic: Vibe coding. Link v bio");
 

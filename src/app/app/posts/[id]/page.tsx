@@ -9,6 +9,10 @@ import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
 import { reschedulePostAction, retryPostAction, setPostStatusAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
+import { brandTemplate, imageText, listPostMedia } from "@/server/images/service";
+import { postMedia } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
+import { ImagesSection } from "./images-section";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +26,10 @@ const NEXT: Partial<Record<PostStatus, PostStatus[]>> = {
   planned: ["skipped"],
 };
 
-export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string }> }) {
+export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string; imageError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
-  const { slotError } = await searchParams;
+  const { slotError, imageError } = await searchParams;
   const db = getDb();
   const post = await getPost(db, org, id).catch((e) => {
     if (e instanceof PostError) notFound();
@@ -35,6 +39,9 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const f = await getFormatter();
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
+  const media = await listPostMedia(db, org, post.id);
+  const [background] = await db.select({ id: postMedia.id }).from(postMedia).where(and(eq(postMedia.orgId, org.orgId), eq(postMedia.postId, post.id), eq(postMedia.kind, "background")));
+  const template = brandTemplate(ctx?.profile.visual);
   const editable = post.status === "planned" || post.status === "ready" || post.status === "needs_review" || post.status === "approved";
   const tf = await getTranslations("PostFormats");
   const ti = await getTranslations("Import");
@@ -89,6 +96,20 @@ export default async function PostPage({ params, searchParams }: { params: Promi
       {ctx && (post.content || post.status === "planned") ? (
         <Card className="p-5"><PostEditor key={post.content ? "text" : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
+
+      <ImagesSection
+        postId={post.id}
+        status={post.mediaStatus}
+        error={post.mediaError}
+        media={media}
+        imageText={imageText(post)}
+        carousel={post.format === "carousel"}
+        canRefreshText={media.length > 0 && (template.background === "plain" || !!background)}
+        aiBackground={template.background === "ai"}
+        aiConfigured={!!process.env.FAL_KEY}
+        requestError={imageError}
+        brandHref={`/app/brands/${post.brandId}`}
+      />
 
       <Card className="p-5" data-testid="plan">
         <h2 className="mb-3 text-base font-semibold">{t("planTitle")}</h2>

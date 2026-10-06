@@ -34,7 +34,7 @@ export async function BulkRuns({ runs, highlight }: { runs: BulkRunView[]; highl
                     <div className="h-full rounded-full bg-signal transition-all" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="whitespace-nowrap text-xs tabular-nums text-muted" data-testid="run-counts">
-                    {t("counts", { done: r.counts.done, total: r.total })}
+                    {t(r.steps.includes("image") ? "countsDone" : "counts", { done: r.counts.done, total: r.total })}
                     {r.counts.failed ? ` · ${t("failed", { n: r.counts.failed })}` : ""}
                     {r.counts.skipped ? ` · ${t("skipped", { n: r.counts.skipped })}` : ""}
                   </span>

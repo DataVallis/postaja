@@ -7,7 +7,7 @@ import { BulkError, cancelBulk, startBulk } from "@/server/bulk/service";
 import { getDb } from "@/server/db/client";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 
-/** Starts a bulk run (TASK-014): a day (all brands or one) or a brand's next N days. Lands on the progress tab. */
+/** Starts a bulk run (TASK-014/015): a day (all brands or one) or a brand's next N days; texts, images or both. */
 export async function startBulkAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");
@@ -24,7 +24,8 @@ export async function startBulkAction(f: FormData) {
             return { kind: "brand" as const, brandId: brandId ?? "", from, to: days === "all" ? null : addDays(from, Math.min(Math.max(Number(days) || 7, 1), 366) - 1) };
           })()
         : { kind: "day" as const, date: String(f.get("date") ?? ""), brandId };
-    runId = await startBulk(getDb(), bossQueue(await getBoss()), ctx, scope);
+    const steps = String(f.get("steps") ?? "text").split(",").filter((x): x is "text" | "image" => x === "text" || x === "image");
+    runId = await startBulk(getDb(), bossQueue(await getBoss()), ctx, scope, steps.length ? steps : ["text"]);
   } catch (e) {
     const code = e instanceof BulkError ? e.code : "FAILED";
     redirect(`${back}${back.includes("?") ? "&" : "?"}bulkError=${code}`);

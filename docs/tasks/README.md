@@ -22,8 +22,8 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-011 | App frame: sidebar + top bar, dark/light theme, UI kit, dashboard, all-posts table with filters, brands table, brand tabs (ADR-040) | — | Done (PR #22, deployed; owner: "super je") |
 | TASK-012 | **Plan import**: upload any content plan (XLSX/CSV/DOCX, any columns or sections, relative dates) → AI maps it to planned posts (date/time, platform, channel, format, topic, text, slides, image prompt, overlay text, hashtags, CTA, status); owner reviews the mapping before saving; already published rows go to history | TASK-011 | Done (PR #23, deployed) |
 | TASK-013 | **Plan and history**: planned posts with date/time per channel; table + calendar (week/month) across all brands; history of published posts | TASK-012 | Done (PR #24, deployed) |
-| TASK-014 | **Bulk creation**: create all planned posts of one brand, or of every brand for a chosen day, in the background (pg-boss worker), progress + cost cap | TASK-013 | In review (ADR-042) |
-| TASK-015 | **Images**: AI background from the image prompt (fal.ai, `FAL_KEY` from owner) + brand templates for text/logo overlays (Satori) matching the owner's examples; carousels slide by slide | TASK-013 | Planned |
+| TASK-014 | **Bulk creation**: create all planned posts of one brand, or of every brand for a chosen day, in the background (pg-boss worker), progress + cost cap | TASK-013 | Done (PR #25, deployed) |
+| TASK-015 | **Images**: AI background from the image prompt (fal.ai, `FAL_KEY` from owner) + brand templates for text/logo overlays (Satori) matching the owner's examples; carousels slide by slide | TASK-013 | Done (PR #27) |
 | TASK-016 | **One-click download**: a post (images + caption with hashtags) or a whole day as ZIP | TASK-015 | Planned |
 | TASK-010b | ~~MCP post tools~~ → **Graphics and files from Claude** into the brand (images as references/logos, documents) — how Claude hands over the bytes is open (owner question) | TASK-010a | Planned (ADR-039) |
 

@@ -32,6 +32,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "satori": "0.35.0",
     "sharp": "^0.34",
     "unpdf": "1.8.1",
     "wawoff2": "2.0.1",

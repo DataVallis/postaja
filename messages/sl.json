@@ -380,6 +380,7 @@
     "tabs": {
       "posts": "Objave",
       "files": "Datoteke",
+      "images": "Slike",
       "profile": "Profil (CGP)",
       "channels": "Kanali",
       "versions": "Verzije"
@@ -394,7 +395,12 @@
     },
     "versionCol": "Verzija",
     "savedAt": "Shranjeno",
-    "noteCol": "Opomba"
+    "noteCol": "Opomba",
+    "imagesTitle": "Predloga za slike",
+    "imagesIntro": "Tako Postaja postavi slike objav: AI ozadje, tvoje barve, pisava in logotip. Tekst na sliki vedno nariše Postaja, zato so č, š in ž vedno pravilni.",
+    "imagesSample": "Daš. Zaklenjeno je.\nIzplača se v korakih.",
+    "imagesSampleLabel": "Kategorija",
+    "templateNote": "Predloga za slike"
   },
   "Posts": {
     "title": "Objave",
@@ -815,7 +821,7 @@
     "dayHintBrand": "Postaja jih napiše za izbrani brand iz plana, CGP-ja in materialov. Teče v ozadju.",
     "dayButton": "Ustvari besedila ({n})",
     "brandTitle": "{n, plural, one {# planirana objava brez besedila} two {# planirani objavi brez besedila} few {# planirane objave brez besedila} other {# planiranih objav brez besedila}}",
-    "brandHint": "Postaja jih napiše iz plana, CGP-ja in materialov, v ozadju.",
+    "brandHint": "Postaja jih napiše iz plana, CGP-ja in materialov, v ozadju. Slike naredi po predlogi branda.",
     "range": "Obdobje",
     "next7": "naslednjih 7 dni",
     "next30": "naslednjih 30 dni",
@@ -826,6 +832,99 @@
       "TOO_MANY": "Naenkrat lahko ustvarim največ 200 objav. Izberi krajše obdobje.",
       "INVALID": "Obseg ni veljaven.",
       "FAILED": "Ustvarjanja ni bilo mogoče začeti."
-    }
+    },
+    "dayImagesTitle": "{n, plural, one {# objava ta dan nima slik} two {# objavi ta dan nimata slik} few {# objave ta dan nimajo slik} other {# objav ta dan nima slik}}",
+    "dayImagesButton": "Ustvari slike ({n})",
+    "bothButton": "Besedila in slike",
+    "countsDone": "{done} / {total} končanih"
+  },
+  "Images": {
+    "title": "Slike",
+    "templateLink": "Predloga branda",
+    "status": {
+      "none": "Ni slik",
+      "queued": "V vrsti",
+      "rendering": "Nastaja",
+      "ready": "Pripravljene",
+      "failed": "Napaka"
+    },
+    "working": "Slike nastajajo … stran se osveži sama.",
+    "empty": "Objava še nima slik. Postaja naredi ozadje iz opisa slike v planu in nanj postavi tekst po predlogi branda.",
+    "noKey": "AI ozadja niso nastavljena (manjka ključ fal.ai). Slike bodo na barvi branda, ko izbereš »Barva branda« v predlogi.",
+    "generate": "Ustvari slike",
+    "regenerate": "Nove slike",
+    "refreshText": "Osveži tekst",
+    "imageAlt": "Slika {n}",
+    "download": "Prenesi {n}",
+    "textLabel": "Tekst na sliki",
+    "textHint": "Naslov na sliki. Vsaka vrstica je svoja vrstica; z »Osveži tekst« ga postaviš na obstoječe ozadje brez novih stroškov.",
+    "textHintCarousel": "En odstavek za vsak diapozitiv (prazna vrstica vmes). Največ 20.",
+    "textSave": "Shrani tekst",
+    "errors": {
+      "FAILED": "Slik ni bilo mogoče narediti. Poskusi znova.",
+      "RETRY": "Prišlo je do napake, slike se bodo naredile znova.",
+      "NO_IMAGE_KEY": "Ključ za AI slike (fal.ai) ni nastavljen ali ni veljaven. Izberi »Barva branda« v predlogi ali prosi skrbnika za ključ.",
+      "IMAGE_PROVIDER": "Ponudnik slik se ni odzval. Poskusi znova čez nekaj minut.",
+      "IMAGE_TIMEOUT": "Ponudnik slik je predolgo delal. Poskusi znova.",
+      "IMAGE_BLOCKED": "Ponudnik je opis slike zavrnil. Spremeni opis slike v planu in poskusi znova.",
+      "IMAGE_INVALID": "Ponudnik je vrnil neveljavno sliko. Poskusi znova.",
+      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov organizacije.",
+      "NO_ACCESS": "Član, ki je zahteval slike, nima več dostopa.",
+      "NOT_FOUND": "Objave ni več.",
+      "BAD_STATE": "Slike se že delajo ali objava je preskočena.",
+      "INVALID": "Preveč diapozitivov (največ 20) ali predolgo besedilo."
+    },
+    "templateTitle": "Predloga",
+    "layout": "Postavitev",
+    "layouts": {
+      "card": "Kartica (oznaka, naslov, noga z logom)",
+      "center": "Sredina (naslov na sredini)",
+      "photo": "Samo slika (z logom)"
+    },
+    "background": "Ozadje",
+    "backgrounds": {
+      "ai": "AI ozadje (fal.ai)",
+      "plain": "Barva branda"
+    },
+    "label": "Oznaka",
+    "labels": {
+      "category": "Kategorija iz plana",
+      "none": "Brez"
+    },
+    "accentLine": "Vrstica v poudarku",
+    "accentLines": {
+      "last": "Zadnja",
+      "first": "Prva",
+      "none": "Nobena"
+    },
+    "typeface": "Vgrajena pisava",
+    "typefaces": {
+      "sans": "Inter (brez serifov)",
+      "mono": "JetBrains Mono (koda)"
+    },
+    "font": "Pisava branda",
+    "fontBuiltin": "Vgrajena",
+    "logo": "Logotip",
+    "logoFirst": "Prvi naloženi",
+    "logoNone": "Brez logotipa",
+    "footerText": "Tekst v nogi",
+    "overlay": "Zatemnitev ozadja: {n} %",
+    "uppercase": "Naslov z velikimi črkami",
+    "colors": {
+      "bg": "Ozadje",
+      "fg": "Tekst",
+      "accent": "Poudarek"
+    },
+    "saveTemplate": "Shrani predlogo",
+    "preview": "Predogled",
+    "previewAlt": "Predogled slike po predlogi",
+    "previewShape": "Oblika predogleda",
+    "shapes": {
+      "portrait": "Pokončna 4:5",
+      "square": "Kvadrat 1:1",
+      "landscape": "Ležeča 16:9"
+    },
+    "previewText": "Tekst za predogled",
+    "previewHint": "Predogled namesto AI ozadja pokaže nadomestno fotografijo, zato je brezplačen."
   }
 }
