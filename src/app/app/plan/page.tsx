@@ -8,6 +8,9 @@ import { listBrands } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
 import { PLATFORMS } from "@/server/db/schema";
 import { calendarPosts, historyPosts, unscheduledPosts, type PlanPost } from "@/server/posts/calendar";
+import { bulkCandidates, listBulkRuns } from "@/server/bulk/service";
+import { startBulkAction } from "./actions";
+import { BulkRuns } from "./bulk-runs";
 
 export const dynamic = "force-dynamic";
 
@@ -29,18 +32,23 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const today = todayIn();
   const view: View = one("view") === "week" || one("view") === "day" ? (one("view") as View) : "month";
   const anchor = isIsoDate(one("d")) ? one("d")! : today;
-  const tab = one("tab") === "unscheduled" || one("tab") === "history" ? one("tab")! : "calendar";
+  const tab = one("tab") === "unscheduled" || one("tab") === "history" || one("tab") === "runs" ? one("tab")! : "calendar";
+  const bulkError = one("bulkError");
   const f = { brandId: one("brand") || undefined, platform: one("platform") || undefined };
   const page = Math.max(1, Number(one("page")) || 1);
 
   const db = getDb();
   const range = viewRange(view, anchor);
-  const [brandList, items, unscheduled, history] = await Promise.all([
+  const [brandList, items, unscheduled, history, runs, dayTodo] = await Promise.all([
     listBrands(db, org),
     tab === "calendar" ? calendarPosts(db, org, range.from, range.to, f) : Promise.resolve([] as PlanPost[]),
     unscheduledPosts(db, org, f, tab === "unscheduled" ? 200 : 0),
     historyPosts(db, org, { ...f, page: tab === "history" ? page : 1 }),
+    listBulkRuns(db, org),
+    tab === "calendar" && view === "day" ? bulkCandidates(db, org, { kind: "day", date: anchor, brandId: f.brandId ?? null }) : Promise.resolve([] as string[]),
   ]);
+  const tb = await getTranslations("Bulk");
+  const activeRuns = runs.filter((r) => r.status === "queued" || r.status === "running").length;
   const t = await getTranslations("Plan");
   const tp = await getTranslations("Posts");
   const tf = await getTranslations("PostFormats");
@@ -108,8 +116,10 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           { key: "calendar", label: t("tabs.calendar"), href: qs({ tab: "calendar", page: undefined }) },
           { key: "unscheduled", label: t("tabs.unscheduled"), href: qs({ tab: "unscheduled" }), count: unscheduled.total },
           { key: "history", label: t("tabs.history"), href: qs({ tab: "history" }), count: history.total },
+          { key: "runs", label: t("tabs.runs"), href: qs({ tab: "runs" }), count: activeRuns || undefined },
         ]}
       />
+      {bulkError ? <p role="alert" className="mb-4 rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger">{tb.has(`errors.${bulkError}`) ? tb(`errors.${bulkError}`) : tb("errors.FAILED")}</p> : null}
 
       {tab === "calendar" ? (
         <section aria-labelledby="cal-h" className="grid gap-4">
@@ -128,6 +138,21 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             </nav>
           </div>
 
+          {view === "day" && dayTodo.length ? (
+            <Card className="flex flex-wrap items-center justify-between gap-3 border-signal/40 p-4" data-testid="day-bulk">
+              <div>
+                <p className="font-semibold">{tb("dayTitle", { n: dayTodo.length })}</p>
+                <p className="text-sm text-muted">{f.brandId ? tb("dayHintBrand") : tb("dayHint")}</p>
+              </div>
+              <form action={startBulkAction}>
+                <input type="hidden" name="kind" value="day" />
+                <input type="hidden" name="date" value={anchor} />
+                {f.brandId ? <input type="hidden" name="brandId" value={f.brandId} /> : null}
+                <input type="hidden" name="back" value={qs({})} />
+                <button type="submit" className={buttonClass("primary")}>{tb("dayButton", { n: dayTodo.length })}</button>
+              </form>
+            </Card>
+          ) : null}
           {view === "day" ? (
             <DataTable testId="plan-day" head={[t("time"), tp("post"), tp("brand"), tp("channel"), t("format"), t("status")]} empty={items.length ? undefined : t("emptyDay")}>
               {postRows(items, false)}
@@ -169,6 +194,8 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           )}
         </section>
       ) : null}
+
+      {tab === "runs" ? <BulkRuns runs={runs} highlight={one("run")} /> : null}
 
       {tab === "unscheduled" ? (
         unscheduled.total ? (

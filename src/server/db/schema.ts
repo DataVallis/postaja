@@ -7,5 +7,6 @@ export * from "./schema/brands";
 export * from "./schema/brand-files";
 export * from "./schema/plans";
 export * from "./schema/generation";
+export * from "./schema/bulk";
 export * from "./schema/oauth";
 export * from "./schema/mcp";

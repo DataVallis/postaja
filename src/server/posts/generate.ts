@@ -1,6 +1,6 @@
 // Text post generation (TASK-007, ADR-036): CGP + materials + effective rules → Claude (forced tool, zod-checked) →
 // machine rule check → at most one automatic fix → ready | needs_review | failed. Every call is cost-capped and logged.
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { checkText, checkThread, effectiveRules, type RuleLayer, type RuleSet, type Violation } from "@/lib/rules";
 import { extractPendingSources } from "../brands/files";
@@ -94,20 +94,22 @@ export async function materialsFor(db: Db, storage: Storage, ctx: OrgContext, br
 
 export type GenerateDeps = { llm: LlmClient; storage: Storage; now?: Date };
 
-/** Any member (owner or editor) may generate. Returns the post id; the post row carries the outcome. */
-export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, input: z.input<typeof generateInput>): Promise<string> {
-  const req = generateInput.parse(input);
-  const r = await rulesFor(db, ctx, req.brandId, req.channelId);
-  if (r.brand.archivedAt) throw new PostError("ARCHIVED");
+type Model = typeof modelRegistry.$inferSelect;
+
+async function defaultModel(db: Db): Promise<Model> {
   const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "text"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
   if (!model) throw new PostError("NO_MODEL");
-  const materials = await materialsFor(db, deps.storage, ctx, req.brandId, req.brief);
+  return model;
+}
 
-  const postId = crypto.randomUUID();
+/**
+ * The writing loop (ADR-036) for a post row that is already "generating": prompt → Claude → schema → rule check →
+ * at most one automatic fix → ready | needs_review | failed. Every call is reserved against the spend cap.
+ */
+async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: string, r: Awaited<ReturnType<typeof rulesFor>>, model: Model, brief: string) {
+  const materials = await materialsFor(db, deps.storage, ctx, r.brand.id, brief);
   const s = forOrg(db, ctx);
-  await s.insert(posts, { id: postId, brandId: req.brandId, channelId: req.channelId, profileVersionId: r.profile.id, brief: req.brief, status: "generating", model: model.modelKey, createdBy: ctx.userId });
-  const finish = (set: Partial<typeof posts.$inferInsert>) => s.update(posts, { ...set, updatedAt: new Date() }, eq(posts.id, postId));
-
+  const finish = (set: Partial<typeof posts.$inferInsert>) => s.update(posts, { ...set, model: model.modelKey, updatedAt: new Date() }, eq(posts.id, postId));
   const thread = r.rules.threadPartMax !== undefined;
   let previous: { draft: unknown; violations: Violation[]; invalid?: boolean } | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -117,17 +119,17 @@ export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, 
       channel: { platform: r.channel.platform, handle: r.channel.handle, language: r.channel.language },
       rules: r.rules,
       materials,
-      brief: req.brief,
+      brief,
       previous,
     });
     const chars = prompt.system.reduce((n, b) => n + b.text.length, 0) + prompt.user.length + JSON.stringify(prompt.tool).length;
     let ledgerId: string;
     try {
-      ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: req.brandId, postId, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, MAX_OUTPUT_TOKENS, model), now: deps.now });
+      ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: r.brand.id, postId, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, MAX_OUTPUT_TOKENS, model), now: deps.now });
     } catch (e) {
       if (e instanceof SpendCapError) {
         await finish({ status: "failed", error: "SPEND_CAP", fixAttempts: attempt });
-        return postId;
+        return;
       }
       throw e;
     }
@@ -137,7 +139,7 @@ export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, 
     } catch (e) {
       await release(db, ledgerId);
       await finish({ status: "failed", error: e instanceof LlmError ? e.code : "PROVIDER", fixAttempts: attempt });
-      return postId;
+      return;
     }
     await settle(db, ledgerId, out.usage, costMicroUsd(out.usage, model));
 
@@ -145,15 +147,70 @@ export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, 
     if (!parsed.success) {
       if (attempt === 0) { previous = { draft: out.input, violations: [], invalid: true }; continue; }
       await finish({ status: "failed", error: "INVALID_OUTPUT", fixAttempts: attempt });
-      return postId;
+      return;
     }
     const content = composeContent(parsed.data);
     const violations = checkPost(content, r.rules, r.cta);
     if (violations.length && attempt === 0) { previous = { draft: parsed.data, violations }; continue; }
     await finish({ status: violations.length ? "needs_review" : "ready", content, topicSummary: parsed.data.topic_summary, ruleFailures: violations, fixAttempts: attempt, error: null });
-    return postId;
+    return;
   }
-  return postId; // unreachable: the second attempt always finishes
+}
+
+/** Any member (owner or editor) may generate. Returns the post id; the post row carries the outcome. */
+export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, input: z.input<typeof generateInput>): Promise<string> {
+  const req = generateInput.parse(input);
+  const r = await rulesFor(db, ctx, req.brandId, req.channelId);
+  if (r.brand.archivedAt) throw new PostError("ARCHIVED");
+  const model = await defaultModel(db);
+  const postId = crypto.randomUUID();
+  await forOrg(db, ctx).insert(posts, { id: postId, brandId: req.brandId, channelId: req.channelId, profileVersionId: r.profile.id, brief: req.brief, status: "generating", model: model.modelKey, createdBy: ctx.userId });
+  await writeInto(db, deps, ctx, postId, r, model, req.brief);
+  return postId;
+}
+
+/**
+ * The request Postaja writes a planned post from (TASK-014): the plan's own words — topic, format, slides, CTA,
+ * link, first comment, audience, notes — never invented. The image prompt is context only.
+ */
+export function planBrief(p: Pick<typeof posts.$inferSelect, "brief" | "format" | "plan" | "scheduledOn">): string {
+  const pl = p.plan ?? {};
+  const lines = [
+    `Topic: ${pl.topic ?? p.brief}`,
+    `Format: ${p.format}${pl.slideCount ? ` (${pl.slideCount} slides)` : ""}. Write the post text (caption) only.`,
+    pl.category ? `Content pillar: ${pl.category}` : "",
+    pl.audience ? `Audience: ${pl.audience}` : "",
+    pl.overlayText ? `Text on the image: ${pl.overlayText}` : "",
+    pl.slides?.length ? `Slide texts:\n${pl.slides.map((x, i) => `${i + 1}. ${x}`).join("\n")}` : "",
+    pl.cta ? `Call to action from the plan: ${pl.cta}` : "",
+    pl.link ? `Link: ${pl.link}` : "",
+    pl.firstComment ? `First comment (posted separately, do not repeat): ${pl.firstComment}` : "",
+    pl.imagePrompt ? `The image (for context only, do not describe it): ${pl.imagePrompt.slice(0, 600)}` : "",
+    pl.notes ? `Notes: ${pl.notes}` : "",
+  ];
+  return lines.filter(Boolean).join("\n").slice(0, 2000);
+}
+
+export type FillOutcome = "written" | "skipped";
+
+/**
+ * Writes the text of an existing planned post (or retries a failed one). Claims the row first (planned/failed →
+ * generating) so two workers can never write the same post; a post that already has text is skipped.
+ */
+export async function generateForPost(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: string): Promise<FillOutcome> {
+  const p = await ownPost(db, ctx, postId);
+  if (p.content || !p.channelId || (p.status !== "planned" && p.status !== "failed")) return "skipped";
+  const r = await rulesFor(db, ctx, p.brandId, p.channelId);
+  if (r.brand.archivedAt) throw new PostError("ARCHIVED");
+  const model = await defaultModel(db);
+  const claimed = await forOrg(db, ctx).update(
+    posts,
+    { status: "generating", error: null, updatedAt: new Date() },
+    and(eq(posts.id, postId), inArray(posts.status, ["planned", "failed"]), sql`${posts.content} is null`)!,
+  );
+  if (!claimed.length) return "skipped";
+  await writeInto(db, deps, ctx, postId, r, model, planBrief(p));
+  return "written";
 }
 
 async function ownPost(db: Db, ctx: OrgContext, postId: string) {

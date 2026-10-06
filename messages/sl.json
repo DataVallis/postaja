@@ -484,11 +484,12 @@
     "publishedAt": "Objavljeno",
     "planSource": "Vir",
     "planImport": "uvoz",
-    "plannedHint": "Objava je v planu, besedila še ni. Napiši ga spodaj ali ga bo napisala Postaja (množično ustvarjanje pride v naslednjem koraku).",
+    "plannedHint": "Objava je v planu, besedila še ni. Napiši ga sam ali naj ga napiše Postaja iz plana, CGP-ja in materialov.",
     "slotDate": "Dan",
     "slotTime": "Ura",
     "slotSave": "Shrani termin",
-    "slotInvalid": "Termin ni veljaven."
+    "slotInvalid": "Termin ni veljaven.",
+    "writeWithAi": "Napiši besedilo z AI"
   },
   "Connect": {
     "title": "Claude",
@@ -764,7 +765,8 @@
     "tabs": {
       "calendar": "Koledar",
       "unscheduled": "Brez termina",
-      "history": "Zgodovina"
+      "history": "Zgodovina",
+      "runs": "Ustvarjanje"
     },
     "prev": "Prejšnje",
     "next": "Naslednje",
@@ -786,5 +788,44 @@
     "noHistory": "Še ni objavljenih objav.",
     "pagination": "Strani",
     "pageOf": "Stran {page} od {pages}"
+  },
+  "Bulk": {
+    "scope": "Obseg",
+    "brand": "Brand",
+    "progress": "Napredek",
+    "status": "Stanje",
+    "started": "Začeto",
+    "none": "Še ni množičnega ustvarjanja.",
+    "allBrands": "vsi brandi",
+    "scopeDay": "dan {date}",
+    "scopeRange": "{from}–{to}",
+    "scopeFrom": "od {from} naprej",
+    "counts": "{done} / {total} napisanih",
+    "failed": "{n} ni uspelo",
+    "skipped": "{n} preskočenih",
+    "cancel": "Ustavi",
+    "statuses": {
+      "queued": "čaka",
+      "running": "v teku",
+      "done": "končano",
+      "cancelled": "ustavljeno"
+    },
+    "dayTitle": "{n, plural, one {# objava ta dan nima besedila} two {# objavi ta dan nimata besedila} few {# objave ta dan nimajo besedila} other {# objav ta dan nima besedila}}",
+    "dayHint": "Postaja jih napiše za vse brande iz plana, CGP-ja in materialov. Teče v ozadju, lahko zapreš stran.",
+    "dayHintBrand": "Postaja jih napiše za izbrani brand iz plana, CGP-ja in materialov. Teče v ozadju.",
+    "dayButton": "Ustvari besedila ({n})",
+    "brandTitle": "{n, plural, one {# planirana objava brez besedila} two {# planirani objavi brez besedila} few {# planirane objave brez besedila} other {# planiranih objav brez besedila}}",
+    "brandHint": "Postaja jih napiše iz plana, CGP-ja in materialov, v ozadju.",
+    "range": "Obdobje",
+    "next7": "naslednjih 7 dni",
+    "next30": "naslednjih 30 dni",
+    "allPlanned": "vse planirane",
+    "brandButton": "Ustvari besedila",
+    "errors": {
+      "NOTHING_TO_DO": "Ni objav brez besedila v tem obsegu.",
+      "TOO_MANY": "Naenkrat lahko ustvarim največ 200 objav. Izberi krajše obdobje.",
+      "INVALID": "Obseg ni veljaven.",
+      "FAILED": "Ustvarjanja ni bilo mogoče začeti."
+    }
   }
 }

@@ -7,7 +7,7 @@ import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
-import { reschedulePostAction, retryPostAction, setPostStatusAction } from "../actions";
+import { reschedulePostAction, retryPostAction, setPostStatusAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
 
 export const dynamic = "force-dynamic";
@@ -77,9 +77,17 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         </div>
       ) : null}
 
-      {post.status === "planned" && !post.content ? <p className="text-sm text-muted" data-testid="planned-hint">{t("plannedHint")}</p> : null}
+      {post.status === "planned" && !post.content ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-signal/40 p-4" data-testid="planned-hint">
+          <p className="text-sm">{t("plannedHint")}</p>
+          <form action={writePlannedPostAction}>
+            <input type="hidden" name="postId" value={post.id} />
+            <button type="submit" className={buttonClass("primary")}>{t("writeWithAi")}</button>
+          </form>
+        </Card>
+      ) : null}
       {ctx && (post.content || post.status === "planned") ? (
-        <Card className="p-5"><PostEditor postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
+        <Card className="p-5"><PostEditor key={post.content ? "text" : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
       <Card className="p-5" data-testid="plan">
