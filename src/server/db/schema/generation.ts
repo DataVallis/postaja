@@ -5,6 +5,7 @@ import { bigint, boolean, check, date, index, integer, jsonb, pgTable, text, tim
 import { user } from "./auth";
 import { brandProfileVersions, brands, channels } from "./brands";
 import { organization } from "./org";
+import { planImports } from "./plans";
 
 /** Prices are micro-USD per million tokens (e.g. $2 / MTok = 2_000_000). Super admin keeps them current. */
 export const modelRegistry = pgTable(
@@ -32,9 +33,16 @@ export const modelRegistry = pgTable(
   ],
 );
 
-export const POST_STATUSES = ["generating", "ready", "needs_review", "failed", "approved", "published", "skipped"] as const;
+export const POST_STATUSES = ["planned", "generating", "ready", "needs_review", "failed", "approved", "published", "skipped"] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
 export type PostContent = { caption: string; hashtags: string[]; parts?: string[] };
+export const POST_FORMATS = ["text", "image", "carousel", "thread", "video"] as const;
+export type PostFormat = (typeof POST_FORMATS)[number];
+/** What a content plan says about a post beyond its text (TASK-012). Everything optional; shown on the post page. */
+export type PostPlan = {
+  topic?: string; category?: string; audience?: string; account?: string; cta?: string; link?: string; firstComment?: string;
+  imagePrompt?: string; overlayText?: string; slides?: string[]; slideCount?: number; notes?: string; sourceRef?: string;
+};
 
 export const posts = pgTable(
   "posts",
@@ -47,6 +55,13 @@ export const posts = pgTable(
     type: text("type").$type<"text">().notNull().default("text"),
     brief: text("brief").notNull(),
     status: text("status").$type<PostStatus>().notNull().default("generating"),
+    format: text("format").$type<PostFormat>().notNull().default("text"),
+    /** Planned day (and optional "HH:MM" time, the brand's local time) from a plan or set by hand. */
+    scheduledOn: date("scheduled_on"),
+    scheduledTime: text("scheduled_time"),
+    plan: jsonb("plan").$type<PostPlan>().notNull().default({}),
+    importId: text("import_id").references(() => planImports.id, { onDelete: "set null" }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
     content: jsonb("content").$type<PostContent>(),
     topicSummary: text("topic_summary"),
     ruleFailures: jsonb("rule_failures").$type<{ code: string; actual: number | string; limit: number | string; part?: number }[]>().notNull().default([]),
@@ -60,7 +75,10 @@ export const posts = pgTable(
   (t) => [
     index("posts_org_idx").on(t.orgId),
     index("posts_brand_created_idx").on(t.brandId, t.createdAt),
-    check("posts_status_ck", sql`${t.status} in ('generating','ready','needs_review','failed','approved','published','skipped')`),
+    check("posts_status_ck", sql`${t.status} in ('planned','generating','ready','needs_review','failed','approved','published','skipped')`),
+    check("posts_format_ck", sql`${t.format} in ('text','image','carousel','thread','video')`),
+    check("posts_time_ck", sql`${t.scheduledTime} is null or ${t.scheduledTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    index("posts_org_scheduled_idx").on(t.orgId, t.scheduledOn),
     check("posts_type_ck", sql`${t.type} in ('text')`),
   ],
 );

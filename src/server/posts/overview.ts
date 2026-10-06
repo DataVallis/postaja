@@ -1,15 +1,15 @@
 // Organization-wide views of posts (TASK-011): dashboard numbers and the filtered posts table.
 // Every query is bounded by ctx.orgId; brand and channel names come from joins on the same org.
-import { and, count, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { brands, channels, orgSettings, posts, type PostStatus } from "../db/schema";
 import { monthStart, monthToDate } from "../llm/spend";
 import type { OrgContext } from "../tenancy/context";
 
-export const POST_STATUSES: PostStatus[] = ["generating", "ready", "needs_review", "approved", "published", "skipped", "failed"];
+export const POST_STATUSES: PostStatus[] = ["planned", "generating", "ready", "needs_review", "approved", "published", "skipped", "failed"];
 export const PAGE_SIZE = 50;
 
-export type PostFilters = { q?: string; brandId?: string; status?: string; platform?: string; page?: number };
+export type PostFilters = { q?: string; brandId?: string; status?: string; platform?: string; importId?: string; page?: number };
 
 export function parsePostFilters(sp: Record<string, string | string[] | undefined>): PostFilters {
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).trim() : "") || undefined;
@@ -20,6 +20,7 @@ export function parsePostFilters(sp: Record<string, string | string[] | undefine
     brandId: one("brand"),
     status: status && (POST_STATUSES as string[]).includes(status) ? status : undefined,
     platform: one("platform"),
+    importId: one("import"),
     page: Number.isInteger(page) && page > 0 ? page : 1,
   };
 }
@@ -29,6 +30,7 @@ export async function listOrgPosts(db: Db, ctx: OrgContext, f: PostFilters = {})
   const where: SQL[] = [eq(posts.orgId, ctx.orgId)];
   if (f.brandId) where.push(eq(posts.brandId, f.brandId));
   if (f.status) where.push(eq(posts.status, f.status as PostStatus));
+  if (f.importId) where.push(eq(posts.importId, f.importId));
   if (f.platform) where.push(eq(channels.platform, f.platform as typeof channels.$inferSelect.platform));
   if (f.q) {
     const like = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
@@ -39,6 +41,7 @@ export async function listOrgPosts(db: Db, ctx: OrgContext, f: PostFilters = {})
     .select({
       id: posts.id, status: posts.status, brief: posts.brief, caption: sql<string | null>`${posts.content}->>'caption'`,
       createdAt: posts.createdAt, updatedAt: posts.updatedAt, brandId: posts.brandId, brandName: brands.name,
+      format: posts.format, scheduledOn: posts.scheduledOn, scheduledTime: posts.scheduledTime, topic: sql<string | null>`${posts.plan}->>'topic'`,
       platform: channels.platform, handle: channels.handle,
     })
     .from(posts)
@@ -46,7 +49,8 @@ export async function listOrgPosts(db: Db, ctx: OrgContext, f: PostFilters = {})
     .leftJoin(channels, and(eq(channels.id, posts.channelId), eq(channels.orgId, posts.orgId)))
     .where(and(...where));
   const [rows, [{ n }]] = await Promise.all([
-    base.orderBy(desc(posts.createdAt)).limit(PAGE_SIZE).offset((page - 1) * PAGE_SIZE),
+    // An import is a plan: show it in plan order (day, time); everything else newest first.
+    (f.importId ? base.orderBy(sql`${posts.scheduledOn} asc nulls last`, asc(posts.scheduledTime), asc(posts.createdAt)) : base.orderBy(desc(posts.createdAt))).limit(PAGE_SIZE).offset((page - 1) * PAGE_SIZE),
     db.select({ n: count() }).from(posts).leftJoin(channels, and(eq(channels.id, posts.channelId), eq(channels.orgId, posts.orgId))).where(and(...where)),
   ]);
   return { rows, total: Number(n), page, pages: Math.max(1, Math.ceil(Number(n) / PAGE_SIZE)) };
@@ -63,6 +67,7 @@ export async function orgOverview(db: Db, ctx: OrgContext, now = new Date()) {
   ]);
   const counts = Object.fromEntries(byStatus.map((r) => [r.status, Number(r.n)])) as Partial<Record<PostStatus, number>>;
   return {
+    planned: counts.planned ?? 0,
     ready: counts.ready ?? 0,
     needsReview: counts.needs_review ?? 0,
     approved: counts.approved ?? 0,

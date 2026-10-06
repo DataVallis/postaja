@@ -52,7 +52,8 @@ export default async function Dashboard() {
         />
       ) : (
         <div className="grid gap-8">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="stats">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" data-testid="stats">
+            <Stat label={t("stats.planned")} value={o.planned} href="/app/posts?status=planned" />
             <Stat label={t("stats.ready")} value={o.ready} href="/app/posts?status=ready" />
             <Stat label={t("stats.needsReview")} value={o.needsReview} href="/app/posts?status=needs_review" />
             <Stat label={t("stats.approved")} value={o.approved} href="/app/posts?status=approved" />

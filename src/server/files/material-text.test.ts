@@ -18,9 +18,9 @@ describe("XLSX material text", () => {
     );
   });
 
-  it("empty rows and trailing empty cells are dropped; a gap inside a row stays as an empty cell", () => {
+  it("empty rows and trailing empty cells are dropped; a gap inside a row stays an empty cell at its position", () => {
     const x = makeXlsx([{ name: "S", rows: [["a", null, "c", null], [null, null], ["", "x"]] }]);
-    expect(xlsxToText(x)).toBe("## S\na | c\n | x");
+    expect(xlsxToText(x)).toBe("## S\na |  | c\n | x"); // Excel omits empty cells; positions come from the cell reference
   });
 
   it("at most XLSX_MAX_ROWS rows per sheet", () => {

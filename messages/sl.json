@@ -433,13 +433,15 @@
       "failed": "ni uspelo",
       "approved": "odobrena",
       "published": "objavljena",
-      "skipped": "preskočena"
+      "skipped": "preskočena",
+      "planned": "v planu"
     },
     "to": {
       "approved": "Odobri",
       "published": "Označi kot objavljeno",
       "skipped": "Preskoči",
-      "ready": "Vrni v pripravljene"
+      "ready": "Vrni v pripravljene",
+      "planned": "Vrni v plan"
     },
     "violations": {
       "caption_too_long": "Predolgo: {actual} znakov, dovoljeno {limit}.",
@@ -474,7 +476,15 @@
     "noChannelsPrefix": "Brand še nima kanala.",
     "noChannelsLink": "Dodaj kanal",
     "statusCol": "Stanje",
-    "createdCol": "Ustvarjeno"
+    "createdCol": "Ustvarjeno",
+    "planTitle": "Iz plana",
+    "planSlot": "Termin",
+    "planFormat": "Format",
+    "slidesN": "{n} slajdov",
+    "publishedAt": "Objavljeno",
+    "planSource": "Vir",
+    "planImport": "uvoz",
+    "plannedHint": "Objava je v planu, besedila še ni. Napiši ga spodaj ali ga bo napisala Postaja (množično ustvarjanje pride v naslednjem koraku)."
   },
   "Connect": {
     "title": "Claude",
@@ -533,7 +543,8 @@
     "toDark": "Temna tema",
     "toLight": "Svetla tema",
     "account": "Račun",
-    "signOut": "Odjava"
+    "signOut": "Odjava",
+    "import": "Uvoz planov"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -556,7 +567,8 @@
       "published": "Objavljene",
       "thisMonth": "ta mesec",
       "spend": "Poraba AI",
-      "ofCap": "od {cap} $ ta mesec"
+      "ofCap": "od {cap} $ ta mesec",
+      "planned": "V planu"
     }
   },
   "PostsList": {
@@ -576,6 +588,160 @@
     "pagination": "Strani",
     "pageOf": "Stran {page} od {pages} · {total} objav",
     "prev": "← Prejšnja",
-    "next": "Naslednja →"
+    "next": "Naslednja →",
+    "fromImport": "Objave iz enega uvoza, v vrstnem redu plana.",
+    "openImport": "Odpri uvoz",
+    "slot": "Termin",
+    "format": "Format"
+  },
+  "Import": {
+    "title": "Uvoz planov",
+    "description": "Naloži plan objav v kakršni koli obliki (Excel, CSV, Word, PDF). AI prepozna stolpce ali objave, ti pregledaš in potrdiš. Besedila ostanejo dobesedna.",
+    "history": "Uvozi",
+    "file": "Datoteka",
+    "kind": "Vrsta",
+    "statusCol": "Stanje",
+    "created": "Ustvarjenih objav",
+    "date": "Naloženo",
+    "kinds": {
+      "table": "tabela",
+      "document": "dokument"
+    },
+    "status": {
+      "draft": "za pregled",
+      "imported": "uvoženo",
+      "discarded": "zavrženo"
+    },
+    "upload": {
+      "title": "Povleci plan sem ali ga izberi",
+      "hint": "Excel (XLSX), CSV, Word (DOCX), PDF, MD ali TXT, do 20 MB. Več listov in več platform v eni datoteki je v redu.",
+      "pick": "Izberi plan",
+      "reading": "Berem …",
+      "readingHint": "Berem »{name}«. Word in PDF lahko trajata do minute.",
+      "errors": {
+        "EMPTY": "Datoteka je prazna.",
+        "TOO_LARGE": "Datoteka je večja od 20 MB.",
+        "UNSUPPORTED_TYPE": "Te vrste datoteke ne znam prebrati. Uporabi XLSX, CSV, DOCX, PDF, MD ali TXT.",
+        "INVALID_FILE": "Datoteke ni bilo mogoče prebrati.",
+        "NO_POSTS": "V datoteki nisem našel objav.",
+        "AI_FAILED": "AI dokumenta ni prebral ({detail}). Poskusi znova ali naloži tabelo.",
+        "SPEND_CAP": "Mesečni limit porabe AI je dosežen.",
+        "NO_MODEL": "AI model ni nastavljen.",
+        "BAD_ORIGIN": "Zahteva ni prišla iz Postaje.",
+        "failed": "Nalaganje ni uspelo. Poskusi znova."
+      }
+    },
+    "readByAi": "Strukturo je prebral AI; vrednosti so prebrane dobesedno.",
+    "readByHeaders": "AI ni bil na voljo, stolpce sem prepoznal po imenih. Preveri jih spodaj.",
+    "errors": {
+      "NOT_FOUND": "Uvoz ne obstaja.",
+      "BAD_STATE": "Ta uvoz je že zaključen.",
+      "INVALID": "Izbira ni veljavna.",
+      "FAILED": "Shranjevanje ni uspelo."
+    },
+    "doneSummary": "Uvoženo: {n} objav.",
+    "seePosts": "Odpri objave",
+    "stats": {
+      "items": "Objav v planu",
+      "history": "Že objavljenih",
+      "historyHint": "gredo v zgodovino",
+      "noText": "Brez besedila",
+      "noTextHint": "besedilo napiše Postaja",
+      "warnings": "Opozoril"
+    },
+    "channelsTitle": "Kam gredo objave",
+    "channelsHint": "Za vsako platformo in račun iz plana izberi kanal branda. Predlog je izbran samodejno, kjer se ujema.",
+    "platform": "Platforma",
+    "account": "Račun v planu",
+    "count": "Objav",
+    "channel": "Kanal",
+    "platforms": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "linkedin": "LinkedIn",
+      "x": "X",
+      "tiktok": "TikTok",
+      "youtube": "YouTube"
+    },
+    "noPlatform": "brez platforme",
+    "channelFor": "Kanal za {what}",
+    "chooseChannel": "Izberi kanal …",
+    "skipGroup": "Ne uvozi",
+    "noChannels": "Organizacija še nima kanalov.",
+    "toBrands": "Dodaj kanal pri brandu",
+    "scheduleTitle": "Začetek plana",
+    "scheduleHint": "Plan ima relativne dneve (+N). Izberi dan 0.",
+    "scheduleHintUndated": "Nekatere objave nimajo datuma. Izberi začetek in razmik v dneh, ali pusti prazno (brez termina).",
+    "startDate": "Začetni dan",
+    "intervalDays": "Razmik (dni)",
+    "confirm": "Uvozi {n} objav",
+    "save": "Shrani izbire",
+    "confirmHint": "Podvojenih objav ne ustvarim dvakrat.",
+    "itemsTitle": "Objave v planu",
+    "itemsShown": "Prikazanih prvih {n} od {total}.",
+    "when": "Termin",
+    "format": "Format",
+    "topic": "Tema",
+    "text": "Besedilo",
+    "warningsCol": "Opozorila",
+    "unscheduled": "brez termina",
+    "noTextYet": "še brez besedila",
+    "itemStatus": {
+      "planned": "v planu",
+      "published": "objavljeno",
+      "skip": "preskočeno"
+    },
+    "warnings": {
+      "DATE": "datum »{value}« ni prepoznan",
+      "TIME": "ura »{value}« ni prepoznana",
+      "OFFSET": "dan »{value}« ni prepoznan",
+      "PLATFORM": "platforma »{value}« ni prepoznana",
+      "FORMAT": "format »{value}« ni prepoznan",
+      "NO_TEXT": "brez besedila",
+      "TEXT_CHANGED": "besedilo ni dobesedno iz dokumenta — preveri"
+    },
+    "columnsTitle": "Stolpci",
+    "columnsHint": "Kaj pomeni vsak stolpec. Popravi in klikni »Preberi znova«.",
+    "sheet": "List »{name}« · {rows} vrstic",
+    "defaultPlatform": "Platforma za cel list",
+    "unnamedColumn": "Stolpec {n}",
+    "fields": {
+      "ignore": "— ne uvozi —",
+      "row_number": "Zaporedna številka",
+      "date": "Datum",
+      "time": "Ura",
+      "day_offset": "Dan od začetka (+N)",
+      "day_number": "Dan plana (1, 2, …)",
+      "platform": "Platforma",
+      "account": "Račun / profil",
+      "format": "Format",
+      "image_type": "Vrsta slike",
+      "slide_count": "Število slajdov",
+      "topic": "Tema",
+      "category": "Kategorija / steber",
+      "audience": "Publika",
+      "text": "Besedilo objave",
+      "hashtags": "Hashtagi",
+      "cta": "CTA / povezava",
+      "cta_hashtags": "CTA in hashtagi",
+      "link": "Povezava",
+      "first_comment": "Prvi komentar",
+      "image_prompt": "Prompt za sliko",
+      "overlay_text": "Tekst na sliki",
+      "slides": "Besedila slajdov",
+      "status": "Status",
+      "published_on": "Objavljeno dne",
+      "notes": "Opombe",
+      "char_count": "Število znakov"
+    },
+    "rereadColumns": "Preberi znova",
+    "discard": "Zavrzi uvoz"
+  },
+  "PostFormats": {
+    "text": "besedilo",
+    "image": "slika",
+    "carousel": "karusel",
+    "thread": "nit",
+    "video": "video"
   }
 }
