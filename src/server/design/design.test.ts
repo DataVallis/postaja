@@ -122,6 +122,9 @@ describe("what Claude is asked", () => {
     expect(r.user).toContain("Temne kartice z rdečim poudarkom");
     expect(r.user).toContain('past_post_images="1"');
     expect(r.tool.name).toBe("submit_brand_design");
+    // A whole design takes minutes to write; the default 90 s timeout cut it off on dev (owner, 2026-10-06).
+    expect(r.timeoutMs).toBeGreaterThanOrEqual(5 * 60_000);
+    expect(reviseDesignRequest(inputs, card, "x", []).timeoutMs).toBeGreaterThanOrEqual(5 * 60_000);
   });
 
   it("a revision includes the current design, its previews and the request", () => {

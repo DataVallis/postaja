@@ -16,7 +16,7 @@ import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import type { ImageClient, ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
 import { listPostMedia, requestImages, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
-import type { LlmClient, StructuredRequest } from "../llm/types";
+import { LlmError, type LlmClient, type StructuredRequest } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
@@ -172,6 +172,16 @@ describe("brand design", () => {
     await expect(activateDesign(db, B, v1)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await activateDesign(db, A, v1);
     expect((await currentDesign(db, A, brandA))!.id).toBe(v1);
+  });
+
+  it("a provider failure is recorded with its status, never as a current design", async () => {
+    const { q } = memoryQueue();
+    const id = await requestDesign(db, q, A, brandA, { brief: "" });
+    const failing: LlmClient = { async structured() { throw new LlmError("PROVIDER", "anthropic network APIConnectionTimeoutError"); } };
+    expect(await runDesignJob(db, { llm: failing, storage }, { designId: id })).toBe("failed");
+    expect((await listDesigns(db, A, brandA))[0]).toMatchObject({ status: "failed", error: "PROVIDER:anthropic network APIConnectionTimeoutError" });
+    expect(await currentDesign(db, A, brandA)).toBeNull();
+    expect(await sql`select * from usage_ledger`).toEqual([]); // the reservation was released
   });
 
   it("revising without a design, another org's brand, and the spend cap", async () => {

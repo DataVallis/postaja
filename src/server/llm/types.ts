@@ -14,6 +14,8 @@ export type StructuredRequest = {
   images?: ImageBlock[];
   tool: ToolSpec;
   maxTokens: number;
+  /** Long answers (a whole brand design) need more than the default 90 s; such calls are retried at most once. */
+  timeoutMs?: number;
 };
 
 export interface LlmClient {
