@@ -52,6 +52,8 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
         ) : null}
       </div>
 
+      <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} />
+
       <section aria-labelledby="profile-h">
         <h2 id="profile-h" className="mb-4 text-lg font-semibold">{t("profile")}</h2>
         <ProfileForm
@@ -63,8 +65,6 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
           visual={profile?.visual ?? { colors: {}, imageStyle: "", negativePrompt: "" }}
         />
       </section>
-
-      <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} />
 
       <section aria-labelledby="channels-h">
         <h2 id="channels-h" className="mb-4 text-lg font-semibold">{t("channels")}</h2>
@@ -95,7 +95,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
             );
           })}
         </ul>
-        {isOwner ? <ChannelForm brandId={brand.id} presets={presets.filter((p) => p.enabled).map((p) => ({ key: p.key, platform: p.platform, width: p.width, height: p.height, media: p.media }))} /> : null}
+        {isOwner ? <ChannelForm brandId={brand.id} languages={brand.languages} presets={presets.filter((p) => p.enabled).map((p) => ({ key: p.key, platform: p.platform, width: p.width, height: p.height, media: p.media }))} /> : null}
       </section>
 
       <section aria-labelledby="versions-h">

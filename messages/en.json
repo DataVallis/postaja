@@ -257,7 +257,8 @@
       "limit_reached": "Your plan's brand limit is reached.",
       "preset_mismatch": "The format does not match the platform.",
       "archived": "The brand is archived.",
-      "failed": "Saving failed."
+      "failed": "Saving failed.",
+      "language_not_in_brand": "The channel language must be one of the brand's languages."
     },
     "ok": {
       "channelAdded": "Channel added."
@@ -267,16 +268,29 @@
     "createdNote": "created",
     "files": {
       "title": "Brand files",
-      "intro": "Logo, fonts and the sources the AI will build the profile from. Files are private and visible only to members of this organization.",
+      "intro": "Logo, fonts and the sources the AI builds the profile from. Files are private and visible only to members of this organization.",
+      "dropTitle": "Drop files or a ZIP here",
+      "dropNow": "Release to upload",
+      "dropBody": "Documents (PDF, Word, Excel, PowerPoint, CSV, TXT), images, fonts (TTF, OTF, WOFF, WOFF2) or a whole ZIP. Every file is sorted for you: images with “logo” in the name go to logos, fonts to fonts, everything else to sources.",
+      "dropFontsSl": "Fonts must include č, š, ž, ć and đ.",
+      "chooseFiles": "Choose files",
+      "uploading": "Uploading …",
+      "waiting": "waiting",
+      "went": {
+        "logo": "logo",
+        "font": "font",
+        "source": "source"
+      },
+      "addLogo": "Add logo",
       "logos": "Logos",
       "fonts": "Fonts",
-      "sources": "Sources (documents, sheets, images)",
-      "noLogos": "No logo yet.",
+      "sources": "Sources",
+      "noLogos": "No logo yet. Drop an image with “logo” in its name above or add one with the button.",
       "noFonts": "No fonts yet.",
-      "noSources": "No sources yet.",
+      "noSources": "No sources yet. Drop documents about the brand above.",
       "logoAlt": "Logo {name}",
       "delete": "Delete {name}",
-      "allGlyphs": "all diacritics (č š ž ć đ) available",
+      "allGlyphs": "all diacritics available",
       "missingGlyphs": "missing: {chars}",
       "file": "File",
       "kind": "Type",
@@ -299,31 +313,24 @@
         "extracted": "read",
         "failed": "failed"
       },
-      "choose": {
-        "logo": "Upload logo",
-        "font": "Upload fonts",
-        "source": "Upload sources"
-      },
-      "hint": {
-        "logo": "PNG, JPEG or WebP, up to {mb} MB. SVG is not supported.",
-        "font": "TTF or OTF, up to {mb} MB. The font must include č š ž ć đ (upper and lower case).",
-        "source": "PDF, Word, Excel, PowerPoint, CSV, TXT/MD or images, up to {mb} MB per file."
-      },
-      "upload": "Upload",
-      "uploading": "Uploading …",
-      "uploaded": "uploaded.",
       "errors": {
-        "TOO_LARGE": "file is larger than {mb} MB.",
-        "UNSUPPORTED_TYPE": "this file type is not supported here.",
+        "TOO_LARGE": "file too large (logo and font up to 10 MB, source up to 50 MB, ZIP up to 100 MB).",
+        "UNSUPPORTED_TYPE": "this file type is not accepted (e.g. SVG, old .doc/.xls or a ZIP inside a ZIP).",
         "INVALID_FILE": "the file is damaged or not what it claims to be.",
-        "MISSING_GLYPHS": "font lacks: {detail}.",
+        "MISSING_GLYPHS": "the font lacks {detail}.",
         "DUPLICATE": "this file is already uploaded.",
-        "LIMIT_REACHED": "the maximum number of files is reached.",
+        "LIMIT_REACHED": "the maximum number of files of this kind is reached.",
         "ARCHIVED": "the brand is archived.",
         "EMPTY": "the file is empty.",
         "FORBIDDEN": "only the owner uploads files.",
         "NOT_FOUND": "brand not found.",
-        "failed": "upload failed."
+        "ZIP_INVALID": "the ZIP cannot be opened.",
+        "ZIP_TOO_MANY_ENTRIES": "the ZIP has too many files (max 200).",
+        "ZIP_TOO_LARGE": "the ZIP is too large unpacked (max 300 MB).",
+        "ENCRYPTED": "a file in the ZIP is password-protected.",
+        "UNSUPPORTED_COMPRESSION": "a file in the ZIP uses an unsupported compression.",
+        "CORRUPT": "a file in the ZIP is damaged.",
+        "failed": "upload failed, try again."
       }
     }
   }

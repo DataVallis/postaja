@@ -58,7 +58,7 @@ describe("POST /api/brands/<id>/files", () => {
     const bytes = pdf("http");
     const res = await post(brandA, "source", bytes, { name: "cenik.pdf" });
     expect(res.status).toBe(201);
-    const { id, table } = (await res.json()) as { id: string; table: "source" };
+    const { id, table } = ((await res.json()) as { results: { id: string; table: "source" }[] }).results[0];
     const dl = await handleDownload(table, id, deps());
     expect(dl.status).toBe(302);
     expect(dl.headers.get("cache-control")).toBe("no-store");
@@ -77,6 +77,7 @@ describe("POST /api/brands/<id>/files", () => {
 
   it("bad slot 400; missing Content-Length 411; no file field 400", async () => {
     expect((await post(brandA, "avatar", pdf())).status).toBe(400);
+    expect((await post(brandA, "auto", pdf("auto"))).status).toBe(201);
     expect((await post(brandA, "source", pdf(), { length: null })).status).toBe(411);
     expect((await post(brandA, "source", null)).status).toBe(400);
   });
@@ -94,7 +95,7 @@ describe("POST /api/brands/<id>/files", () => {
     const bytes = pdf("dup");
     expect((await post(brandA, "source", bytes)).status).toBe(201);
     const dup = await post(brandA, "source", bytes);
-    expect([dup.status, ((await dup.json()) as { error: string }).error]).toEqual([409, "DUPLICATE"]);
+    expect([dup.status, ((await dup.json()) as { results: { error: string }[] }).results[0].error]).toEqual([409, "DUPLICATE"]);
     as = B;
     expect((await post(brandA, "source", pdf("b"))).status).toBe(404);
   });
@@ -102,7 +103,7 @@ describe("POST /api/brands/<id>/files", () => {
 
 describe("GET /api/brand-files/<table>/<id>", () => {
   it("another org gets 404 (no URL leaks), anonymous 401, unknown table 404", async () => {
-    const { id } = (await (await post(brandA, "source", pdf("leak"))).json()) as { id: string };
+    const { id } = ((await (await post(brandA, "source", pdf("leak"))).json()) as { results: { id: string }[] }).results[0];
     as = B;
     const res = await handleDownload("source", id, deps());
     expect(res.status).toBe(404);

@@ -44,7 +44,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
 - 2026-10-05: Hetzner Cloud Firewall on the dev server (asisto 5432/6379/3000 were public; now closed). DNS for dev-postaja/postaja set.
 - 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green.
-- 2026-10-05: TASK-005b part 2 (upload UI + routes) — PR #15.
+- 2026-10-06: TASK-005c smart uploads (dropzone, auto-sorting, ZIP, WOFF/WOFF2, language fixes; owner feedback) — PR #16.
+- 2026-10-05: TASK-005b part 2 (upload UI + routes) — PR #15, deployed (Deploy dev 1018a42 green).
 - 2026-10-05: TASK-005b part 1 (server side: S3 storage, brand_sources/brand_assets, sniffing, fonts, sharp, tenant separation) — PR #14. Part 2 = upload UI.
 - 2026-10-05: **S3 ready (owner, 19:48)**: Hetzner Object Storage, location **fsn1**, endpoint `https://fsn1.your-objectstorage.com`, bucket **`postaja-dev`** (private); secrets `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` set in GitHub environment `dev`. Owner requirement: files of each organization strictly separated.
 - 2026-10-05: TASK-004b super admin edits platform rules/presets (audited) + 90-day re-verification banner — PR #13 (merged by owner).
@@ -56,7 +57,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: ADR-027 (dev behind host nginx) — PR #4. First deploy: Deploy dev run 37334467728 (setup=true) green; health ok with SHA 8445e2d.
 
 ## Owner's open actions
-1. **Check uploads on dev** (after PR #15 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": upload a logo, a font with č/š/ž and a PDF; the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
+1. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
 2. Swap 2 GB (TASK-002 Step B) — optional.
 3. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
 
@@ -69,7 +70,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - Owner requirement — tenant separation for files: keys `org/<orgId>/brand/<brandId>/<kind>/<uuid>.<ext>` generated server-side only (never from user input); bucket private; presigned GET ≤ 15 min issued only after `resolveOrgContext` + ownership check; DB row (`org_id`) is the source of truth for access, not the key prefix; cross-tenant tests for upload/read/delete/presign (B cannot get A's file or URL), with deliberate breaks.
 - Scope: logo, fonts (TTF/OTF, glyph check č š ž ć đ Č Š Ž Ć Đ), brand sources (PDF, DOCX, XLSX/CSV, PPTX, TXT/MD, images); size limits, MIME sniffing (magic bytes, not extension), images re-encoded with sharp.
 Then TASK-006 brand ingestion (AI builds the CGP from uploaded files).
-Latest numbers: TASK-006, ADR-033. Latest PR: #15.
+Latest numbers: TASK-006 (+005c in review), ADR-034. Latest PR: #16.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.

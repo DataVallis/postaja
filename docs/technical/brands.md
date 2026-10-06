@@ -7,7 +7,7 @@ Status: **Live on dev** (TASK-005a, PR #10). File uploads follow in TASK-005b.
 |---|---|
 | `brands` | name, slug (unique per org), website (http/https only), languages, `current_profile_version_id`, `archived_at` |
 | `brand_profile_versions` | immutable; `version` 1.. per brand (unique); `cgp` (≤ 50,000 chars), `rules`, `pillars`, `visual`, `note`, `created_by` |
-| `channels` | platform, handle (unique per brand+platform), language, goal `{postsPerDay 0–10, weekdays 1–7}`, channel `rules` (captionMax, hashtagsMax, linksAllowed), `allowed_types`, `default_preset_key` (FK, same platform, enabled) |
+| `channels` | platform, handle (unique per brand+platform), language (must be one of the brand's languages — `LANGUAGE_NOT_IN_BRAND` on add/update; the form offers only those, default = first), goal `{postsPerDay 0–10, weekdays 1–7}`, channel `rules` (captionMax, hashtagsMax, linksAllowed), `allowed_types`, `default_preset_key` (FK, same platform, enabled) |
 
 ## Rules
 - **Owner** creates/edits/archives brands, saves profiles, manages channels; **editor** reads (ADR-031).

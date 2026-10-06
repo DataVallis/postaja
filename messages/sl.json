@@ -257,7 +257,8 @@
       "limit_reached": "Dosežena je omejitev števila brandov za tvoj plan.",
       "preset_mismatch": "Format ne ustreza platformi.",
       "archived": "Brand je arhiviran.",
-      "failed": "Shranjevanje ni uspelo."
+      "failed": "Shranjevanje ni uspelo.",
+      "language_not_in_brand": "Jezik kanala mora biti eden od jezikov branda."
     },
     "ok": {
       "channelAdded": "Kanal je dodan."
@@ -268,15 +269,28 @@
     "files": {
       "title": "Datoteke branda",
       "intro": "Logotip, fonti in viri, iz katerih bo AI sestavil profil. Datoteke so zasebne in vidne samo članom te organizacije.",
+      "dropTitle": "Povleci datoteke ali ZIP sem",
+      "dropNow": "Spusti za nalaganje",
+      "dropBody": "Dokumenti (PDF, Word, Excel, PowerPoint, CSV, TXT), slike, fonti (TTF, OTF, WOFF, WOFF2) ali cel ZIP. Vsako datoteko razvrstimo sami: slike z »logo« v imenu gredo med logotipe, fonti med fonte, vse ostalo med vire.",
+      "dropFontsSl": "Fonti morajo imeti č, š, ž, ć in đ.",
+      "chooseFiles": "Izberi datoteke",
+      "uploading": "Nalagam …",
+      "waiting": "čaka",
+      "went": {
+        "logo": "logotip",
+        "font": "font",
+        "source": "vir"
+      },
+      "addLogo": "Dodaj logotip",
       "logos": "Logotipi",
       "fonts": "Fonti",
-      "sources": "Viri (dokumenti, tabele, slike)",
-      "noLogos": "Še ni logotipa.",
+      "sources": "Viri",
+      "noLogos": "Še ni logotipa. Spusti sliko z »logo« v imenu zgoraj ali jo dodaj z gumbom.",
       "noFonts": "Še ni fontov.",
-      "noSources": "Še ni virov.",
+      "noSources": "Še ni virov. Spusti dokumente o brandu zgoraj.",
       "logoAlt": "Logotip {name}",
       "delete": "Izbriši {name}",
-      "allGlyphs": "vsi šumniki (č š ž ć đ) so na voljo",
+      "allGlyphs": "vsi šumniki so na voljo",
       "missingGlyphs": "manjka: {chars}",
       "file": "Datoteka",
       "kind": "Vrsta",
@@ -299,31 +313,24 @@
         "extracted": "prebrano",
         "failed": "napaka"
       },
-      "choose": {
-        "logo": "Naloži logotip",
-        "font": "Naloži fonte",
-        "source": "Naloži vire"
-      },
-      "hint": {
-        "logo": "PNG, JPEG ali WebP, do {mb} MB. SVG ni podprt.",
-        "font": "TTF ali OTF, do {mb} MB. Font mora imeti č š ž ć đ (velike in male).",
-        "source": "PDF, Word, Excel, PowerPoint, CSV, TXT/MD ali slike, do {mb} MB na datoteko."
-      },
-      "upload": "Naloži",
-      "uploading": "Nalagam …",
-      "uploaded": "naloženo.",
       "errors": {
-        "TOO_LARGE": "datoteka je večja od {mb} MB.",
-        "UNSUPPORTED_TYPE": "ta vrsta datoteke tukaj ni podprta.",
+        "TOO_LARGE": "prevelika datoteka (logotip in font do 10 MB, vir do 50 MB, ZIP do 100 MB).",
+        "UNSUPPORTED_TYPE": "te vrste datoteke ne sprejemamo (npr. SVG, stari .doc/.xls ali ZIP v ZIP-u).",
         "INVALID_FILE": "datoteka je poškodovana ali ni prave vrste.",
-        "MISSING_GLYPHS": "font nima znakov: {detail}.",
+        "MISSING_GLYPHS": "font nima znakov {detail}.",
         "DUPLICATE": "ta datoteka je že naložena.",
-        "LIMIT_REACHED": "doseženo je največje število datotek.",
+        "LIMIT_REACHED": "doseženo je največje število datotek te vrste.",
         "ARCHIVED": "brand je arhiviran.",
         "EMPTY": "datoteka je prazna.",
         "FORBIDDEN": "datoteke nalaga lastnik.",
         "NOT_FOUND": "brand ne obstaja.",
-        "failed": "nalaganje ni uspelo."
+        "ZIP_INVALID": "ZIP se ne da odpreti.",
+        "ZIP_TOO_MANY_ENTRIES": "ZIP ima preveč datotek (največ 200).",
+        "ZIP_TOO_LARGE": "ZIP je razpakiran prevelik (največ 300 MB).",
+        "ENCRYPTED": "datoteka v ZIP-u je zaklenjena z geslom.",
+        "UNSUPPORTED_COMPRESSION": "datoteka v ZIP-u je stisnjena na nepodprt način.",
+        "CORRUPT": "datoteka v ZIP-u je poškodovana.",
+        "failed": "nalaganje ni uspelo, poskusi znova."
       }
     }
   }

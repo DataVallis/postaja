@@ -13,6 +13,7 @@ import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createBrand, setBrandArchived } from "./service";
+import { sniff } from "../files/sniff";
 import { brandFileUrl, cleanFilename, deleteBrandFile, listBrandFiles, MAX_BYTES, MAX_FILES, uploadBrandFile } from "./files";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -258,5 +259,68 @@ describe("cleanFilename", () => {
     expect(cleanFilename("a\u202egnp.exe")).toBe("agnp.exe");
     expect(cleanFilename("\u0000\u0001")).toBe("file");
     expect(cleanFilename("č".repeat(300))).toHaveLength(200);
+  });
+});
+
+describe("uploadAuto: drop anything, incl. a ZIP", () => {
+  it("one ZIP is unpacked and every entry is checked and filed on its own", async () => {
+    const { makeZipEntries } = await import("../../../tests/fixtures/files");
+    const { compress } = await import("wawoff2");
+    const fs = await import("node:fs");
+    const { uploadAuto } = await import("./files");
+    const tiny = new Uint8Array(fs.readFileSync("tests/fixtures/fonts/TinySans.ttf"));
+    const zip = makeZipEntries([
+      { name: "Brand/", bytes: new Uint8Array() },
+      { name: "Brand/Logo.png", bytes: await image("png", 120, 40) },
+      { name: "Brand/fonts/TinySans.woff2", bytes: await compress(tiny) },
+      { name: "Brand/brief.pdf", bytes: pdf("zip-brief"), deflate: true },
+      { name: "Brand/team.jpg", bytes: await image("jpeg") },
+      { name: "Brand/icon.svg", bytes: new TextEncoder().encode("<svg onload='x'/>") },
+      { name: "Brand/old.zip", bytes: makeZipEntries([{ name: "x.txt", bytes: new TextEncoder().encode("x") }]) },
+      { name: "__MACOSX/Brand/._Logo.png", bytes: new TextEncoder().encode("junk") },
+    ]);
+    const res = await uploadAuto(db, s3, A, brandA, { filename: "brand.zip", bytes: zip });
+    expect(res.map((r) => [r.name, r.ok ? r.slot : r.error])).toEqual([
+      ["Brand/Logo.png", "logo"],
+      ["Brand/fonts/TinySans.woff2", "font"],
+      ["Brand/brief.pdf", "source"],
+      ["Brand/team.jpg", "source"],
+      ["Brand/icon.svg", "UNSUPPORTED_TYPE"],
+      ["Brand/old.zip", "UNSUPPORTED_TYPE"],
+    ]);
+    const files = await listBrandFiles(db, A, brandA);
+    expect(files.logos.map((l) => l.filename)).toEqual(["Logo.png"]);
+    expect(files.fonts[0]).toMatchObject({ filename: "TinySans.woff2", contentType: "font/ttf", meta: { family: "Tiny Sans", missingGlyphs: [], convertedFrom: "woff2" } });
+    expect(files.fonts[0].storageKey).toMatch(/\/font\/[0-9a-f-]{36}\.ttf$/);
+    expect(files.sources.map((s) => s.kind).sort()).toEqual(["image", "pdf"]);
+    // the stored font is a plain TTF the renderer can read
+    const got = await fetch(await brandFileUrl(db, s3, A, "asset", files.fonts[0].id));
+    expect(new Uint8Array(await got.arrayBuffer()).subarray(0, 4)).toEqual(new Uint8Array([0, 1, 0, 0]));
+  });
+
+  it("a single file still goes to its slot; a forced slot wins; brand errors throw, file errors are results", async () => {
+    const { uploadAuto } = await import("./files");
+    expect(await uploadAuto(db, s3, A, brandA, { filename: "x.pdf", bytes: pdf("auto1") })).toMatchObject([{ ok: true, slot: "source", kind: "pdf" }]);
+    expect(await uploadAuto(db, s3, A, brandA, { filename: "photo.png", bytes: await image("png", 31, 31) }, "logo")).toMatchObject([{ ok: true, slot: "logo" }]);
+    expect(await uploadAuto(db, s3, A, brandA, { filename: "x.svg", bytes: new TextEncoder().encode("<svg/>") })).toMatchObject([{ ok: false, error: "UNSUPPORTED_TYPE", detail: "svg" }]);
+    await expect(uploadAuto(db, s3, editorA, brandA, { filename: "x.pdf", bytes: pdf("ed") })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(uploadAuto(db, s3, B, brandA, { filename: "x.pdf", bytes: pdf("b") })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("a broken ZIP is one clear error; nothing stored", async () => {
+    const { uploadAuto } = await import("./files");
+    const broken = makeZip(["a.txt"]);
+    broken[broken.length - 22 + 16] = 0xff;
+    expect(sniff(broken)).toBe("unknown"); // unreadable directory: not even recognised as a ZIP
+    expect(await uploadAuto(db, s3, A, brandA, { filename: "b.zip", bytes: broken })).toMatchObject([{ ok: false, error: "UNSUPPORTED_TYPE" }]);
+    expect((await sql`select count(*)::int n from brand_sources`)[0].n).toBe(0);
+  });
+
+  it("WOFF fonts without č/š/ž: refused for a Slovenian brand, accepted (gap recorded) for an English one", async () => {
+    const { makeWoff } = await import("../../../tests/fixtures/files");
+    const { uploadAuto } = await import("./files");
+    const woff = makeWoff(makeFont({ chars: "abc", family: "Plain" }));
+    expect(await uploadAuto(db, s3, A, brandA, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: false, error: "MISSING_GLYPHS" }]);
+    expect(await uploadAuto(db, s3, B, brandB, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: true, slot: "font" }]);
   });
 });

@@ -112,7 +112,7 @@ export function ProfileForm(p: ProfileProps) {
   );
 }
 
-export function ChannelForm({ brandId, presets }: { brandId: string; presets: { key: string; platform: string; width: number; height: number; media: string }[] }) {
+export function ChannelForm({ brandId, languages, presets }: { brandId: string; languages: string[]; presets: { key: string; platform: string; width: number; height: number; media: string }[] }) {
   const t = useTranslations("Brands");
   const [state, action, pending] = useActionState(addChannelAction, undefined);
   const [platform, setPlatform] = useState<string>("instagram");
@@ -127,8 +127,8 @@ export function ChannelForm({ brandId, presets }: { brandId: string; presets: { 
         </Field>
         <Field id="handle" label={t("handle")}><input id="handle" name="handle" required className={input} /></Field>
         <Field id="language" label={t("language")}>
-          <select id="language" name="language" defaultValue="sl" className={input}>
-            {LANGS.map((l) => <option key={l} value={l}>{t(`lang.${l}`)}</option>)}
+          <select id="language" name="language" defaultValue={languages[0]} className={input}>
+            {LANGS.filter((l) => languages.includes(l)).map((l) => <option key={l} value={l}>{t(`lang.${l}`)}</option>)}
           </select>
         </Field>
         <Field id="postsPerDay" label={t("postsPerDay")}><input id="postsPerDay" name="postsPerDay" type="number" min={0} max={10} defaultValue={1} className={input} /></Field>
