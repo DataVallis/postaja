@@ -660,7 +660,8 @@
       "NOT_FOUND": "Uvoz ne obstaja.",
       "BAD_STATE": "Ta uvoz je že zaključen.",
       "INVALID": "Izbira ni veljavna.",
-      "FAILED": "Shranjevanje ni uspelo."
+      "FAILED": "Shranjevanje ni uspelo.",
+      "PLATFORM_MISMATCH": "Vrstice ene platforme lahko gredo samo na kanal iste platforme (npr. LinkedIn na LinkedIn)."
     },
     "doneSummary": "Uvoženo: {n} objav.",
     "seePosts": "Odpri objave",
@@ -760,7 +761,8 @@
     "rereadColumns": "Preberi znova",
     "discard": "Zavrzi uvoz",
     "reopen": "Uvozi manjkajoče",
-    "reopenHint": "Si dodal kanal (npr. X ali LinkedIn), ki ga ob uvozu še ni bilo? Odpri uvoz znova, poveži platformo s kanalom in uvozi — že uvožene objave se ne podvojijo."
+    "reopenHint": "Si dodal kanal (npr. X ali LinkedIn), ki ga ob uvozu še ni bilo? Odpri uvoz znova, poveži platformo s kanalom in uvozi — že uvožene objave se ne podvojijo.",
+    "noChannelForPlatform": "Ni kanala za to platformo — dodaj ga pri brandu."
   },
   "PostFormats": {
     "text": "besedilo",
