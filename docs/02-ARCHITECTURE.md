@@ -127,13 +127,13 @@ Job chain per post (pg-boss, singleton key `post:<id>:<step>` for idempotency):
 - Every rendered asset is validated against its `format_presets` row (exact width × height, bytes, duration) before `ready`.
 - "Clean" assets (`image_clean`, `video_clean`) are kept without overlays so text edits, animation and recompose never re-generate.
 
-### 5.1 Brand ingestion jobs
-1. `source.extract` (per source) — by kind (see §1 Brand ingestion); store `extract`; images also get palette (sharp stats) and a vision description.
-   Sources are wrapped as quoted data in every prompt; instructions inside them are ignored (prompt-injection guard, tested with a fixture).
-2. `brand.synthesize` — when all sources of a batch are extracted: Claude gets the current profile (if any) + extracts → returns
-   zod-validated `{fields, source_refs, conflicts, plan_like_sources}` → `brand_profile_proposals` row.
-3. Owner accepts in UI → new `brand_profile_versions` row; confirmed assets copied to `brand_assets`.
-4. Phase 2: `source.chunk` → `brand_knowledge_chunks` with embeddings; generation retrieves top-k by post topic.
+### 5.1 Brand materials for generation (ADR-035 — no CGP synthesis)
+1. `source.extract` (per source, when generation first needs it) — by kind (see §1 Brand ingestion libraries); store `extract` (text, tables);
+   images also get palette (sharp stats) and a vision description for use as references.
+   Materials are wrapped as quoted data in every prompt; instructions inside them are ignored (prompt-injection guard, tested with a fixture).
+2. Generation uses the owner's CGP version + rules + the relevant material extracts; the CGP wins on conflicts.
+3. Phase 2: `source.chunk` → `brand_knowledge_chunks` with embeddings; generation retrieves top-k by post topic.
+(The former `brand.synthesize` / `brand_profile_proposals` flow is dropped.)
 
 ### 5.1a Rule engine (all post types)
 - `src/server/rules/` — pure functions: `effectiveRules(platformRules, channelRules, brandRules)` (most strict wins) and
