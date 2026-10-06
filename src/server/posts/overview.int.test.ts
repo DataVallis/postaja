@@ -31,7 +31,7 @@ beforeEach(async () => {
   const bUser = (await session((await signIn("b@b.si"))!))!.user;
   A = { userId: s.user.id, orgId: a.orgId, orgName: "Org A", role: "owner", plan: "pro" };
   B = { userId: bUser.id, orgId: b.orgId, orgName: "Org B", role: "owner", plan: "pro" };
-  const chan = (platform: "instagram" | "linkedin", handle: string) => ({ platform, handle, language: "sl", goal: { postsPerDay: 1, weekdays: [1] }, allowedTypes: ["text" as const] });
+  const chan = (platform: "instagram" | "linkedin", handle: string) => ({ platform, handle, language: "sl" as const, goal: { postsPerDay: 1, weekdays: [1] }, allowedTypes: ["text" as const] });
   brandA = (await createBrand(db, A, { name: "Inženirji", slug: "inzenirji", languages: ["sl"] })).id;
   brandA2 = (await createBrand(db, A, { name: "AI Builders", slug: "aib", languages: ["sl"] })).id;
   brandB = (await createBrand(db, B, { name: "Cherr", slug: "cherr", languages: ["sl"] })).id;
