@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-05
+# Handoff — state as of 2026-10-06
 
 ## Working mode
 **Mode B (autonomous) — partially.** Owner granted push access to `DataVallis/postaja` on 2026-10-05
@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-06: TASK-010a Claude → Postaja over MCP (OAuth 2.1 + `/api/mcp`, CGP drafts, `/app/connect`; ADR-038) — PR #20.
 - 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
 - 2026-10-05: Hetzner Cloud Firewall on the dev server (asisto 5432/6379/3000 were public; now closed). DNS for dev-postaja/postaja set.
 - 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green.
@@ -60,11 +61,12 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: ADR-027 (dev behind host nginx) — PR #4. First deploy: Deploy dev run 37334467728 (setup=true) green; health ok with SHA 8445e2d.
 
 ## Owner's open actions
-1. **Try CGP import on dev** (after PR #19 deploys): a brand → Profil (CGP) → "Uvozi iz dokumenta" → your CGP as Word or PDF → the text appears in the field → "Shrani novo verzijo".
-2. **Try post generation on dev** (after PR #18 deploys): a brand with a CGP and an Instagram channel → section "Objave" → write a request → "Ustvari objavo". Expect a post in a few seconds with status "pripravljena" or "za pregled" and a cost line. If it says the AI key is not set, check the secret name `ANTHROPIC_API_KEY` in environment `dev`.
-3. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
-4. Swap 2 GB (TASK-002 Step B) — optional.
-5. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
+1. **Connect Claude on dev** (after PR #20 deploys): https://dev-postaja.inzenirji.si/app/connect → copy the URL → Claude: Settings → Connectors → add a custom connector named Postaja with that URL → Connect → sign in with your email (open the mail link in the same browser) → Dovoli. Then in a Claude conversation: "Pošlji ta CGP v Postajo za brand <slug>". The brand page shows "Claude je predlagal CGP" → Vstavi v urejevalnik → Shrani novo verzijo.
+2. **Try CGP import on dev** (after PR #19 deploys): a brand → Profil (CGP) → "Uvozi iz dokumenta" → your CGP as Word or PDF → the text appears in the field → "Shrani novo verzijo".
+3. **Try post generation on dev** (after PR #18 deploys): a brand with a CGP and an Instagram channel → section "Objave" → write a request → "Ustvari objavo". Expect a post in a few seconds with status "pripravljena" or "za pregled" and a cost line. If it says the AI key is not set, check the secret name `ANTHROPIC_API_KEY` in environment `dev`.
+4. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
+5. Swap 2 GB (TASK-002 Step B) — optional.
+6. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
@@ -72,8 +74,9 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 ## Next
 **Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
 Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
-TASK-008 in review (PR #19). Next: TASK-009 material text for generation (reuses `extract.ts`), then images/carousels (worker + fal).
-Latest numbers: TASK-009, ADR-037. Latest PR: #19.
+Owner idea (2026-10-06): Claude conversations/projects feed Postaja → **Claude pushes to Postaja's MCP server** (ADR-038). TASK-010a in review (PR #20).
+Next: TASK-010b MCP post tools (`create_post`, `list_posts`, `set_post_status`), TASK-009 material text for generation (reuses `extract.ts`), then images/carousels (worker + fal).
+Latest numbers: TASK-010b, ADR-038. Latest PR: #20.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.

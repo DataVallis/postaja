@@ -6,3 +6,5 @@ export * from "./schema/platform";
 export * from "./schema/brands";
 export * from "./schema/brand-files";
 export * from "./schema/generation";
+export * from "./schema/oauth";
+export * from "./schema/mcp";

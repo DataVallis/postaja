@@ -34,7 +34,7 @@ Decisions referenced as ADR-XXX live in `03-DECISIONS.md`.
 ## 2. Components
 
 ```
-Browser
+Browser                 Claude (claude.ai / Claude Code) ── MCP over HTTPS + OAuth 2.1 ──► web /api/mcp (ADR-038)
   │ HTTPS
 kamal-proxy (TLS)
   │
@@ -245,6 +245,7 @@ SENTRY_DSN                   # optional
 - Brand sources: office files processed only in the worker, LibreOffice in a sandboxed process without network; macros never executed; zip-bomb limits on DOCX/XLSX/PPTX.
 - URL sources: server-side fetch with SSRF guard (no private IPs, no redirects to them), size and time limits.
 - Prompt injection: source content always passed as quoted data; synthesis output is a proposal the owner must accept.
+- MCP (ADR-038): OAuth codes only to Claude's callbacks; JWT access tokens audience-bound to `/api/mcp`, scope `postaja`, verified against the local JWKS, plus a live consent per request; org re-resolved per request; CGP from Claude is only a draft; tool calls logged without arguments.
 - No prompts, captions, emails or tokens in logs beyond IDs; provider errors logged without payloads.
 - BYOK keys (phase 2): encrypted at rest (AES-GCM, key from env), never returned to the client.
 

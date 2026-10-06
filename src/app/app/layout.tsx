@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <nav aria-label={t("nav")} className="flex gap-4 text-sm">
           <Link href="/app" className="underline-offset-4 hover:underline">{t("home")}</Link>
           {ctx.org ? <Link href="/app/brands" className="underline-offset-4 hover:underline">{t("brands")}</Link> : null}
+          {ctx.org ? <Link href="/app/connect" className="underline-offset-4 hover:underline">{t("claude")}</Link> : null}
           {ctx.user.role === "superadmin" ? <Link href="/admin" className="underline-offset-4 hover:underline">{t("adminLink")}</Link> : null}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm">

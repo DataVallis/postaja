@@ -2,7 +2,7 @@
 import { useActionState, useRef, useState } from "react";
 import { CgpImport } from "./cgp-import";
 import { useTranslations } from "next-intl";
-import { addChannelAction, createBrandAction, saveProfileAction, type ActionState } from "./actions";
+import { addChannelAction, createBrandAction, discardCgpDraftAction, saveProfileAction, type ActionState } from "./actions";
 
 export const input = "rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal disabled:opacity-60";
 const button = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink disabled:opacity-60";
@@ -55,10 +55,34 @@ type ProfileProps = {
   cgpSources?: { id: string; filename: string }[];
   readOnly: boolean;
   cgp: string;
+  /** A CGP Claude proposed through MCP, waiting for the owner (ADR-038). Saving a version marks it used. */
+  cgpDraft?: { id: string; text: string; note: string | null; when: string } | null;
   pillarsText: string;
   rules: { bannedWords: string[]; ctaPhrases: string[]; captionMax?: number; hashtagsMax?: number; emojiMax?: number; linksAllowed?: boolean; mustEndWithCta?: boolean };
   visual: { colors: Record<string, string | undefined>; imageStyle: string; negativePrompt: string };
 };
+
+function CgpDraftBanner({ draft, onInsert }: { draft: NonNullable<ProfileProps["cgpDraft"]>; onInsert: (text: string) => void }) {
+  const t = useTranslations("Brands.cgpDraft");
+  const [inserted, setInserted] = useState(false);
+  return (
+    <div role="region" aria-label={t("title")} className="grid gap-2 rounded-xl border border-signal/60 bg-signal/10 p-3 text-sm">
+      <p>
+        <strong>{t("title")}</strong> · {draft.when} · {t("chars", { n: draft.text.length })}
+        {draft.note ? <> · <span className="italic">{draft.note}</span></> : null}
+      </p>
+      <p className="text-muted">{inserted ? t("insertedHint") : t("hint")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => { onInsert(draft.text); setInserted(true); }} className="rounded-lg bg-signal px-3 py-1.5 font-semibold text-ink">
+          {t("insert")}
+        </button>
+        <button type="submit" formAction={discardCgpDraftAction} formNoValidate name="draftId" value={draft.id} className="rounded-lg border border-fg/25 px-3 py-1.5 font-medium hover:border-fg/60">
+          {t("discard")}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ProfileForm(p: ProfileProps) {
   const t = useTranslations("Brands");
@@ -70,6 +94,7 @@ export function ProfileForm(p: ProfileProps) {
       <input type="hidden" name="brandId" value={p.brandId} />
       <fieldset disabled={p.readOnly} className="grid gap-6">
         <Field id="cgp" label={t("cgp")} hint={t("cgpHint")}>
+          {!p.readOnly && p.cgpDraft ? <CgpDraftBanner draft={p.cgpDraft} onInsert={(text) => { if (cgpRef.current) { cgpRef.current.value = text; cgpRef.current.focus(); } }} /> : null}
           {!p.readOnly ? <CgpImport brandId={p.brandId} sources={p.cgpSources ?? []} onText={(text) => { if (cgpRef.current) { cgpRef.current.value = text; cgpRef.current.focus(); } }} /> : null}
           <textarea ref={cgpRef} id="cgp" name="cgp" rows={12} defaultValue={p.cgp} aria-describedby="cgp-hint" className={`${input} font-mono text-sm`} />
         </Field>

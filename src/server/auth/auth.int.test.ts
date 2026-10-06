@@ -2,6 +2,7 @@ import postgres from "postgres";
 import { getSchema } from "better-auth/db";
 import { getTableColumns } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { lazyAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
@@ -19,7 +20,7 @@ const make = (ttl?: number) =>
     db, mailer, baseURL, secret: "test-secret-test-secret-test-secret-123",
     superadminEmails: parseEmailList("Boss@DataVallis.com"), magicLinkTtlSeconds: ttl,
   });
-const auth = make();
+const auth = lazyAuth(() => make()); // built after beforeAll's migration (see lazyAuth)
 const headers = () => new Headers({ origin: baseURL, "content-type": "application/json" });
 
 beforeAll(async () => { await resetAndMigrate(url); });

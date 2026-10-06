@@ -6,6 +6,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // OAuth / MCP discovery documents (RFC 8414, RFC 9728, OIDC) for Claude (ADR-038).
+  async rewrites() {
+    return [{ source: "/.well-known/:path*", destination: "/api/well-known/:path*" }];
+  },
 };
 
 export default withNextIntl(nextConfig);

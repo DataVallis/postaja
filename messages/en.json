@@ -14,7 +14,9 @@
     "sending": "Sending …",
     "sent": "If you have access, you received an email with a sign-in link. The link is valid for 10 minutes.",
     "error": "Sending failed. Try again in a minute.",
-    "linkInvalid": "The link is invalid or expired. Request a new one."
+    "linkInvalid": "The link is invalid or expired. Request a new one.",
+    "oauthIntro": "Claude wants to connect to Postaja. Enter your email and we will send you a sign-in link. Open it in this browser.",
+    "oauthExpired": "The Claude connection request has expired. Start again in Claude."
   },
   "App": {
     "signedInAs": "Signed in as",
@@ -36,7 +38,8 @@
     "adminLink": "Admin",
     "nav": "Main navigation",
     "home": "Home",
-    "brands": "Brands"
+    "brands": "Brands",
+    "claude": "Claude"
   },
   "Admin": {
     "nav": "Admin navigation",
@@ -352,6 +355,14 @@
         "ARCHIVED": "The brand is archived.",
         "failed": "Import failed, try again."
       }
+    },
+    "cgpDraft": {
+      "title": "Claude proposed a CGP",
+      "chars": "{n} characters",
+      "hint": "The active CGP does not change until you insert the proposal into the editor and save a new version.",
+      "insertedHint": "The proposal is in the editor. Review it and save a new version, or reload the page to cancel.",
+      "insert": "Insert into editor",
+      "discard": "Discard proposal"
     }
   },
   "Posts": {
@@ -427,6 +438,45 @@
       "INVALID": "Check the input (request at least 3 characters).",
       "FORBIDDEN": "No access.",
       "FAILED": "Something went wrong. Try again."
+    }
+  },
+  "Connect": {
+    "title": "Claude",
+    "intro": "Connect your Claude to Postaja. In a conversation Claude can then send the CGP and materials from your projects straight to a brand, and you review everything here.",
+    "howTitle": "How to connect",
+    "urlLabel": "MCP server URL",
+    "step1": "In Claude (claude.ai or the desktop app) open Settings → Connectors and add a custom connector.",
+    "step2": "Name it Postaja and paste the URL above.",
+    "step3": "Click Connect. Postaja opens: sign in with your email and open the link from the mail in the same browser.",
+    "step4": "Allow access. Then say in a conversation, e.g. “Send this CGP to Postaja for the brand inzenirji”.",
+    "codeLabel": "Claude Code (terminal)",
+    "tools": "Claude sees your organization's brands and their CGPs. An owner can propose a CGP through Claude (stored as a proposal you confirm on the brand page) and add text materials.",
+    "editorNote": "As an editor you can only read brands through Claude; the owner proposes CGPs and adds materials.",
+    "connections": "Connected apps",
+    "none": "No app is connected yet.",
+    "claudeCode": "Claude Code",
+    "since": "connected {when}",
+    "disconnect": "Disconnect",
+    "activity": "Recent Claude actions",
+    "noActivity": "Claude has not done anything yet.",
+    "ok": "ok",
+    "failed": "error ({error})",
+    "copy": "Copy",
+    "copied": "Copied",
+    "consent": {
+      "title": "{client} wants access to Postaja",
+      "who": "Signed in as {email}, organization {org}.",
+      "canRead": "read brands, CGPs, channels and the list of materials",
+      "canPropose": "propose a CGP (only you change the active CGP, by saving a version)",
+      "canAdd": "add text materials to brands",
+      "cannot": "publish, delete or change settings",
+      "redirect": "After you allow, you return to {host}. You can disconnect any time on the Claude page in Postaja.",
+      "allow": "Allow",
+      "deny": "Deny",
+      "working": "Connecting …",
+      "failed": "Could not confirm. Start again in Claude.",
+      "invalid": "This connection request is invalid or has expired. Start again in Claude.",
+      "noOrg": "You are not a member of any organization, so Claude cannot access Postaja."
     }
   }
 }

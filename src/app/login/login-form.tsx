@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 
-export function LoginForm() {
+/** `callbackURL` is /app, or the authorize request when Claude is connecting (validated server-side). */
+export function LoginForm({ callbackURL = "/app" }: { callbackURL?: string }) {
   const t = useTranslations("Login");
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -13,7 +14,7 @@ export function LoginForm() {
     setState("sending");
     const { error } = await authClient.signIn.magicLink({
       email,
-      callbackURL: "/app",
+      callbackURL,
       errorCallbackURL: "/login?error=link",
     });
     setState(error ? "error" : "sent");
