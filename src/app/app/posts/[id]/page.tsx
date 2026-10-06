@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Badge, buttonClass, Card, PageHeader, STATUS_TONE } from "@/components/ui";
+import { Badge, buttonClass, Card, inputClass, PageHeader, STATUS_TONE } from "@/components/ui";
 import { microToUsd } from "@/lib/money/usd";
 import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
-import { retryPostAction, setPostStatusAction } from "../actions";
+import { reschedulePostAction, retryPostAction, setPostStatusAction } from "../actions";
 import { PostEditor } from "../editor";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,10 @@ const NEXT: Partial<Record<PostStatus, PostStatus[]>> = {
   planned: ["skipped"],
 };
 
-export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
+  const { slotError } = await searchParams;
   const db = getDb();
   const post = await getPost(db, org, id).catch((e) => {
     if (e instanceof PostError) notFound();
@@ -83,6 +84,21 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
 
       <Card className="p-5" data-testid="plan">
         <h2 className="mb-3 text-base font-semibold">{t("planTitle")}</h2>
+        {post.status !== "published" ? (
+          <form action={reschedulePostAction} className="mb-4 flex flex-wrap items-end gap-3 border-b border-line pb-4" data-testid="slot-form">
+            <input type="hidden" name="postId" value={post.id} />
+            <div className="grid gap-1">
+              <label htmlFor="slot-date" className="text-sm font-medium">{t("slotDate")}</label>
+              <input id="slot-date" name="date" type="date" defaultValue={post.scheduledOn ?? ""} className={`${inputClass} w-44`} />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="slot-time" className="text-sm font-medium">{t("slotTime")}</label>
+              <input id="slot-time" name="time" type="time" defaultValue={post.scheduledTime ?? ""} className={`${inputClass} w-32`} />
+            </div>
+            <button type="submit" className={buttonClass("secondary")}>{t("slotSave")}</button>
+            {slotError ? <p role="alert" className="text-sm text-danger">{t("slotInvalid")}</p> : null}
+          </form>
+        ) : null}
         <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[12rem_1fr]">
           {facts.filter(([, v]) => v).map(([k, v]) => (
             <div key={k} className="contents">

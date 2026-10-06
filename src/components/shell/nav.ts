@@ -1,5 +1,5 @@
 // Sidebar structure (TASK-011). Only real pages are listed; future sections (plan, calendar, import) join here.
-export type NavIcon = "dashboard" | "import" | "posts" | "brands" | "claude" | "orgs" | "platform" | "audit";
+export type NavIcon = "dashboard" | "plan" | "import" | "posts" | "brands" | "claude" | "orgs" | "platform" | "audit";
 export type NavItem = { href: string; label: string; icon: NavIcon; exact?: boolean; also?: string[] };
 export type NavSection = { title?: string; items: NavItem[] };
 

@@ -484,7 +484,11 @@
     "publishedAt": "Objavljeno",
     "planSource": "Vir",
     "planImport": "uvoz",
-    "plannedHint": "Objava je v planu, besedila še ni. Napiši ga spodaj ali ga bo napisala Postaja (množično ustvarjanje pride v naslednjem koraku)."
+    "plannedHint": "Objava je v planu, besedila še ni. Napiši ga spodaj ali ga bo napisala Postaja (množično ustvarjanje pride v naslednjem koraku).",
+    "slotDate": "Dan",
+    "slotTime": "Ura",
+    "slotSave": "Shrani termin",
+    "slotInvalid": "Termin ni veljaven."
   },
   "Connect": {
     "title": "Claude",
@@ -544,7 +548,8 @@
     "toLight": "Svetla tema",
     "account": "Račun",
     "signOut": "Odjava",
-    "import": "Uvoz planov"
+    "import": "Uvoz planov",
+    "plan": "Plan"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -569,7 +574,11 @@
       "spend": "Poraba AI",
       "ofCap": "od {cap} $ ta mesec",
       "planned": "V planu"
-    }
+    },
+    "today": "Danes",
+    "todayHint": "{n, plural, =0 {Za danes ni nič v planu.} one {# objava v planu za danes.} two {# objavi v planu za danes.} few {# objave v planu za danes.} other {# objav v planu za danes.}}",
+    "openPlan": "Odpri plan →",
+    "time": "Ura"
   },
   "PostsList": {
     "title": "Objave",
@@ -743,5 +752,39 @@
     "carousel": "karusel",
     "thread": "nit",
     "video": "video"
+  },
+  "Plan": {
+    "title": "Plan",
+    "description": "Vse objave vseh brandov po dnevih. Klik na dan odpre dnevni pregled, klik na objavo jo odpre.",
+    "allBrands": "Brand: vsi",
+    "allPlatforms": "Platforma: vse",
+    "platform": "Platforma",
+    "apply": "Filtriraj",
+    "tabsLabel": "Pogledi plana",
+    "tabs": {
+      "calendar": "Koledar",
+      "unscheduled": "Brez termina",
+      "history": "Zgodovina"
+    },
+    "prev": "Prejšnje",
+    "next": "Naslednje",
+    "today": "Danes",
+    "viewLabel": "Pogled",
+    "views": {
+      "month": "Mesec",
+      "week": "Teden",
+      "day": "Dan"
+    },
+    "time": "Ura",
+    "format": "Format",
+    "status": "Stanje",
+    "emptyDay": "Ta dan ni objav.",
+    "emptyRange": "V tem obdobju ni objav.",
+    "more": "+{n} več",
+    "noUnscheduled": "Vse objave imajo termin.",
+    "publishedOn": "Objavljeno",
+    "noHistory": "Še ni objavljenih objav.",
+    "pagination": "Strani",
+    "pageOf": "Stran {page} od {pages}"
   }
 }

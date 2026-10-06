@@ -12,6 +12,7 @@
 | [brands.md](brands.md) | `src/server/brands/**`, `src/server/files/extract.ts`, `src/app/app/brands/cgp-import.tsx`, `src/app/api/brands/[id]/cgp-import/**`, `src/server/db/schema/brands.ts`, `src/app/app/**`, `src/server/auth/require.ts` | Live on dev |
 | [ui.md](ui.md) | `src/components/**`, `src/lib/theme.ts`, `src/app/globals.css`, `src/app/app/layout.tsx`, `src/app/admin/layout.tsx`, `src/app/app/page.tsx`, `src/app/app/posts/page.tsx`, `src/app/app/brands/page.tsx`, `src/server/posts/overview.ts` | Built |
 | [plans.md](plans.md) | `src/server/plans/**`, `src/app/app/import/**`, `src/app/api/imports/**`, `src/server/db/schema/plans.ts`, `drizzle/0013_plan_imports.sql`, post plan fields in `src/server/db/schema/generation.ts` | Built |
+| [plan-view.md](plan-view.md) | `src/app/app/plan/**`, `src/server/posts/calendar.ts`, `src/lib/dates/**`, slot form in `src/app/app/posts/[id]/page.tsx` | Built |
 | [mcp.md](mcp.md) | `src/server/mcp/**`, `src/app/api/mcp/**`, `src/app/api/well-known/**`, `src/app/connect/**`, `src/app/app/connect/**`, `src/server/db/schema/{oauth,mcp}.ts`, `drizzle/0010…0012`, OAuth part of `src/server/auth/auth.ts`, `next.config.ts` rewrite | Built |
 
 Every PR that changes covered code updates the chapter in the same PR.
