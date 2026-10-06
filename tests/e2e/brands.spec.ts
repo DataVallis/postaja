@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+const tab = (p: Page, name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -51,6 +52,7 @@ test("owner creates a brand, saves CGP versions, adds a channel and sees the eff
 
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
   await expect(p.getByText("verzija 1")).toBeVisible();
+  await tab(p, "Profil (CGP)");
   await p.getByLabel("CGP — navodila za AI").fill("# Inženirji\nPišemo jasno, strokovno, brez žargona. Čšž.");
   await p.getByLabel("Stebri vsebine").fill("Nasveti | 60 | praktični nasveti\nZgodbe | 40");
   await p.getByLabel("Največ hashtagov", { exact: true }).fill("4");
@@ -61,6 +63,7 @@ test("owner creates a brand, saves CGP versions, adds a channel and sees the eff
   await p.getByRole("button", { name: "Shrani novo verzijo" }).click();
   await expect(p.getByRole("alert").filter({ hasText: "Preveri vnesene podatke." })).toBeVisible();
 
+  await tab(p, "Kanali");
   await p.getByLabel("Platforma").selectOption("instagram");
   await p.getByLabel("Profil (@ime)").fill("@inzenirji");
   await p.getByLabel("Privzeti format").selectOption("ig_feed_portrait");
@@ -69,6 +72,7 @@ test("owner creates a brand, saves CGP versions, adds a channel and sees the eff
   await expect(p.getByTestId("channels")).toContainText("instagram · @inzenirji");
   // platform 5, brand 4, channel 3 → 3; Instagram: 2200 chars, links not clickable
   await expect(p.getByTestId("effective-instagram")).toHaveText("Velja: 2200 znakov · 3 hashtagov · povezave niso klikljive");
+  await tab(p, "Verzije");
   await expect(p.getByTestId("versions")).toContainText("v2");
   await expect(p.getByTestId("versions")).toContainText("ustvarjen");
   expect(await serious(p)).toEqual([]);

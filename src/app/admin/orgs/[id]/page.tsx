@@ -15,7 +15,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
   const t = await getTranslations("Admin");
   const f = await getFormatter();
   return (
-    <main className="grid gap-10">
+    <div className="grid gap-10">
       <div>
         <h1 className="text-2xl font-bold">{org.name}</h1>
         <p className="text-sm text-muted">/{org.slug} · {f.dateTime(org.createdAt, { dateStyle: "medium" })}</p>
@@ -39,6 +39,6 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
         </ul>
         <InviteForm orgId={org.id} />
       </section>
-    </main>
+    </div>
   );
 }

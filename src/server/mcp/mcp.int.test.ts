@@ -211,7 +211,7 @@ describe("connecting Claude", () => {
     const before = await sql`select count(*)::int n from brand_profile_versions`;
     const r = await tool(t.access_token!, "propose_cgp", { brand: "inzenirji", cgp: "# Glas\nPišemo kot inženirji.", note: "Iz pogovora" });
     expect(r.isError).toBe(false);
-    expect(r.data.reviewUrl).toBe(`${BASE_URL}/app/brands/${brandA}#profile-h`);
+    expect(r.data.reviewUrl).toBe(`${BASE_URL}/app/brands/${brandA}?tab=profile`);
     expect(await sql`select count(*)::int n from brand_profile_versions`).toEqual(before);
     expect(await sql`select brand_id, text, status, source from cgp_drafts`).toEqual([{ brand_id: brandA, text: "# Glas\nPišemo kot inženirji.", status: "pending", source: "claude" }]);
   });

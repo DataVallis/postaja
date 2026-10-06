@@ -17,7 +17,7 @@ export default async function PlatformPage() {
   const Due = ({ at }: { at: string }) =>
     isDueForReverification(at) ? <span className="ml-1 rounded bg-signal/20 px-1 text-xs font-semibold">{t("reverify.badge")}</span> : null;
   return (
-    <main className="grid gap-10">
+    <div className="grid gap-10">
       <div>
         <h1 className="text-2xl font-bold">{t("platform")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">{t("platformIntro")}</p>
@@ -36,7 +36,7 @@ export default async function PlatformPage() {
             </thead>
             <tbody>
               {rules.map((r) => (
-                <tr key={r.platform} className="border-t border-muted/20 align-top">
+                <tr key={r.platform} className="border-t border-line align-top">
                   <td className="py-2 pr-4 font-semibold">
                     <Link href={`/admin/platform/rules/${r.platform}`} aria-label={t("edit.editLabel", { name: r.platform })} className="underline-offset-4 hover:underline">{r.platform}</Link>
                   </td>
@@ -71,7 +71,7 @@ export default async function PlatformPage() {
             </thead>
             <tbody>
               {presets.map((p) => (
-                <tr key={p.key} className={`border-t border-muted/20 ${p.enabled ? "" : "opacity-50"}`}>
+                <tr key={p.key} className={`border-t border-line ${p.enabled ? "" : "opacity-50"}`}>
                   <td className="py-2 pr-4 font-mono text-xs">
                     <Link href={`/admin/platform/presets/${p.key}`} aria-label={t("edit.editLabel", { name: p.key })} className="underline-offset-4 hover:underline">{p.key}</Link>
                     {p.enabled ? null : <span className="ml-1 font-sans">({t("edit.disabled")})</span>}
@@ -92,6 +92,6 @@ export default async function PlatformPage() {
           </table>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

@@ -88,7 +88,7 @@ export async function proposeCgp(db: Db, ctx: OrgContext, input: z.input<typeof 
     await t.update(cgpDrafts, { status: "discarded", resolvedAt: new Date() }, and(eq(cgpDrafts.brandId, b.id), eq(cgpDrafts.status, "pending")));
     await t.insert(cgpDrafts, { id, brandId: b.id, text: data.cgp, note: data.note ?? null, source: "claude", createdBy: ctx.userId });
   });
-  return { draftId: id, brand: b.name, reviewUrl: `${appUrl}/app/brands/${b.id}#profile-h`, chars: data.cgp.length };
+  return { draftId: id, brand: b.name, reviewUrl: `${appUrl}/app/brands/${b.id}?tab=profile`, chars: data.cgp.length };
 }
 
 export async function pendingDraft(db: Db, ctx: OrgContext, brandId: string) {

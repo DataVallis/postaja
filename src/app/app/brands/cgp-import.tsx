@@ -32,7 +32,7 @@ export function CgpImport({ brandId, sources, onText }: { brandId: string; sourc
   }
 
   return (
-    <div className="grid gap-2 rounded-xl border border-dashed border-ink/20 bg-paper/50 p-3 text-sm dark:border-paper/25 dark:bg-paper/5">
+    <div className="grid gap-2 rounded-xl border border-dashed border-line bg-raised/40 p-3 text-sm ">
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" disabled={busy} onClick={() => input.current?.click()} className="rounded-lg border border-fg/25 px-3 py-1.5 font-medium hover:border-fg/60 disabled:opacity-60">
           {busy ? t("reading") : t("fromComputer")}

@@ -4,6 +4,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { compress } from "wawoff2";
 import { image, makeFont, makeXlsx, makeZipEntries, pdf } from "../fixtures/files";
+const tab = (p: Page, name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -54,6 +55,7 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await p.getByLabel("Kratko ime (slug)").fill("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
+  await tab(p, "Datoteke");
   await expect(p.getByRole("heading", { name: "Datoteke branda" })).toBeVisible();
   await expect(p.getByTestId("dropzone")).toContainText("Fonti morajo imeti č, š, ž, ć in đ.");
   const brandUrl = p.url();
@@ -137,7 +139,10 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await p.getByLabel("angleščina").check();
   await p.getByRole("button", { name: "Ustvari" }).click();
   await expect(p.getByRole("heading", { name: "AI Builders", level: 1 })).toBeVisible();
+  await tab(p, "Datoteke");
+  await expect(p.getByTestId("dropzone")).toBeVisible();
   await expect(p.getByTestId("dropzone")).not.toContainText("č, š, ž");
+  await tab(p, "Kanali");
   await expect(p.getByLabel("Jezik", { exact: true })).toHaveValue("en");
   expect(await p.getByLabel("Jezik", { exact: true }).locator("option").allTextContents()).toEqual(["angleščina"]);
   await p.screenshot({ path: info.outputPath("brand-files-en.png"), fullPage: true });

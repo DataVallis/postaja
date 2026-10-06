@@ -14,13 +14,13 @@ export default async function EditPresetPage({ params }: { params: Promise<{ key
   if (!preset) notFound();
   const t = await getTranslations("Admin");
   return (
-    <main className="grid gap-6">
+    <div className="grid gap-6">
       <div>
         <Link href="/admin/platform" className="text-sm text-muted underline-offset-4 hover:underline">← {t("platform")}</Link>
         <h1 className="mt-2 text-2xl font-bold">{t("edit.presetTitle", { key: preset.key })}</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">{preset.platform} · {preset.placement} · {preset.media}. {t("edit.intro")}</p>
       </div>
       <PresetForm preset={preset} today={todayIso()} />
-    </main>
+    </div>
   );
 }

@@ -8,9 +8,9 @@ export default async function NewBrandPage() {
   if (org.role !== "owner") notFound();
   const t = await getTranslations("Brands");
   return (
-    <main>
+    <div>
       <h1 className="mb-6 text-2xl font-bold">{t("new")}</h1>
       <NewBrandForm />
-    </main>
+    </div>
   );
 }

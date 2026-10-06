@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+const tab = (p: Page, name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -45,17 +46,20 @@ test("owner asks for a post, gets it checked against the rules, edits, approves 
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
   await expect(p.getByText("Brand še nima kanala.")).toBeVisible();
 
+  await tab(p, "Profil (CGP)");
   await p.getByLabel("CGP — navodila za AI").fill("# Inženirji\nPišemo strokovno in toplo.");
   await p.getByLabel("Prepovedane besede").fill("poceni");
   await p.getByLabel("CTA fraze").fill("link v bio");
   await p.getByRole("button", { name: "Shrani novo verzijo" }).click();
   await expect(p.getByRole("status").filter({ hasText: "Shranjeno kot verzija 2." })).toBeVisible();
+  await tab(p, "Kanali");
   await p.getByLabel("Platforma").selectOption("instagram");
   await p.getByLabel("Profil (@ime)").fill("@inzenirji");
   await p.getByRole("button", { name: "Dodaj kanal" }).click();
   await expect(p.getByTestId("channels")).toContainText("instagram · @inzenirji");
 
   // Ask for a post → lands on the post, ready, with the brand's CTA and the hashtag appended.
+  await tab(p, "Objave");
   await p.getByLabel("Kaj objavimo?").fill("Jesenski tečaj se začne");
   await p.getByRole("button", { name: "Ustvari objavo" }).click();
   await expect(p).toHaveURL(/\/app\/posts\//);

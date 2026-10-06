@@ -9,14 +9,14 @@ export default async function AuditPage() {
   const f = await getFormatter();
   const rows = await listAudit(getDb());
   return (
-    <main>
+    <div>
       <h1 className="mb-6 text-2xl font-bold">{t("audit")}</h1>
       {rows.length === 0 ? (
         <p className="text-muted">{t("noAudit")}</p>
       ) : (
         <ul className="grid gap-2 text-sm" data-testid="audit">
           {rows.map((r) => (
-            <li key={r.id} className="border-t border-muted/20 pt-2">
+            <li key={r.id} className="border-t border-line pt-2">
               <span className="text-muted">{f.dateTime(r.createdAt, { dateStyle: "short", timeStyle: "medium" })}</span>{" "}
               <strong>{r.action}</strong> {r.orgName ? `· ${r.orgName}` : ""} {r.target ? `· ${r.target}` : ""}{" "}
               <span className="text-muted">· {r.actor}</span>
@@ -25,6 +25,6 @@ export default async function AuditPage() {
           ))}
         </ul>
       )}
-    </main>
+    </div>
   );
 }

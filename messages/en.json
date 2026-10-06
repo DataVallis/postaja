@@ -271,7 +271,7 @@
     "createdNote": "created",
     "files": {
       "title": "Brand files",
-      "intro": "Logo, fonts and the sources the AI builds the profile from. Files are private and visible only to members of this organization.",
+      "intro": "Logos, fonts and documents of the brand. Postaja uses document text as facts when it writes posts; logo and fonts are for images. Only members of this organization can see the files.",
       "dropTitle": "Drop files or a ZIP here",
       "dropNow": "Release to upload",
       "dropBody": "Documents (PDF, Word, Excel, PowerPoint, CSV, TXT), images, fonts (TTF, OTF, WOFF, WOFF2) or a whole ZIP. Every file is sorted for you: images with “logo” in the name go to logos, fonts to fonts, everything else to sources.",
@@ -370,8 +370,31 @@
       "hint": "The active CGP does not change until you insert the proposal into the editor and save a new version.",
       "insertedHint": "The proposal is in the editor. Review it and save a new version, or reload the page to cancel.",
       "insert": "Insert into editor",
-      "discard": "Discard proposal"
-    }
+      "discard": "Discard proposal",
+      "waiting": "is waiting for your review in the profile.",
+      "open": "Open proposal"
+    },
+    "listDescription": "The organization's projects: each has its own CGP, channels, files and posts.",
+    "emptyTitle": "No brands yet",
+    "tabsLabel": "Brand sections",
+    "tabs": {
+      "posts": "Posts",
+      "files": "Files",
+      "profile": "Profile (CGP)",
+      "channels": "Channels",
+      "versions": "Versions"
+    },
+    "table": {
+      "brand": "Brand",
+      "languages": "Languages",
+      "channels": "Channels",
+      "posts": "Posts",
+      "waiting": "Waiting",
+      "lastPost": "Last post"
+    },
+    "versionCol": "Version",
+    "savedAt": "Saved",
+    "noteCol": "Note"
   },
   "Posts": {
     "title": "Posts",
@@ -446,7 +469,12 @@
       "INVALID": "Check the input (request at least 3 characters).",
       "FORBIDDEN": "No access.",
       "FAILED": "Something went wrong. Try again."
-    }
+    },
+    "newTitle": "New post",
+    "noChannelsPrefix": "The brand has no channel yet.",
+    "noChannelsLink": "Add a channel",
+    "statusCol": "Status",
+    "createdCol": "Created"
   },
   "Connect": {
     "title": "Claude",
@@ -486,5 +514,68 @@
       "invalid": "This connection request is invalid or has expired. Start again in Claude.",
       "noOrg": "You are not a member of any organization, so Claude cannot access Postaja."
     }
+  },
+  "Shell": {
+    "nav": "Main navigation",
+    "dashboard": "Dashboard",
+    "content": "Content",
+    "posts": "Posts",
+    "brands": "Brands",
+    "connections": "Connections",
+    "claude": "Claude",
+    "admin": "Administration",
+    "organizations": "Organizations",
+    "platform": "Platforms",
+    "audit": "Audit log",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language: switch to Slovenian",
+    "toDark": "Dark theme",
+    "toLight": "Light theme",
+    "account": "Account",
+    "signOut": "Sign out"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "allPosts": "All posts",
+    "superadminHint": "As a super admin you can create an organization.",
+    "noBrandsTitle": "No brands yet",
+    "noBrandsOwner": "Create the first brand, add the CGP and channels, then Postaja writes the posts.",
+    "noBrandsEditor": "The organization owner has not created a brand yet.",
+    "createBrand": "Create brand",
+    "recent": "Recent posts",
+    "seeAll": "All →",
+    "status": "Status",
+    "created": "Created",
+    "noPosts": "No posts yet. Open a brand and request the first one.",
+    "brands": "Brands",
+    "stats": {
+      "ready": "Ready",
+      "needsReview": "Needs review",
+      "approved": "Approved",
+      "published": "Published",
+      "thisMonth": "this month",
+      "spend": "AI spend",
+      "ofCap": "of {cap} $ this month"
+    }
+  },
+  "PostsList": {
+    "title": "Posts",
+    "description": "All posts of the organization. Search text or request, filter by brand, status and platform.",
+    "search": "Search",
+    "allBrands": "Brand: all",
+    "allStatuses": "Status: all",
+    "allPlatforms": "Platform: all",
+    "status": "Status",
+    "platform": "Platform",
+    "apply": "Filter",
+    "clear": "Clear",
+    "created": "Created",
+    "empty": "No posts yet.",
+    "noMatch": "No post matches the filters.",
+    "pagination": "Pages",
+    "pageOf": "Page {page} of {pages} · {total} posts",
+    "prev": "← Previous",
+    "next": "Next →"
   }
 }

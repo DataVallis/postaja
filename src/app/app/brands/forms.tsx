@@ -4,7 +4,7 @@ import { CgpImport } from "./cgp-import";
 import { useTranslations } from "next-intl";
 import { addChannelAction, createBrandAction, discardCgpDraftAction, saveProfileAction, type ActionState } from "./actions";
 
-export const input = "rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal disabled:opacity-60";
+export const input = "rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal disabled:opacity-60";
 const button = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink disabled:opacity-60";
 const LANGS = ["sl", "en", "de", "hr", "it"] as const;
 const TYPES = ["text", "single_image", "carousel", "animation", "video", "ad"] as const;
@@ -147,7 +147,7 @@ export function ChannelForm({ brandId, languages, presets }: { brandId: string; 
   const [state, action, pending] = useActionState(addChannelAction, undefined);
   const [platform, setPlatform] = useState<string>("instagram");
   return (
-    <form action={action} className="grid gap-4 rounded-xl border border-muted/30 p-4">
+    <form action={action} className="grid gap-4 rounded-xl border border-line p-4">
       <input type="hidden" name="brandId" value={brandId} />
       <div className="grid gap-4 sm:grid-cols-3">
         <Field id="platform" label={t("platform")}>

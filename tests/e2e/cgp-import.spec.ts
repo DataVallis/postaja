@@ -3,6 +3,7 @@ import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { makeDocx } from "../fixtures/files";
+const tab = (p: Page, name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -47,6 +48,7 @@ test("owner imports the CGP verbatim from a Word file and from an uploaded PDF, 
 
   // From the computer: a Word file.
   const docx = makeDocx([{ text: "Kdo smo", style: "Naslov1" }, { text: "Inženirji za inženirje." }, { text: "brez žargona", list: true }]);
+  await tab(p, "Profil (CGP)");
   await p.getByLabel("Uvozi iz dokumenta").setInputFiles({ name: "CGP.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: Buffer.from(docx) });
   await expect(p.getByRole("status").filter({ hasText: "Besedilo iz »CGP.docx« je vstavljeno" })).toBeVisible();
   await expect(p.getByLabel("CGP — navodila za AI")).toHaveValue("# Kdo smo\nInženirji za inženirje.\n- brez žargona");
@@ -55,8 +57,10 @@ test("owner imports the CGP verbatim from a Word file and from an uploaded PDF, 
   await expect(p.getByRole("status").filter({ hasText: "Shranjeno kot verzija 2." })).toBeVisible();
 
   // From an uploaded source: the PDF dropped into "Datoteke branda".
+  await tab(p, "Datoteke");
   await p.getByLabel("Izberi datoteke").setInputFiles({ name: "CGP Inženirji.pdf", mimeType: "application/pdf", buffer: fs.readFileSync("tests/fixtures/docs/cgp.pdf") });
   await expect(p.getByTestId("sources")).toContainText("CGP Inženirji.pdf");
+  await tab(p, "Profil (CGP)");
   await p.getByLabel("Naložen vir").selectOption({ label: "CGP Inženirji.pdf" });
   await p.getByRole("button", { name: "Uvozi", exact: true }).click();
   await expect(p.getByLabel("CGP — navodila za AI")).toHaveValue(/Pišemo strokovno, toplo in brez žargona\./);

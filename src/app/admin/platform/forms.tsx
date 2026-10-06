@@ -3,7 +3,7 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { updatePresetAction, updateRuleAction, type PlatformActionState } from "./actions";
 
-const input = "rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal";
+const input = "rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal";
 const button = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink disabled:opacity-60";
 const v = (n: number | null) => (n === null ? "" : String(n));
 

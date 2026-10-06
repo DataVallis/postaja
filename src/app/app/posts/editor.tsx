@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { hashtags, measure, type RuleSet } from "@/lib/rules";
 import { editPostAction, generatePostAction } from "./actions";
 
-const input = "w-full rounded-lg border border-muted bg-bg px-3 py-2 text-fg outline-none focus:border-signal";
+const input = "w-full rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal";
 const primary = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-60";
 
 /** Live counter against the effective limit, computed with the same rule engine the server uses. */
@@ -52,7 +52,7 @@ export function PostEditor({ postId, caption, parts, rules, readOnly }: { postId
         <button
           type="button"
           onClick={async () => { await navigator.clipboard.writeText(full); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className="rounded-lg border border-fg/25 px-4 py-2 font-medium hover:border-fg/60"
+          className="h-9 rounded-lg border border-line px-4 text-sm font-medium hover:border-muted"
         >
           {copied ? t("copied") : t("copy")}
         </button>
@@ -68,7 +68,7 @@ export function NewPostForm({ brandId, channels }: { brandId: string; channels: 
   const [state, action, pending] = useActionState(generatePostAction, undefined);
   if (!channels.length) return <p className="text-sm text-muted">{t("noChannels")}</p>;
   return (
-    <form action={action} className="grid gap-4 rounded-2xl border border-muted/25 p-5">
+    <form action={action} className="grid gap-4">
       <input type="hidden" name="brandId" value={brandId} />
       <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_1fr]">
         <div className="grid content-start gap-1">
