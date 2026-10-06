@@ -484,11 +484,12 @@
     "publishedAt": "Published",
     "planSource": "Source",
     "planImport": "import",
-    "plannedHint": "The post is planned and has no text yet. Write it below, or Postaja will write it (bulk creation comes next).",
+    "plannedHint": "The post is planned and has no text yet. Write it yourself or let Postaja write it from the plan, the CGP and the materials.",
     "slotDate": "Day",
     "slotTime": "Time",
     "slotSave": "Save slot",
-    "slotInvalid": "The slot is not valid."
+    "slotInvalid": "The slot is not valid.",
+    "writeWithAi": "Write text with AI"
   },
   "Connect": {
     "title": "Claude",
@@ -764,7 +765,8 @@
     "tabs": {
       "calendar": "Calendar",
       "unscheduled": "No slot",
-      "history": "History"
+      "history": "History",
+      "runs": "Creation"
     },
     "prev": "Previous",
     "next": "Next",
@@ -786,5 +788,44 @@
     "noHistory": "Nothing published yet.",
     "pagination": "Pages",
     "pageOf": "Page {page} of {pages}"
+  },
+  "Bulk": {
+    "scope": "Scope",
+    "brand": "Brand",
+    "progress": "Progress",
+    "status": "Status",
+    "started": "Started",
+    "none": "No bulk creation yet.",
+    "allBrands": "all brands",
+    "scopeDay": "day {date}",
+    "scopeRange": "{from}–{to}",
+    "scopeFrom": "from {from}",
+    "counts": "{done} / {total} written",
+    "failed": "{n} failed",
+    "skipped": "{n} skipped",
+    "cancel": "Stop",
+    "statuses": {
+      "queued": "waiting",
+      "running": "running",
+      "done": "done",
+      "cancelled": "stopped"
+    },
+    "dayTitle": "{n, plural, one {# post on this day has no text} other {# posts on this day have no text}}",
+    "dayHint": "Postaja writes them for every brand from the plan, the CGP and the materials. It runs in the background; you can close the page.",
+    "dayHintBrand": "Postaja writes them for the chosen brand from the plan, the CGP and the materials, in the background.",
+    "dayButton": "Create texts ({n})",
+    "brandTitle": "{n, plural, one {# planned post without text} other {# planned posts without text}}",
+    "brandHint": "Postaja writes them from the plan, the CGP and the materials, in the background.",
+    "range": "Period",
+    "next7": "next 7 days",
+    "next30": "next 30 days",
+    "allPlanned": "all planned",
+    "brandButton": "Create texts",
+    "errors": {
+      "NOTHING_TO_DO": "No posts without text in this scope.",
+      "TOO_MANY": "At most 200 posts at once. Pick a shorter period.",
+      "INVALID": "The scope is not valid.",
+      "FAILED": "Could not start."
+    }
   }
 }

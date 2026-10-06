@@ -25,6 +25,8 @@ env:
     S3_ENDPOINT: https://fsn1.your-objectstorage.com
     S3_REGION: fsn1
     S3_BUCKET: postaja-dev
+    # Background jobs (ADR-042): the web container also runs the pg-boss workers on dev.
+    RUN_WORKER: "1"
   secret:
     - DATABASE_URL
     - BETTER_AUTH_SECRET

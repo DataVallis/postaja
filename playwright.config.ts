@@ -37,6 +37,8 @@ export default defineConfig({
       MAIL_DIR: MAIL_DIR,
       ANTHROPIC_API_KEY: "e2e-not-a-real-key",
       ANTHROPIC_BASE_URL: "http://127.0.0.1:3199",
+      // Bulk creation runs in the background (ADR-042): the E2E server runs the workers too.
+      RUN_WORKER: "1",
     },
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: false,

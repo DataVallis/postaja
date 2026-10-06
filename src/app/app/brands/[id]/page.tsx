@@ -15,6 +15,8 @@ import { FilesSection } from "./files-section";
 import { PostsSection } from "./posts-section";
 import { listPosts } from "@/server/posts/generate";
 import { pendingDraft } from "@/server/mcp/service";
+import { bulkCandidates } from "@/server/bulk/service";
+import { todayIn } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   });
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id)]);
+  const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
   const f = await getFormatter();
@@ -86,7 +89,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       />
 
       {tab === "posts" ? (
-        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} />
+        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} />
       ) : null}
 
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}

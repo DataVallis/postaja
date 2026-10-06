@@ -8,7 +8,7 @@ import { POST_STATUSES } from "@/server/db/schema";
 import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
-import { editPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
+import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
 
@@ -37,7 +37,14 @@ export async function retryPostAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const old = await getPost(getDb(), ctx, String(f.get("postId") ?? "")).catch(() => null);
   if (!old?.channelId) return;
-  const id = await generatePost(getDb(), { llm: createAnthropicClient(), storage: getStorage() }, ctx, { brandId: old.brandId, channelId: old.channelId, brief: old.brief });
+  const deps = { llm: createAnthropicClient(), storage: getStorage() };
+  // A failed post without text is retried in place (TASK-014); one that has text gets a fresh draft.
+  if (!old.content) {
+    await generateForPost(getDb(), deps, ctx, old.id).catch(() => undefined);
+    revalidatePath(`/app/posts/${old.id}`);
+    redirect(`/app/posts/${old.id}`);
+  }
+  const id = await generatePost(getDb(), deps, ctx, { brandId: old.brandId, channelId: old.channelId, brief: old.brief });
   redirect(`/app/posts/${id}`);
 }
 
@@ -80,4 +87,14 @@ export async function reschedulePostAction(f: FormData): Promise<void> {
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?slotError=${error}` : ""}`);
+}
+
+/** "Napiši besedilo z AI" on a planned post (TASK-014): written now, from the plan, in place. */
+export async function writePlannedPostAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  await generateForPost(getDb(), { llm: createAnthropicClient(), storage: getStorage() }, ctx, id).catch(() => undefined);
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}`);
 }
