@@ -9,7 +9,7 @@ import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { cardDesign } from "../../../tests/fixtures/design";
 import { uploadBrandFile } from "../brands/files";
-import { addChannel, createBrand, getBrandDetail, saveProfile } from "../brands/service";
+import { addChannel, createBrand, getBrandDetail, saveProfile, setBrandTextModel } from "../brands/service";
 import { runBulkItem, startBulk, type JobQueue, type QueueJob } from "../bulk/service";
 import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
@@ -172,6 +172,22 @@ describe("brand design", () => {
     await expect(activateDesign(db, B, v1)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await activateDesign(db, A, v1);
     expect((await currentDesign(db, A, brandA))!.id).toBe(v1);
+  });
+
+  it("uses the brand's chosen Claude model; an unknown or disabled model falls back to the default", async () => {
+    await expect(setBrandTextModel(db, editorA, brandA, "anthropic-claude-haiku-4-5")).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(setBrandTextModel(db, A, brandA, "fal-flux-pro-v1-1")).rejects.toMatchObject({ code: "NOT_FOUND" }); // not a text model
+    await expect(setBrandTextModel(db, B, brandA, null)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await setBrandTextModel(db, A, brandA, "anthropic-claude-haiku-4-5");
+    const claude = fakeClaude();
+    await design(claude);
+    expect(claude.calls[0].model).toBe("claude-haiku-4-5-20251001");
+    await sql`update model_registry set enabled = false where id = 'anthropic-claude-haiku-4-5'`;
+    const again = fakeClaude();
+    const { q } = memoryQueue();
+    await runDesignJob(db, { llm: again.client, storage }, { designId: await requestDesign(db, q, A, brandA, { brief: "x" }) });
+    expect(again.calls[0].model).toBe("claude-sonnet-5-5");
+    await sql`update model_registry set enabled = true where id = 'anthropic-claude-haiku-4-5'`;
   });
 
   it("a provider failure is recorded with its status, never as a current design", async () => {
