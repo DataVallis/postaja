@@ -37,6 +37,8 @@ export const brands = pgTable(
     currentProfileVersionId: text("current_profile_version_id"),
     /** The brand design (TASK-017) used for new images; a ready version of brand_designs. */
     currentDesignId: text("current_design_id"),
+    /** Claude model this brand's texts, designs and image plans use (model_registry id); null = the platform default. */
+    textModelId: text("text_model_id"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

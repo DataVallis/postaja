@@ -134,6 +134,13 @@
       "when": 1791289997298,
       "tag": "0018_seed_style_image_model",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791298716561,
+      "tag": "0019_brand_text_model",
+      "breakpoints": true
     }
   ]
 }

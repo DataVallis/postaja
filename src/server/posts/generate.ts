@@ -9,6 +9,7 @@ import type { Db } from "../db/client";
 import { brandSources, modelRegistry, posts, usageLedger, type PostContent, type PostStatus } from "../db/schema";
 import type { Storage } from "../files/storage";
 import { costMicroUsd, worstCaseMicroUsd } from "../llm/cost";
+import { textModelFor } from "../llm/call";
 import { reserve, release, settle, SpendCapError } from "../llm/spend";
 import { LlmError, type LlmClient } from "../llm/types";
 import { getPlatformRuleSet } from "../rules/repo";
@@ -96,10 +97,13 @@ export type GenerateDeps = { llm: LlmClient; storage: Storage; now?: Date };
 
 type Model = typeof modelRegistry.$inferSelect;
 
-async function defaultModel(db: Db): Promise<Model> {
-  const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "text"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
-  if (!model) throw new PostError("NO_MODEL");
-  return model;
+/** The brand's chosen Claude model, else the platform default (TASK-017 follow-up). */
+async function defaultModel(db: Db, brandId: string): Promise<Model> {
+  try {
+    return await textModelFor(db, brandId);
+  } catch {
+    throw new PostError("NO_MODEL");
+  }
 }
 
 /**
@@ -162,7 +166,7 @@ export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, 
   const req = generateInput.parse(input);
   const r = await rulesFor(db, ctx, req.brandId, req.channelId);
   if (r.brand.archivedAt) throw new PostError("ARCHIVED");
-  const model = await defaultModel(db);
+  const model = await defaultModel(db, req.brandId);
   const postId = crypto.randomUUID();
   await forOrg(db, ctx).insert(posts, { id: postId, brandId: req.brandId, channelId: req.channelId, profileVersionId: r.profile.id, brief: req.brief, status: "generating", model: model.modelKey, createdBy: ctx.userId });
   await writeInto(db, deps, ctx, postId, r, model, req.brief);
@@ -202,7 +206,7 @@ export async function generateForPost(db: Db, deps: GenerateDeps, ctx: OrgContex
   if (p.content || !p.channelId || (p.status !== "planned" && p.status !== "failed")) return "skipped";
   const r = await rulesFor(db, ctx, p.brandId, p.channelId);
   if (r.brand.archivedAt) throw new PostError("ARCHIVED");
-  const model = await defaultModel(db);
+  const model = await defaultModel(db, p.brandId);
   const claimed = await forOrg(db, ctx).update(
     posts,
     { status: "generating", error: null, updatedAt: new Date() },

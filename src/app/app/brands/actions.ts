@@ -5,7 +5,7 @@ import { z } from "zod";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
-import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived } from "@/server/brands/service";
+import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived, setBrandTextModel } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
@@ -171,4 +171,14 @@ export async function activateDesignAction(f: FormData): Promise<void> {
   await activateDesign(getDb(), ctx, str(f, "designId")).catch(() => undefined);
   revalidatePath(`/app/brands/${brandId}`);
   redirect(`/app/brands/${brandId}?tab=design`);
+}
+
+/** Owner picks the brand's Claude model (empty = platform default). */
+export async function setBrandModelAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const brandId = str(f, "brandId");
+  await setBrandTextModel(getDb(), ctx, brandId, str(f, "modelId") || null).catch(() => undefined);
+  revalidatePath(`/app/brands/${brandId}`);
+  redirect(`/app/brands/${brandId}?tab=profile&model=saved`);
 }

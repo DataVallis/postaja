@@ -395,7 +395,15 @@
     },
     "versionCol": "Version",
     "savedAt": "Saved",
-    "noteCol": "Note"
+    "noteCol": "Note",
+    "model": {
+      "title": "AI model (Claude)",
+      "hint": "The model that writes this brand's post texts, designs its visual identity and plans its images. Price per million tokens (input / output).",
+      "default": "Default ({label})",
+      "option": "{label} · {input} / {output}",
+      "save": "Save model",
+      "saved": "Saved."
+    }
   },
   "Posts": {
     "title": "Posts",

@@ -395,7 +395,15 @@
     },
     "versionCol": "Verzija",
     "savedAt": "Shranjeno",
-    "noteCol": "Opomba"
+    "noteCol": "Opomba",
+    "model": {
+      "title": "AI model (Claude)",
+      "hint": "Model, ki za ta brand piše besedila objav, oblikuje vizualno podobo in izbira predloge za slike. Cena je na milijon žetonov (vhod / izhod).",
+      "default": "Privzeti ({label})",
+      "option": "{label} · {input} / {output}",
+      "save": "Shrani model",
+      "saved": "Shranjeno."
+    }
   },
   "Posts": {
     "title": "Objave",

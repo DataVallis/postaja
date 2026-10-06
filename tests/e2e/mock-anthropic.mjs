@@ -66,6 +66,12 @@ function fal(req, res) {
     req.on("data", (c) => (body += c));
     req.on("end", () => {
       const r = JSON.parse(body);
+      // Like the real API for current models: forced tool use is refused (400).
+      if (r.tool_choice?.type === "tool" || r.tool_choice?.type === "any") {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: 'tool_choice: type "tool" and "any" are not supported for this model.' } }));
+        return;
+      }
       const id = `req-${++falSeq}`;
       falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height, references: r.image_urls?.length ?? 0 });
       falLog.push({ model: req.url.slice(1), references: r.image_urls?.length ?? 0 });

@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "../db/client";
-import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, orgSettings } from "../db/schema";
+import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, modelRegistry, orgSettings } from "../db/schema";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { brandInput, channelInput, profileInput } from "./schemas";
@@ -179,4 +179,24 @@ export async function listProfileVersions(db: Db, ctx: OrgContext, brandId: stri
     .from(brandProfileVersions)
     .where(and(eq(brandProfileVersions.brandId, brandId), eq(brandProfileVersions.orgId, ctx.orgId)))
     .orderBy(desc(brandProfileVersions.version));
+}
+
+/** Claude models a brand can choose (enabled text models, cheapest first). */
+export async function listTextModels(db: Db) {
+  return db
+    .select({ id: modelRegistry.id, label: modelRegistry.label, isDefault: modelRegistry.isDefault, inputPerMtok: modelRegistry.inputPerMtok, outputPerMtok: modelRegistry.outputPerMtok })
+    .from(modelRegistry)
+    .where(and(eq(modelRegistry.kind, "text"), eq(modelRegistry.enabled, true)))
+    .orderBy(modelRegistry.outputPerMtok);
+}
+
+/** Owner picks the brand's Claude model (null = the platform default). */
+export async function setBrandTextModel(db: Db, ctx: OrgContext, brandId: string, modelId: string | null) {
+  requireOwner(ctx);
+  if (modelId) {
+    const [m] = await db.select({ id: modelRegistry.id }).from(modelRegistry).where(and(eq(modelRegistry.id, modelId), eq(modelRegistry.kind, "text"), eq(modelRegistry.enabled, true)));
+    if (!m) throw new BrandError("NOT_FOUND");
+  }
+  const rows = await forOrg(db, ctx).update(brands, { textModelId: modelId, updatedAt: new Date() }, eq(brands.id, brandId));
+  if (!rows.length) throw new BrandError("NOT_FOUND");
 }

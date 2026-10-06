@@ -19,13 +19,15 @@ import { bulkCandidates } from "@/server/bulk/service";
 import { todayIn } from "@/lib/dates";
 import { listDesigns } from "@/server/design/service";
 import { DesignSection } from "./design-section";
+import { ModelSection } from "./model-section";
+import { listTextModels } from "@/server/brands/service";
 
 export const dynamic = "force-dynamic";
 
 const TABS = ["posts", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -115,6 +117,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       {tab === "profile" ? (
         <section aria-labelledby="profile-h">
           <h2 id="profile-h" className="sr-only">{t("profile")}</h2>
+          <ModelSection brandId={brand.id} models={await listTextModels(db)} current={brand.textModelId} isOwner={isOwner} saved={sp.model === "saved"} />
           <ProfileForm
             brandId={brand.id}
             readOnly={!isOwner}
