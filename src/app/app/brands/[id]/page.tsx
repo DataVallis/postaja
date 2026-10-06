@@ -63,6 +63,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
         <ProfileForm
           brandId={brand.id}
           readOnly={!isOwner}
+          cgpSources={files.sources.filter((s) => s.kind === "pdf" || s.kind === "docx" || s.kind === "text").map((s) => ({ id: s.id, filename: s.filename }))}
           cgp={profile?.cgp ?? ""}
           pillarsText={(profile?.pillars ?? []).map((p) => `${p.name} | ${p.share}${p.description ? ` | ${p.description}` : ""}`).join("\n")}
           rules={rules}

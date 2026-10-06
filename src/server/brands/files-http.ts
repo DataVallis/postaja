@@ -3,7 +3,7 @@
 import type { Db } from "../db/client";
 import type { Storage } from "../files/storage";
 import type { OrgContext } from "../tenancy/context";
-import { brandFileUrl, FileError, MAX_BYTES, MAX_ZIP_BYTES, uploadAuto, type Slot } from "./files";
+import { brandFileUrl, CGP_IMPORT_MAX_BYTES, CgpImportError, cgpTextFromDocument, FileError, MAX_BYTES, MAX_ZIP_BYTES, uploadAuto, type Slot } from "./files";
 
 /** Multipart framing around the file (boundary, headers, name field). */
 export const MULTIPART_OVERHEAD = 64 * 1024;
@@ -67,6 +67,38 @@ export async function handleDownload(table: string, id: string, deps: Omit<HttpD
     return new Response(null, { status: 302, headers: { Location: url, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
   } catch (e) {
     if (e instanceof FileError) return json({ error: e.code }, STATUS[e.code]);
+    throw e;
+  }
+}
+
+const CGP_STATUS: Record<CgpImportError["code"], number> = {
+  FORBIDDEN: 403, NOT_FOUND: 404, ARCHIVED: 409, TOO_LARGE: 413, UNSUPPORTED_TYPE: 415, INVALID_FILE: 422, NO_TEXT: 422, TOO_LONG: 422,
+};
+
+/** POST multipart with `file` (a document) or `sourceId` (an uploaded source) → `{ text, filename, kind }` (ADR-037). */
+export async function handleCgpImport(req: Request, brandId: string, deps: HttpDeps): Promise<Response> {
+  if (!sameOrigin(req, deps.appOrigin)) return json({ error: "BAD_ORIGIN" }, 403);
+  const ctx = await deps.getCtx();
+  if (!ctx) return json({ error: "UNAUTHORIZED" }, 401);
+  const length = Number(req.headers.get("content-length") ?? NaN);
+  if (!Number.isFinite(length)) return json({ error: "LENGTH_REQUIRED" }, 411);
+  if (length > CGP_IMPORT_MAX_BYTES + MULTIPART_OVERHEAD) return json({ error: "TOO_LARGE" }, 413);
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return json({ error: "BAD_FORM" }, 400);
+  }
+  const file = form.get("file");
+  const sourceId = form.get("sourceId");
+  try {
+    const from = file instanceof File
+      ? { file: { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) } }
+      : typeof sourceId === "string" && sourceId ? { sourceId } : null;
+    if (!from) return json({ error: "BAD_FORM" }, 400);
+    return json(await cgpTextFromDocument(deps.db, deps.storage, ctx, brandId, from), 200);
+  } catch (e) {
+    if (e instanceof CgpImportError) return json({ error: e.code, detail: e.detail }, CGP_STATUS[e.code]);
     throw e;
   }
 }

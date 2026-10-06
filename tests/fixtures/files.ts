@@ -138,3 +138,24 @@ export function makeWoff(sfnt: Uint8Array): Uint8Array {
   });
   return out;
 }
+
+/** A minimal .docx: one paragraph per item; `style` sets w:pStyle (e.g. "Heading1", "Naslov2"), `list` adds w:numPr. */
+export function makeDocx(paragraphs: { text: string; style?: string; list?: boolean }[]): Uint8Array {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const body = paragraphs
+    .map((p) => {
+      const props = p.style || p.list ? `<w:pPr>${p.style ? `<w:pStyle w:val="${p.style}"/>` : ""}${p.list ? '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' : ""}</w:pPr>` : "";
+      // Split each paragraph into two runs to prove runs are joined; tabs/breaks as Word writes them.
+      const half = Math.ceil(p.text.length / 2);
+      const runs = p.text ? `<w:r><w:t xml:space="preserve">${esc(p.text.slice(0, half))}</w:t></w:r><w:r><w:t>${esc(p.text.slice(half))}</w:t></w:r>` : "";
+      return `<w:p>${props}${runs}</w:p>`;
+    })
+    .join("");
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr/></w:body></w:document>`;
+  const enc = new TextEncoder();
+  return makeZipEntries([
+    { name: "[Content_Types].xml", bytes: enc.encode('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>') },
+    { name: "_rels/.rels", bytes: enc.encode('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>') },
+    { name: "word/document.xml", bytes: enc.encode(doc), deflate: true },
+  ]);
+}

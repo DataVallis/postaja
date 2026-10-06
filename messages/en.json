@@ -177,7 +177,7 @@
     "create": "Create",
     "profile": "Profile (CGP)",
     "cgp": "CGP — instructions for the AI",
-    "cgpHint": "Who we are, audience, voice, do and don't. Later the AI will build it from your documents.",
+    "cgpHint": "Who we are, audience, voice, what we do and don't. Paste it or import it from a document — Postaja writes every post from it.",
     "pillars": "Content pillars",
     "pillarsHint": "One line per pillar: Name | share % | description. Total at most 100%.",
     "bannedWords": "Banned words",
@@ -331,6 +331,26 @@
         "UNSUPPORTED_COMPRESSION": "a file in the ZIP uses an unsupported compression.",
         "CORRUPT": "a file in the ZIP is damaged.",
         "failed": "upload failed, try again."
+      }
+    },
+    "cgpImport": {
+      "fromComputer": "Import from a document",
+      "or": "or from an uploaded source:",
+      "fromSource": "Uploaded source",
+      "useSource": "Import",
+      "reading": "Reading …",
+      "hint": "Word (DOCX), PDF, MD or TXT. The text is copied verbatim, no AI. Review it and click “Save new version”.",
+      "inserted": "Text from “{name}” inserted ({chars} characters). Review it and save a new version.",
+      "errors": {
+        "UNSUPPORTED_TYPE": "This file type is not supported — use DOCX, PDF, MD or TXT.",
+        "INVALID_FILE": "The document cannot be read (damaged or password-protected).",
+        "NO_TEXT": "The document has no text (maybe a scanned PDF).",
+        "TOO_LONG": "The text is too long ({detail} characters, max 50,000).",
+        "TOO_LARGE": "The document is larger than 20 MB.",
+        "FORBIDDEN": "Only the owner edits the CGP.",
+        "NOT_FOUND": "Source not found.",
+        "ARCHIVED": "The brand is archived.",
+        "failed": "Import failed, try again."
       }
     }
   },
