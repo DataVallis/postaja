@@ -3,7 +3,8 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
-import { pdf } from "../../../tests/fixtures/files";
+import fs from "node:fs";
+import { image, makeDocx, makePptx, makeXlsx, pdf } from "../../../tests/fixtures/files";
 import { crossTenantSuite } from "../../../tests/tenancy/harness";
 import { uploadBrandFile } from "../brands/files";
 import { addChannel, createBrand, saveProfile, setBrandArchived } from "../brands/service";
@@ -108,19 +109,62 @@ describe("generatePost", () => {
     expect(llm.requests[0].system[2].text).toContain("each at most 280 characters (X counting");
   });
 
-  it("text materials of this brand are in the prompt; PDFs, other brands and other orgs are not", async () => {
-    await uploadBrandFile(db, storage, A, brandA, "source", { filename: "cenik.csv", bytes: new TextEncoder().encode("Tečaj;99 €") });
-    await uploadBrandFile(db, storage, A, brandA, "source", { filename: "brosura.pdf", bytes: pdf("brochure") });
-    await uploadBrandFile(db, storage, B, brandB, "source", { filename: "tajno.txt", bytes: new TextEncoder().encode("SECRET-OF-B") });
+  it("the knowledge base: text of PDF, Word, Excel, PowerPoint and CSV is in the prompt; images, unreadable files, other brands and orgs are not", async () => {
+    const up = (ctx: OrgContext, brand: string, filename: string, bytes: Uint8Array) => uploadBrandFile(db, storage, ctx, brand, "source", { filename, bytes });
+    await up(A, brandA, "cenik.csv", new TextEncoder().encode("Tečaj;99 €"));
+    await up(A, brandA, "CGP.pdf", new Uint8Array(fs.readFileSync("tests/fixtures/docs/cgp.pdf")));
+    await up(A, brandA, "o nas.docx", makeDocx([{ text: "Ustanovljeno 2019", style: "Heading1" }]));
+    await up(A, brandA, "termini.xlsx", makeXlsx([{ name: "Termini", rows: [["Maribor", "12. 11."]] }]));
+    await up(A, brandA, "predstavitev.pptx", makePptx([["Mentorstvo 1:1"]]));
+    await up(A, brandA, "slika.png", await image("png"));
+    await up(A, brandA, "pokvarjen.pdf", pdf("not really a pdf"));
+    await up(B, brandB, "tajno.txt", new TextEncoder().encode("SECRET-OF-B"));
     const other = (await createBrand(db, A, { name: "Drugi", slug: "drugi", languages: ["sl"] })).id;
-    await uploadBrandFile(db, storage, A, other, "source", { filename: "drugi.txt", bytes: new TextEncoder().encode("OTHER-BRAND") });
+    await up(A, other, "drugi.txt", new TextEncoder().encode("OTHER-BRAND"));
+    expect(await sql`select filename, status, error, (extract->>'chars')::int as chars from brand_sources where brand_id = ${brandA} order by filename`).toEqual([
+      { filename: "CGP.pdf", status: "extracted", error: null, chars: 131 },
+      { filename: "cenik.csv", status: "extracted", error: null, chars: 10 },
+      { filename: "o nas.docx", status: "extracted", error: null, chars: 19 },
+      { filename: "pokvarjen.pdf", status: "failed", error: "INVALID_FILE", chars: null },
+      { filename: "predstavitev.pptx", status: "extracted", error: null, chars: 30 },
+      { filename: "slika.png", status: "uploaded", error: null, chars: null },
+      { filename: "termini.xlsx", status: "extracted", error: null, chars: 28 },
+    ]);
     const llm = createFakeLlm([{ input: goodIg }]);
     await generatePost(db, { llm: llm.client, storage }, A, { brandId: brandA, channelId: igA, brief: "Cene" });
     const block = llm.requests[0].system[1].text;
     expect(block).toContain('<material name="cenik.csv">\nTečaj;99 €\n</material>');
-    expect(block).not.toContain("brosura.pdf");
-    expect(block).not.toContain("SECRET-OF-B");
-    expect(block).not.toContain("OTHER-BRAND");
+    expect(block).toContain("Pišemo strokovno, toplo in brez žargona.");
+    expect(block).toContain("# Ustanovljeno 2019");
+    expect(block).toContain("Maribor | 12. 11.");
+    expect(block).toContain("Mentorstvo 1:1");
+    for (const absent of ["slika.png", "pokvarjen.pdf", "SECRET-OF-B", "OTHER-BRAND"]) expect(block).not.toContain(absent);
+  });
+
+  it("sources uploaded before material text existed are read on the next generation (once)", async () => {
+    const { id } = await uploadBrandFile(db, storage, A, brandA, "source", { filename: "stari.docx", bytes: makeDocx([{ text: "Stara ponudba: 59 €" }]) });
+    await sql`update brand_sources set status = 'uploaded', extract = null where id = ${id}`;
+    const llm = createFakeLlm([{ input: goodIg }, { input: goodIg }]);
+    await generatePost(db, { llm: llm.client, storage }, A, { brandId: brandA, channelId: igA, brief: "Ponudba" });
+    expect(llm.requests[0].system[1].text).toContain("Stara ponudba: 59 €");
+    expect(await sql`select status, (extract->>'chars')::int as chars from brand_sources where id = ${id}`).toEqual([{ status: "extracted", chars: 19 }]);
+    // B cannot trigger reading A's pending sources: the backfill is scoped like everything else.
+    await sql`update brand_sources set status = 'uploaded', extract = null where id = ${id}`;
+    await expect(generatePost(db, { llm: llm.client, storage }, B, { brandId: brandA, channelId: igA, brief: "Ponudba" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect((await sql`select status from brand_sources where id = ${id}`)[0].status).toBe("uploaded");
+  });
+
+  it("over the budget, the passages matching the brief are chosen", async () => {
+    // ~80k characters before the price and ~48k after it: the start of the file alone would fill the 60k budget.
+    const filler = (w: string, n: number) => Array.from({ length: n }, (_, i) => `${w} odstavek ${i} `.repeat(40)).join("\n\n");
+    await uploadBrandFile(db, storage, A, brandA, "source", { filename: "dolgo.txt", bytes: new TextEncoder().encode(`${filler("splošno", 100)}\n\nCenik delavnice: 490 € za podjetja.\n\n${filler("ostalo", 60)}`) });
+    const llm = createFakeLlm([{ input: goodIg }]);
+    await generatePost(db, { llm: llm.client, storage }, A, { brandId: brandA, channelId: igA, brief: "Objava o ceniku delavnice" });
+    const block = llm.requests[0].system[1].text;
+    expect(block).toContain("Cenik delavnice: 490 € za podjetja.");
+    expect(block).toContain("\n\n[…]\n\n"); // the left-out text before it is marked
+    expect(block).toContain("splošno odstavek 0 "); // the rest of the budget: the start of the document
+    expect(block.length).toBeLessThan(70_000);
   });
 
   it("editors generate too; another org gets NOT_FOUND; archived brands refuse; bad brief refused", async () => {

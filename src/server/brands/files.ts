@@ -2,11 +2,12 @@
 // Tenant separation: rows are read and written only through forOrg; S3 keys are built here from ids the server
 // already verified (never from input); a URL is presigned only after the row was found in the caller's org.
 import { createHash } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, ne, sql } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { brandAssets, brands, brandSources, type AssetKind, type SourceKind } from "../db/schema";
 import { inspectFont, woff2ToSfnt, woffToSfnt } from "../files/font";
 import { reencodeImage } from "../files/images";
+import { ExtractError, materialText } from "../files/extract";
 import { CONTENT_TYPES, sniff, type Sniffed } from "../files/sniff";
 import type { Storage } from "../files/storage";
 import { unzip, type ZipEntry } from "../files/zip";
@@ -144,10 +145,12 @@ export async function uploadBrandFile(
 
   const id = crypto.randomUUID();
   const key = storageKey(ctx.orgId, brandId, p.kind, p.ext);
+  // Material text is read once at upload (TASK-009); a document without text is still stored, marked failed.
+  const text = p.table === "source" && p.kind !== "image" ? await extractSourceText(p.bytes, p.kind) : {};
   await storage.put(key, p.bytes, p.contentType);
   const row = {
     id, brandId, filename, storageKey: key, contentType: p.contentType, sizeBytes: p.bytes.byteLength, sha256, kind: p.kind, createdBy: ctx.userId,
-    ...(p.table === "asset" ? { meta: p.meta } : {}),
+    ...(p.table === "asset" ? { meta: p.meta } : text),
   };
   try {
     await scoped.insert(table, row);
@@ -159,17 +162,47 @@ export async function uploadBrandFile(
   return { id, table: p.table, kind: p.kind };
 }
 
-/** Every member (owner or editor) can see a brand's files. */
+export type SourceText = { status?: "extracted" | "failed"; extract?: { text: string; chars: number }; error?: string | null };
+
+/** Text of a source for generation; never throws (a failed read is recorded on the row, the upload still succeeds). */
+export async function extractSourceText(bytes: Uint8Array, kind: string): Promise<SourceText> {
+  try {
+    const text = await materialText(bytes, kind);
+    return { status: "extracted", extract: { text, chars: text.length }, error: null };
+  } catch (e) {
+    return { status: "failed", error: e instanceof ExtractError ? e.code : "INVALID_FILE" };
+  }
+}
+
+/**
+ * Sources uploaded before TASK-009 (status `uploaded`) are read on first need. Returns how many were read.
+ * Rows are re-checked by org; each update is scoped too.
+ */
+export async function extractPendingSources(db: Db, storage: Storage, ctx: OrgContext, brandId: string): Promise<number> {
+  const s = forOrg(db, ctx);
+  const pending = (await s.select(brandSources, and(eq(brandSources.brandId, brandId), eq(brandSources.status, "uploaded"), ne(brandSources.kind, "image")))) as (typeof brandSources.$inferSelect)[];
+  for (const r of pending) {
+    const text = await extractSourceText(await storage.get(r.storageKey), r.kind);
+    await s.update(brandSources, text, and(eq(brandSources.id, r.id), eq(brandSources.status, "uploaded")));
+  }
+  return pending.length;
+}
+
+/** Every member (owner or editor) can see a brand's files. The material text itself is not loaded, only its length. */
 export async function listBrandFiles(db: Db, ctx: OrgContext, brandId: string) {
   await brandOf(db, ctx, brandId);
   const s = forOrg(db, ctx);
+  const cols = Object.fromEntries(Object.entries(getTableColumns(brandSources)).filter(([k]) => k !== "extract")) as Omit<ReturnType<typeof getTableColumns<typeof brandSources>>, "extract">;
   const [sources, assets] = await Promise.all([
-    s.select(brandSources, eq(brandSources.brandId, brandId)),
+    db
+      .select({ ...cols, textChars: sql<number | null>`(${brandSources.extract}->>'chars')::int` })
+      .from(brandSources)
+      .where(and(eq(brandSources.orgId, ctx.orgId), eq(brandSources.brandId, brandId))),
     s.select(brandAssets, eq(brandAssets.brandId, brandId)),
   ]);
   const byDate = <T extends { createdAt: Date }>(a: T, b: T) => b.createdAt.getTime() - a.createdAt.getTime();
   return {
-    sources: (sources as (typeof brandSources.$inferSelect)[]).sort(byDate),
+    sources: sources.sort(byDate),
     logos: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "logo").sort(byDate),
     fonts: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "font").sort(byDate),
   };

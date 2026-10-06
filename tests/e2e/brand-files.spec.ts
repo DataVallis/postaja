@@ -3,7 +3,7 @@ import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { compress } from "wawoff2";
-import { image, makeFont, makeZipEntries, pdf } from "../fixtures/files";
+import { image, makeFont, makeXlsx, makeZipEntries, pdf } from "../fixtures/files";
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -66,6 +66,7 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
     { name: "Brand/TinySans.woff2", bytes: await compress(tiny) },
     { name: "Brand/Brief – č.pdf", bytes: brief, deflate: true },
     { name: "Brand/icon.svg", bytes: new TextEncoder().encode("<svg/>") },
+    { name: "Brand/Cenik.xlsx", bytes: makeXlsx([{ name: "Cenik", rows: [["Tečaj", 149]] }]) },
   ]);
   await p.getByLabel("Izberi datoteke").setInputFiles(file("brand.zip", "application/zip", zip));
   const log = p.getByTestId("upload-log");
@@ -78,6 +79,10 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await expect(p.getByTestId("fonts")).toContainText("Tiny Sans");
   await expect(p.getByTestId("fonts")).toContainText("vsi šumniki so na voljo");
   await expect(p.getByTestId("sources")).toContainText("Brief – č.pdf");
+  // Knowledge base (TASK-009): document text is read at upload; the fake PDF has none.
+  const row = (name: string) => p.getByTestId("sources").getByRole("row").filter({ hasText: name });
+  await expect(row("Cenik.xlsx").getByTestId("source-text")).toHaveText("20 znakov besedila");
+  await expect(row("Brief – č.pdf").getByTestId("source-text")).toHaveText("datoteke ni bilo mogoče prebrati");
 
   // Real drag and drop onto the zone: a CSV source.
   await p.getByTestId("dropzone").evaluate((zone) => {
@@ -88,6 +93,7 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   });
   await expect(log.getByRole("status").filter({ hasText: "izdelki.csv" })).toContainText("vir");
   await expect(p.getByTestId("sources")).toContainText("CSV");
+  await expect(row("izdelki.csv").getByTestId("source-text")).toHaveText("14 znakov besedila");
 
   // A font without diacritics is refused for this Slovenian brand; the same PDF again is a duplicate.
   await p.getByLabel("Izberi datoteke").setInputFiles([

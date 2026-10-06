@@ -311,10 +311,10 @@
         "image": "image"
       },
       "statuses": {
-        "uploaded": "uploaded",
+        "uploaded": "not read yet",
         "extracting": "processing",
         "extracted": "read",
-        "failed": "failed"
+        "failed": "no text"
       },
       "errors": {
         "TOO_LARGE": "file too large (logo and font up to 10 MB, source up to 50 MB, ZIP up to 100 MB).",
@@ -334,7 +334,15 @@
         "UNSUPPORTED_COMPRESSION": "a file in the ZIP uses an unsupported compression.",
         "CORRUPT": "a file in the ZIP is damaged.",
         "failed": "upload failed, try again."
-      }
+      },
+      "textChars": "{n} characters of text",
+      "imageNote": "image",
+      "failReasons": {
+        "NO_TEXT": "no text (scanned document?)",
+        "INVALID_FILE": "the file could not be read",
+        "UNSUPPORTED_TYPE": "type not supported"
+      },
+      "knowledgeHint": "Document text is the knowledge base: for every post Postaja takes the parts that match the request."
     },
     "cgpImport": {
       "fromComputer": "Import from a document",

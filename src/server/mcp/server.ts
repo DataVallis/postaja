@@ -29,7 +29,14 @@ function message(e: unknown): string | null {
 }
 
 export function buildMcpServer(d: McpDeps): McpServer {
-  const server = new McpServer({ name: "postaja", version: "1.0.0" });
+  const server = new McpServer(
+    { name: "postaja", version: "1.0.0" },
+    {
+      // ADR-039: posts are written in Postaja; Claude fills the brand's knowledge base.
+      instructions:
+        "Postaja writes and schedules the social posts itself. Use these tools only to fill a brand's knowledge base: send the owner's CGP for review (propose_cgp) and add facts as materials (add_material: price lists, products, dates, FAQs, past posts). Do not write posts here; tell the owner to create them in Postaja.",
+    },
+  );
 
   async function run(tool: string, fn: () => Promise<unknown>) {
     try {
@@ -87,7 +94,7 @@ export function buildMcpServer(d: McpDeps): McpServer {
     {
       title: "Add a text material to a brand",
       description:
-        "Adds text as a material of a brand (price lists, product facts, FAQs, campaign briefs, past posts). Postaja uses materials as facts when it writes posts. Saved as Markdown unless the filename ends with .txt or .csv. Owner only.",
+        "Adds text to a brand's knowledge base (price lists, product facts, FAQs, campaign briefs, past posts). For every post Postaja picks the passages that match the request. Saved as Markdown unless the filename ends with .txt or .csv. Owner only.",
       inputSchema: addMaterialInput.extend({
         brand: z.string().describe("Brand id or slug"),
         filename: z.string().describe("Name shown in Postaja, e.g. \"cenik-2026.md\""),

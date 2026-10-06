@@ -1,6 +1,6 @@
 # Claude → Postaja (MCP server)
 
-Status: **Built** (TASK-010a). Decision: ADR-038.
+Status: **Live on dev** (TASK-010a, PR #20). Decisions: ADR-038, ADR-039 (Claude fills the knowledge base; posts are made in Postaja).
 
 The owner keeps projects, history and CGPs in Claude. Claude has no API that lets Postaja read them, so it works the
 other way round: **Postaja is a remote MCP server**, the owner adds it to Claude as a custom connector, and Claude
@@ -53,6 +53,8 @@ Signing out of the web app does **not** disconnect Claude: `oauth_*_token.sessio
 | `propose_cgp` | owner | stores the text as a **pending draft** (`cgp_drafts`, ≤ 50,000 chars; earlier pending drafts of the brand discarded). The active CGP never changes here (ADR-035). Returns the review URL. |
 | `add_material` | owner | text from the conversation → a brand source (`.md` unless named `.txt`/`.csv`), through the normal upload checks |
 
+The server's `instructions` tell Claude to use the tools only for the knowledge base and not to write posts (ADR-039).
+`get_brand` lists materials with `textChars` (how much text Postaja could read).
 Every call is logged in `mcp_tool_calls` (org, user, client, tool, ok/error code) — **arguments are not stored**.
 Errors return MCP tool errors with a readable reason (not found, owner only, archived, too long).
 

@@ -185,6 +185,7 @@ describe("connecting Claude", () => {
     const init = await mcp(t.access_token!, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "claude", version: "1" } });
     expect(init.status).toBe(200);
     expect(init.json.result.serverInfo.name).toBe("postaja");
+    expect(init.json.result.instructions).toMatch(/knowledge base.*Do not write posts here/s); // ADR-039
 
     const list = await mcp(t.access_token!, "tools/list");
     expect((list.json.result.tools as { name: string }[]).map((x) => x.name).sort()).toEqual(["add_material", "get_brand", "list_brands", "propose_cgp"]);

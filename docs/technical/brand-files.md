@@ -11,6 +11,11 @@ Status: **Live on dev** (TASK-005b: PR #14, #15) · TASK-005c (auto-sorting, ZIP
 | Service | `src/server/brands/files.ts`: `uploadBrandFile`, `listBrandFiles`, `brandFileUrl`, `deleteBrandFile` |
 | Checks | `src/server/files/sniff.ts` (magic bytes, OOXML part names), `font.ts` (cmap/name, diacritics), `images.ts` (sharp re-encode), `storage.ts` (S3 client, presign ≤ 15 min, Content-Disposition) |
 
+## Knowledge base (TASK-009, ADR-039)
+- Every source except images is read at upload (`extractSourceText` → `materialText` in `src/server/files/extract.ts`): PDF, DOCX (headings/lists as Markdown), XLSX (`## Sheet`, rows `a | b | c`, ≤ 5,000 rows per sheet), PPTX (`## Prosojnica N`, slides in presentation order), TXT/MD/CSV. Stored as `extract = {text, chars}` (≤ 300,000 characters), `status = extracted`; no text → `status = failed`, `error` = `NO_TEXT` / `INVALID_FILE`. The upload never fails because of it.
+- Rows from before TASK-009 (`status = uploaded`) are read on the next generation (`extractPendingSources`, scoped by org).
+- `listBrandFiles` never loads the text, only `textChars`; the brand page shows "N znakov besedila" or why there is none.
+
 ## Drop anything (TASK-005c, ADR-034)
 - `uploadAuto` (`files.ts`): one dropped file goes to its slot by `classify()` — TTF/OTF/WOFF/WOFF2 → font; PNG/JPEG/WebP with "logo" in the file name → logo; everything else → source. `?slot=logo` (the "Dodaj logotip" button) forces the slot.
 - A plain ZIP (not docx/xlsx/pptx) is unpacked by `src/server/files/zip.ts` and every entry runs through the normal checks on its own: ≤ 200 files, ≤ 50 MB per file, ≤ 300 MB unpacked in total, ZIP upload ≤ 100 MB. Inflation is capped (`inflateCapped`) so a lying header cannot allocate more than the cap. Skipped silently: folders, `__MACOSX/`, hidden files, `Thumbs.db`, `desktop.ini`. Refused per entry: encrypted, unknown compression, ZIP64, corrupt, a ZIP inside the ZIP.

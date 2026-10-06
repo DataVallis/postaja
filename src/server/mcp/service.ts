@@ -65,7 +65,7 @@ export async function mcpGetBrand(db: Db, ctx: OrgContext, ref: string) {
     cgp: d.profile?.cgp ?? "", profileVersion: d.profile?.version ?? 0,
     rules: d.profile?.rules ?? null, pillars: d.profile?.pillars ?? [],
     channels: d.channels.map((c) => ({ id: c.id, platform: c.platform, handle: c.handle, language: c.language })),
-    materials: files.sources.map((s) => ({ filename: s.filename, kind: s.kind })),
+    materials: files.sources.map((s) => ({ filename: s.filename, kind: s.kind, textChars: s.textChars ?? 0 })),
     logos: files.logos.length, fonts: files.fonts.map((f) => f.meta.family ?? f.filename),
   };
 }

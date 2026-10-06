@@ -128,11 +128,11 @@ Job chain per post (pg-boss, singleton key `post:<id>:<step>` for idempotency):
 - "Clean" assets (`image_clean`, `video_clean`) are kept without overlays so text edits, animation and recompose never re-generate.
 
 ### 5.1 Brand materials for generation (ADR-035 — no CGP synthesis)
-1. `source.extract` (per source, when generation first needs it) — by kind (see §1 Brand ingestion libraries); store `extract` (text, tables);
-   images also get palette (sharp stats) and a vision description for use as references.
+1. Material text is read **at upload** (TASK-009, ADR-039): PDF (unpdf), DOCX/XLSX/PPTX (in-house over the safe unzip), TXT/MD/CSV → `brand_sources.extract = {text, chars}` (≤ 300k chars), `status` extracted/failed; older rows are read on the next generation.
+   Later: images get palette (sharp stats) and a vision description for use as references.
    Materials are wrapped as quoted data in every prompt; instructions inside them are ignored (prompt-injection guard, tested with a fixture).
-2. Generation uses the owner's CGP version + rules + the relevant material extracts; the CGP wins on conflicts.
-3. Phase 2: `source.chunk` → `brand_knowledge_chunks` with embeddings; generation retrieves top-k by post topic.
+2. Generation uses the owner's CGP version + rules + material text; the CGP wins on conflicts. All material text when it fits 60k characters, otherwise BM25 over paragraph chunks (diacritics folded) picks the passages matching the brief (`src/server/posts/retrieve.ts`).
+3. Phase 2: embeddings (ADR-008) can replace the lexical ranking without changing the stored text.
 (The former `brand.synthesize` / `brand_profile_proposals` flow is dropped.)
 
 ### 5.1a Rule engine (all post types)
