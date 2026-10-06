@@ -84,3 +84,57 @@ export async function image(format: "png" | "jpeg" | "webp", w = 40, h = 30, opt
   if (opts.exif) img = img.withExif({ IFD0: { Artist: "Secret Person", Copyright: "GPS 46.55,15.64" } });
   return new Uint8Array(await img.toFormat(format).toBuffer());
 }
+
+/** ZIP with real per-entry content; `deflate` compresses entries (method 8), `flags` sets general-purpose bits. */
+export function makeZipEntries(entries: { name: string; bytes: Uint8Array; deflate?: boolean; flags?: number; declaredSize?: number }[]): Uint8Array {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { deflateRawSync } = require("node:zlib") as typeof import("node:zlib");
+  const enc = new TextEncoder();
+  const le16 = (v: number) => [v & 0xff, (v >> 8) & 0xff];
+  const le32 = (v: number) => [...le16(v & 0xffff), ...le16(v >>> 16)];
+  const local: number[] = [];
+  const central: number[] = [];
+  for (const e of entries) {
+    const name = enc.encode(e.name);
+    const data = e.deflate ? new Uint8Array(deflateRawSync(e.bytes)) : e.bytes;
+    const method = e.deflate ? 8 : 0;
+    const usize = e.declaredSize ?? e.bytes.length;
+    const at = local.length;
+    const flags = e.flags ?? 0;
+    local.push(...le32(0x04034b50), ...le16(20), ...le16(flags), ...le16(method), ...le16(0), ...le16(0), ...le32(0), ...le32(data.length), ...le32(usize), ...le16(name.length), ...le16(0), ...name);
+    for (const x of data) local.push(x);
+    central.push(...le32(0x02014b50), ...le16(20), ...le16(20), ...le16(flags), ...le16(method), ...le16(0), ...le16(0), ...le32(0), ...le32(data.length), ...le32(usize), ...le16(name.length), ...le16(0), ...le16(0), ...le16(0), ...le16(0), ...le32(0), ...le32(at), ...name);
+  }
+  const eocd = [...le32(0x06054b50), ...le16(0), ...le16(0), ...le16(entries.length), ...le16(entries.length), ...le32(central.length), ...le32(local.length), ...le16(0)];
+  const out = new Uint8Array(local.length + central.length + eocd.length);
+  out.set(local, 0); out.set(central, local.length); out.set(eocd, local.length + central.length);
+  return out;
+}
+
+/** WOFF 1.0 wrapper around an sfnt (tables zlib-compressed when it helps), per the W3C WOFF spec. */
+export function makeWoff(sfnt: Uint8Array): Uint8Array {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { deflateSync } = require("node:zlib") as typeof import("node:zlib");
+  const v = new DataView(sfnt.buffer, sfnt.byteOffset, sfnt.byteLength);
+  const num = v.getUint16(4);
+  const tables = Array.from({ length: num }, (_, i) => {
+    const p = 12 + i * 16;
+    const off = v.getUint32(p + 8), len = v.getUint32(p + 12);
+    const orig = sfnt.subarray(off, off + len);
+    const z = new Uint8Array(deflateSync(orig));
+    return { tag: v.getUint32(p), sum: v.getUint32(p + 4), orig, data: z.length < orig.length ? z : orig };
+  });
+  const dirEnd = 44 + num * 20;
+  let at = dirEnd;
+  const offsets = tables.map((t) => { const o = at; at += (t.data.length + 3) & ~3; return o; });
+  const totalSfnt = 12 + num * 16 + tables.reduce((s, t) => s + ((t.orig.length + 3) & ~3), 0);
+  const out = new Uint8Array(at);
+  const o = new DataView(out.buffer);
+  o.setUint32(0, 0x774f4646); o.setUint32(4, v.getUint32(0)); o.setUint32(8, at); o.setUint16(12, num); o.setUint32(16, totalSfnt);
+  tables.forEach((t, i) => {
+    const p = 44 + i * 20;
+    o.setUint32(p, t.tag); o.setUint32(p + 4, offsets[i]); o.setUint32(p + 8, t.data.length); o.setUint32(p + 12, t.orig.length); o.setUint32(p + 16, t.sum);
+    out.set(t.data, offsets[i]);
+  });
+  return out;
+}

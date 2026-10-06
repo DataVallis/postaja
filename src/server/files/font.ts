@@ -1,5 +1,7 @@
 // Minimal TrueType/OpenType reader (TASK-005b, ADR-033): enough to prove a font is well-formed, read its family
 // name and check glyph coverage for Slovenian (and neighbouring) diacritics. Bounds-checked: a malformed font throws.
+import { inflateSync } from "node:zlib";
+
 
 /** Characters every brand font must cover for Slovenian text (plus ć/đ used in names). */
 export const REQUIRED_GLYPHS = "čšžćđČŠŽĆĐ";
@@ -118,4 +120,56 @@ export function inspectFont(bytes: Uint8Array): FontInfo {
     if (e instanceof RangeError) throw new Error("FONT_TRUNCATED");
     throw e;
   }
+}
+
+/** Upper bound for a converted font (a decompression guard for WOFF/WOFF2). */
+export const MAX_SFNT_BYTES = 30 * 1024 * 1024;
+
+/**
+ * WOFF 1.0 → plain TTF/OTF (in-house: zlib per table). The renderer (Satori) needs TTF/OTF; brands often only have
+ * web fonts. Throws FONT_* on malformed input.
+ */
+export function woffToSfnt(b: Uint8Array): Uint8Array {
+  try {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const flavor = v.getUint32(4);
+    const num = v.getUint16(12);
+    const total = v.getUint32(16);
+    if (num === 0 || num > 200 || total > MAX_SFNT_BYTES) throw new Error("FONT_BAD_DIRECTORY");
+    const out = new Uint8Array(total);
+    const o = new DataView(out.buffer);
+    let searchRange = 1, entrySelector = 0;
+    while (searchRange * 2 <= num) { searchRange *= 2; entrySelector++; }
+    o.setUint32(0, flavor); o.setUint16(4, num); o.setUint16(6, searchRange * 16); o.setUint16(8, entrySelector); o.setUint16(10, num * 16 - searchRange * 16);
+    let at = 12 + num * 16;
+    for (let i = 0; i < num; i++) {
+      const p = 44 + i * 20;
+      const tag = v.getUint32(p), off = v.getUint32(p + 4), comp = v.getUint32(p + 8), orig = v.getUint32(p + 12), sum = v.getUint32(p + 16);
+      if (off + comp > b.length) throw new Error("FONT_TABLE_OUT_OF_BOUNDS");
+      const src = b.subarray(off, off + comp);
+      const data = comp < orig ? new Uint8Array(inflateSync(src, { maxOutputLength: orig + 1 })) : src;
+      if (data.length !== orig || at + orig > total) throw new Error("FONT_TABLE_OUT_OF_BOUNDS");
+      const d = 12 + i * 16;
+      o.setUint32(d, tag); o.setUint32(d + 4, sum); o.setUint32(d + 8, at); o.setUint32(d + 12, orig);
+      out.set(data, at);
+      at += (orig + 3) & ~3; // 4-byte aligned tables
+    }
+    return out.subarray(0, Math.min(at, total));
+  } catch (e) {
+    if (e instanceof RangeError || (e as { code?: string }).code?.startsWith("Z_") || (e as { code?: string }).code === "ERR_BUFFER_TOO_LARGE") throw new Error("FONT_TRUNCATED");
+    throw e;
+  }
+}
+
+/** WOFF2 → TTF/OTF via Google's reference decoder (wawoff2, WebAssembly). */
+export async function woff2ToSfnt(b: Uint8Array): Promise<Uint8Array> {
+  const { decompress } = await import("wawoff2");
+  let out: Uint8Array;
+  try {
+    out = await decompress(b);
+  } catch {
+    throw new Error("FONT_TRUNCATED");
+  }
+  if (out.length === 0 || out.length > MAX_SFNT_BYTES) throw new Error("FONT_TOO_LARGE");
+  return out;
 }

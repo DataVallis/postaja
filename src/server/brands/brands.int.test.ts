@@ -203,3 +203,13 @@ describe("cross-tenant: data layer", () => {
     raw: async (id) => (await db.select().from(channels).where(eq(channels.id, id)))[0],
   });
 });
+
+describe("channel language follows the brand", () => {
+  it("an English-only brand cannot get a Slovenian channel (add or update); English is fine", async () => {
+    const { id } = await createBrand(db, A, { name: "AI Builders", slug: "aibuilders", languages: ["en"] });
+    await expect(addChannel(db, A, id, { ...channel, language: "sl" })).rejects.toMatchObject({ code: "LANGUAGE_NOT_IN_BRAND" });
+    const { id: chId } = await addChannel(db, A, id, { ...channel, language: "en" });
+    await expect(updateChannel(db, A, chId, { ...channel, language: "sl" })).rejects.toMatchObject({ code: "LANGUAGE_NOT_IN_BRAND" });
+    expect((await getBrandDetail(db, A, id)).channels.map((c) => c.language)).toEqual(["en"]);
+  });
+});

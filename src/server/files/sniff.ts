@@ -4,7 +4,8 @@
 export type Sniffed =
   | "pdf" | "docx" | "xlsx" | "pptx"
   | "png" | "jpeg" | "webp"
-  | "ttf" | "otf"
+  | "ttf" | "otf" | "woff" | "woff2"
+  | "zip" | "svg"
   | "text"
   | "unknown";
 
@@ -48,11 +49,12 @@ function officeKind(b: Uint8Array): Sniffed {
     return "unknown";
   }
   const has = (n: string) => names.includes(n);
-  if (!has("[Content_Types].xml")) return "unknown";
-  if (has("word/document.xml")) return "docx";
-  if (has("xl/workbook.xml")) return "xlsx";
-  if (has("ppt/presentation.xml")) return "pptx";
-  return "unknown";
+  if (has("[Content_Types].xml")) {
+    if (has("word/document.xml")) return "docx";
+    if (has("xl/workbook.xml")) return "xlsx";
+    if (has("ppt/presentation.xml")) return "pptx";
+  }
+  return "zip"; // a plain archive: unpacked and checked entry by entry (zip.ts)
 }
 
 /** Valid UTF-8 (BOM allowed) without NUL bytes → text. */
@@ -73,12 +75,19 @@ export function sniff(b: Uint8Array): Sniffed {
   if (startsWith(b, ascii("RIFF")) && startsWith(b, ascii("WEBP"), 8)) return "webp";
   if (startsWith(b, [0x00, 0x01, 0x00, 0x00]) || startsWith(b, ascii("true"))) return "ttf";
   if (startsWith(b, ascii("OTTO"))) return "otf";
+  if (startsWith(b, ascii("wOFF"))) return "woff";
+  if (startsWith(b, ascii("wOF2"))) return "woff2";
   if (startsWith(b, [0x50, 0x4b, 0x03, 0x04])) return officeKind(b);
-  if (isText(b)) return "text";
+  if (isText(b)) {
+    // SVG can carry scripts: recognised so it can be refused with a clear reason instead of stored as text.
+    const head = new TextDecoder().decode(b.subarray(0, 2048)).replace(/^\ufeff/, "").trimStart().toLowerCase();
+    if (/^(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!doctype svg[^>]*>\s*)?<svg[\s/>]/.test(head)) return "svg";
+    return "text";
+  }
   return "unknown";
 }
 
-export const CONTENT_TYPES: Record<Exclude<Sniffed, "unknown">, string> = {
+export const CONTENT_TYPES: Record<Exclude<Sniffed, "unknown" | "zip" | "svg" | "woff" | "woff2">, string> = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

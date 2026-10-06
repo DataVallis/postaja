@@ -3,7 +3,7 @@
 import type { Db } from "../db/client";
 import type { Storage } from "../files/storage";
 import type { OrgContext } from "../tenancy/context";
-import { brandFileUrl, FileError, MAX_BYTES, uploadBrandFile, type Slot } from "./files";
+import { brandFileUrl, FileError, MAX_BYTES, MAX_ZIP_BYTES, uploadAuto, type Slot } from "./files";
 
 /** Multipart framing around the file (boundary, headers, name field). */
 export const MULTIPART_OVERHEAD = 64 * 1024;
@@ -26,12 +26,15 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   if (!sameOrigin(req, deps.appOrigin)) return json({ error: "BAD_ORIGIN" }, 403);
   const ctx = await deps.getCtx();
   if (!ctx) return json({ error: "UNAUTHORIZED" }, 401);
-  const slot = new URL(req.url).searchParams.get("slot") as Slot | null;
-  if (slot !== "logo" && slot !== "font" && slot !== "source") return json({ error: "BAD_SLOT" }, 400);
+  // No slot (or "auto") = sort each file (and each entry of a ZIP) automatically; a slot forces e.g. "this is the logo".
+  const raw = new URL(req.url).searchParams.get("slot") ?? "auto";
+  if (raw !== "auto" && raw !== "logo" && raw !== "font" && raw !== "source") return json({ error: "BAD_SLOT" }, 400);
+  const slot = raw === "auto" ? undefined : (raw as Slot);
+  const max = slot ? MAX_BYTES[slot] : Math.max(MAX_ZIP_BYTES, MAX_BYTES.source);
   // Refuse oversized bodies before buffering them; a missing length (chunked upload) is refused too.
   const length = Number(req.headers.get("content-length") ?? NaN);
   if (!Number.isFinite(length)) return json({ error: "LENGTH_REQUIRED" }, 411);
-  if (length > MAX_BYTES[slot] + MULTIPART_OVERHEAD) return json({ error: "TOO_LARGE" }, 413);
+  if (length > max + MULTIPART_OVERHEAD) return json({ error: "TOO_LARGE" }, 413);
 
   let file: FormDataEntryValue | null;
   try {
@@ -41,11 +44,13 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   }
   if (!(file instanceof File)) return json({ error: "BAD_FORM" }, 400);
   try {
-    const r = await uploadBrandFile(deps.db, deps.storage, ctx, brandId, slot, {
-      filename: file.name,
-      bytes: new Uint8Array(await file.arrayBuffer()),
-    });
-    return json(r, 201);
+    const results = await uploadAuto(deps.db, deps.storage, ctx, brandId, { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }, slot);
+    // Always one result per file. Status: 201 all stored; a single failed file keeps its specific status (415, 422, …);
+    // a ZIP with mixed outcomes is 200 and the results say which entries failed.
+    if (results.every((r) => r.ok)) return json({ results }, 201);
+    const first = results[0];
+    if (results.length === 1 && !first.ok) return json({ results }, STATUS[first.error as FileError["code"]] ?? 422);
+    return json({ results }, 200);
   } catch (e) {
     if (e instanceof FileError) return json({ error: e.code, detail: e.detail }, STATUS[e.code]);
     throw e;

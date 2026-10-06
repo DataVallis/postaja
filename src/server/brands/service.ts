@@ -7,7 +7,7 @@ import { forOrg } from "../tenancy/scoped";
 import { brandInput, channelInput, profileInput } from "./schemas";
 
 export class BrandError extends Error {
-  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "LIMIT_REACHED" | "DUPLICATE" | "PRESET_MISMATCH" | "ARCHIVED") {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "LIMIT_REACHED" | "DUPLICATE" | "PRESET_MISMATCH" | "ARCHIVED" | "LANGUAGE_NOT_IN_BRAND") {
     super(code);
   }
 }
@@ -121,6 +121,8 @@ export async function addChannel(db: Db, ctx: OrgContext, brandId: string, input
   const data = channelInput.parse(input);
   const b = await ownBrand(db, ctx, brandId);
   if (b.archivedAt) throw new BrandError("ARCHIVED");
+  // A channel posts in one of the brand's languages (an English-only brand cannot get a Slovenian channel).
+  if (!b.languages.includes(data.language)) throw new BrandError("LANGUAGE_NOT_IN_BRAND");
   await checkPreset(db, data.platform, data.defaultPresetKey);
   const id = crypto.randomUUID();
   try {
@@ -135,6 +137,10 @@ export async function addChannel(db: Db, ctx: OrgContext, brandId: string, input
 export async function updateChannel(db: Db, ctx: OrgContext, channelId: string, input: z.input<typeof channelInput>) {
   requireOwner(ctx);
   const data = channelInput.parse(input);
+  const [ch] = (await forOrg(db, ctx).select(channels, eq(channels.id, channelId))) as (typeof channels.$inferSelect)[];
+  if (!ch) throw new BrandError("NOT_FOUND");
+  const b = await ownBrand(db, ctx, ch.brandId);
+  if (!b.languages.includes(data.language)) throw new BrandError("LANGUAGE_NOT_IN_BRAND");
   await checkPreset(db, data.platform, data.defaultPresetKey);
   const rows = await forOrg(db, ctx).update(channels, { ...data, defaultPresetKey: data.defaultPresetKey ?? null, updatedAt: new Date() }, eq(channels.id, channelId));
   if (!rows[0]) throw new BrandError("NOT_FOUND");
