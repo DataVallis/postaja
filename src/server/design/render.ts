@@ -27,6 +27,9 @@ function builtinFonts() {
       out.push({ name, data: await fs.readFile(path.join(dir, regular)), weight: 400, style: "normal" });
       out.push({ name, data: await fs.readFile(path.join(dir, bold)), weight: 700, style: "normal" });
     }
+    // Fallback for ✓ ✗ → ★ ● ■ and other symbols the text families lack (Noto Sans Symbols 1+2, OFL).
+    const symbols = await fs.readFile(path.join(dir, "NotoSansSymbols-Regular.woff"));
+    out.push({ name: "symbols", data: symbols, weight: 400, style: "normal" }, { name: "symbols", data: symbols, weight: 700, style: "normal" });
     return out;
   })();
   return builtins;
@@ -102,7 +105,7 @@ function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H:
   );
   const inner = el("div", {
     display: "flex", flexDirection: "column", maxWidth: "100%",
-    fontFamily: family, fontWeight: e.weight, fontSize: size, lineHeight: e.lineHeight, letterSpacing: `${e.letterSpacing}em`,
+    fontFamily: `${family}, symbols`, fontWeight: e.weight, fontSize: size, lineHeight: e.lineHeight, letterSpacing: `${e.letterSpacing}em`,
     ...(e.fill ? { backgroundColor: color(spec, e.fill), padding: pad, borderRadius: (e.radius / 100) * W, paddingRight: Math.max(0, pad - gap) } : {}),
   }, rows);
   return el("div", {
@@ -133,7 +136,7 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
     : spec;
   // Only the families this design uses (Satori parses every font it is given, on every render).
   const used = new Set<string>([s.typography.heading, s.typography.body]);
-  const fonts = (await builtinFonts()).filter((f) => used.has(f.name));
+  const fonts = (await builtinFonts()).filter((f) => used.has(f.name) || f.name === "symbols");
   if (input.brandFont && used.has("brand")) for (const weight of [400, 700] as const) fonts.push({ name: "brand", data: Buffer.from(input.brandFont), weight, style: "normal" });
 
   const b = t.background;
