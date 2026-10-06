@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
-import { brands, channels, modelRegistry, planImports, posts, type ImportSettings, type PostContent, type PostPlan } from "../db/schema";
+import { brands, channels, modelRegistry, planImports, posts, postMedia, type ImportSettings, type PostContent, type PostPlan } from "../db/schema";
 import { ExtractError, materialText } from "../files/extract";
 import { sniff } from "../files/sniff";
 import type { Storage } from "../files/storage";
@@ -23,7 +23,7 @@ export const IMPORT_MAX_BYTES = 20 * 1024 * 1024;
 const MAX_SHEETS = 10;
 
 export class ImportError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "INVALID_FILE" | "NO_POSTS" | "BAD_STATE" | "INVALID" | "AI_FAILED" | "SPEND_CAP" | "NO_MODEL", public readonly detail?: string) {
+  constructor(public readonly code: "NOT_FOUND" | "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "INVALID_FILE" | "NO_POSTS" | "BAD_STATE" | "INVALID" | "AI_FAILED" | "SPEND_CAP" | "NO_MODEL" | "PLATFORM_MISMATCH", public readonly detail?: string) {
     super(code);
   }
 }
@@ -182,7 +182,13 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
     g.count++;
     groups.set(key, g);
   }
-  for (const g of groups.values()) g.channelId = map[g.key] ?? g.suggested;
+  // A saved choice of a channel on another platform (allowed before) is ignored: LinkedIn rows never go to Instagram.
+  const platformOf = new Map(list.map((c) => [c.id, c.platform]));
+  for (const g of groups.values()) {
+    const chosen = map[g.key];
+    const ok = chosen === "skip" || (chosen && (!g.platform || platformOf.get(chosen) === g.platform));
+    g.channelId = ok ? chosen! : g.suggested;
+  }
   return { import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list };
 }
 
@@ -204,8 +210,14 @@ export async function updateImport(db: Db, ctx: OrgContext, id: string, patch: z
     set.mappings = p.mappings;
   }
   if (p.channelMap) {
-    const ids = new Set((await orgChannels(db, ctx)).map((c) => c.id));
-    if (Object.values(p.channelMap).some((v) => v !== "skip" && !ids.has(v))) throw new ImportError("INVALID");
+    const list = await orgChannels(db, ctx);
+    const platformOf = new Map(list.map((c) => [c.id, c.platform]));
+    if (Object.values(p.channelMap).some((v) => v !== "skip" && !platformOf.has(v))) throw new ImportError("INVALID");
+    // The group key starts with the platform ("linkedin|David"); its rows only go to a channel of that platform.
+    for (const [key, v] of Object.entries(p.channelMap)) {
+      const platform = key.split("|")[0];
+      if (v !== "skip" && platform && platformOf.get(v) !== platform) throw new ImportError("PLATFORM_MISMATCH");
+    }
   }
   const settings: ImportSettings = { ...r.settings };
   if (p.startDate !== undefined) settings.startDate = p.startDate;
@@ -252,7 +264,7 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
   const byGroup = new Map(view.groups.map((g) => [g.key, g.channelId]));
   const chans = new Map(view.channels.map((c) => [c.id, c]));
   const rules = new Map<string, Awaited<ReturnType<typeof rulesFor>> | null>();
-  const counts = { created: 0, duplicates: 0, skipped: 0, noChannel: 0, published: 0, planned: 0, needsReview: 0 };
+  const counts = { created: 0, duplicates: 0, skipped: 0, noChannel: 0, published: 0, planned: 0, needsReview: 0, moved: 0 };
 
   await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
@@ -269,6 +281,14 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
     const byText = new Set(existing.filter((e) => e.caption).map((e) => `${e.channelId}|${e.caption}`));
     const byPlan = new Set(existing.filter((e) => e.importId || !e.caption).map((e) => `${e.channelId}|${e.day}|${e.topic}`));
     const thisRun = new Set<string>();
+    // Posts this import already made, by plan row: a row that landed on a channel of another platform (possible before
+    // the platform check) is moved to its right channel instead of being created twice.
+    const mine = new Map(
+      (await t.select({ id: posts.id, ref: sql<string | null>`${posts.plan}->>'sourceRef'`, platform: channels.platform, brandId: posts.brandId, status: posts.status })
+        .from(posts).innerJoin(channels, eq(channels.id, posts.channelId))
+        .where(and(eq(posts.orgId, ctx.orgId), eq(posts.importId, id))))
+        .filter((m) => m.ref).map((m) => [m.ref!, m]),
+    );
 
     for (const [idx, item] of view.items.entries()) {
       if (item.status === "skip") { counts.skipped++; continue; }
@@ -281,6 +301,20 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
       if (!rc) { counts.noChannel++; continue; }
       const content = composeImported(item);
       const day = view.schedule[idx];
+      const prev = mine.get(item.ref);
+      if (prev && item.platform && prev.platform !== item.platform && ch.platform === item.platform) {
+        const v = content && prev.status !== "published" ? checkPost(content, rc.rules, rc.cta) : [];
+        const st = prev.status === "ready" || prev.status === "needs_review" ? (v.length ? "needs_review" : "ready") : prev.status;
+        await forOrg(t, ctx).update(posts, {
+          channelId: ch.id, brandId: ch.brandId, profileVersionId: rc.profile.id, status: st, ruleFailures: prev.status === "published" ? [] : v,
+          // Images were made for the wrong channel (maybe another brand): start over.
+          visual: null, mediaStatus: "none", mediaError: null, updatedAt: new Date(),
+        }, eq(posts.id, prev.id));
+        await forOrg(t, ctx).delete(postMedia, eq(postMedia.postId, prev.id));
+        mine.delete(item.ref);
+        counts.moved++;
+        continue;
+      }
       const textKey = content ? `${ch.id}|${content.caption}` : null;
       const planKey = `${ch.id}|${day}|${item.topic}`;
       const dup = textKey ? byText.has(textKey) || byPlan.has(planKey) || thisRun.has(`t|${textKey}`) : byPlan.has(planKey) || thisRun.has(`p|${planKey}`);

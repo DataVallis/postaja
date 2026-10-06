@@ -81,9 +81,10 @@ export default async function ImportReview({ params, searchParams }: { params: P
                       <label htmlFor={`ch-${gi}`} className="sr-only">{t("channelFor", { what: label(g.key) })}</label>
                       <select id={`ch-${gi}`} name={`ch:${encodeURIComponent(g.key)}`} defaultValue={g.channelId ?? ""} className={`${selectClass} w-full min-w-56`}>
                         <option value="">{t("chooseChannel")}</option>
-                        {v.channels.map((c) => <option key={c.id} value={c.id}>{c.brandName} · {t(`platforms.${c.platform}`)} · {c.handle}</option>)}
+                        {v.channels.filter((c) => !g.platform || c.platform === g.platform).map((c) => <option key={c.id} value={c.id}>{c.brandName} · {t(`platforms.${c.platform}`)} · {c.handle}</option>)}
                         <option value="skip">{t("skipGroup")}</option>
                       </select>
+                      {g.platform && !v.channels.some((c) => c.platform === g.platform) ? <p className="mt-1 text-xs text-muted">{t("noChannelForPlatform")}</p> : null}
                     </td>
                   </tr>
                 ))}

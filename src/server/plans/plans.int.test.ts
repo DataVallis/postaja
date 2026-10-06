@@ -134,7 +134,7 @@ describe("confirming", () => {
   it("creates posts verbatim per channel: history, ready, needs review, planned; skipped rows left out; text + missing hashtags", async () => {
     const importId = await start(A, plan()).id;
     const counts = await confirmImport(db, A, importId);
-    expect(counts).toEqual({ created: 5, duplicates: 0, skipped: 1, noChannel: 0, published: 1, planned: 1, needsReview: 1 });
+    expect(counts).toEqual({ created: 5, duplicates: 0, skipped: 1, noChannel: 0, published: 1, planned: 1, needsReview: 1, moved: 0 });
     const rows = await sql`select channel_id, status, format, content, plan, scheduled_on::text as day, scheduled_time, published_at is not null as pub, rule_failures from posts order by scheduled_on, scheduled_time`;
     expect(rows.map((r) => [r.channel_id, r.status, r.format, r.day, r.scheduled_time])).toEqual([
       [liA, "ready", "image", "2026-09-29", "08:30"],
@@ -151,13 +151,15 @@ describe("confirming", () => {
     expect((await listImports(db, A))[0]).toMatchObject({ status: "imported", createdCount: 5 });
   });
 
-  it("owner choices: start date, skip a platform, move an account to another channel; a second import of the same plan only adds what is new", async () => {
+  it("owner choices: skip a platform, never put one platform's rows on another's channel; a second import only adds what is new", async () => {
     const first = await start(A, plan()).id;
-    await updateImport(db, A, first, { channelMap: { "x|@davitacer": "skip", "linkedin|David (osebni profil)": igA } });
+    // LinkedIn rows on the Instagram channel are refused (owner, 2026-10-06: LinkedIn posts ended up under Instagram).
+    await expect(updateImport(db, A, first, { channelMap: { "linkedin|David (osebni profil)": igA } })).rejects.toMatchObject({ code: "PLATFORM_MISMATCH" });
+    await updateImport(db, A, first, { channelMap: { "x|@davitacer": "skip" } });
     expect(await confirmImport(db, A, first)).toMatchObject({ created: 4, skipped: 2 });
-    expect((await sql`select count(*)::int n from posts where channel_id = ${igA}`)[0].n).toBe(4);
+    expect((await sql`select count(*)::int n from posts where channel_id = ${igA}`)[0].n).toBe(3);
     const again = await start(A, plan()).id;
-    expect(await confirmImport(db, A, again)).toMatchObject({ created: 2, duplicates: 3 }); // LinkedIn + X are new now
+    expect(await confirmImport(db, A, again)).toMatchObject({ created: 1, duplicates: 4 }); // X is new now
   });
 
   it("posts written or edited by hand since the first import are not imported again", async () => {
@@ -194,6 +196,33 @@ describe("confirming", () => {
     expect(await confirmImport(db, B, bImport)).toMatchObject({ created: 1, duplicates: 3, noChannel: 1 });
     expect((await sql`select created_count, status from plan_imports where id = ${bImport}`)[0]).toEqual({ created_count: 4, status: "imported" });
     await expect(reopenImport(db, A, await start(A, plan()).id)).rejects.toMatchObject({ code: "BAD_STATE" }); // a draft is not "imported"
+  });
+
+  it("rows go only to channels of their own platform; rows misplaced before that guard are moved on re-import", async () => {
+    const importId = await start(B, plan()).id;
+    await expect(updateImport(db, B, importId, { channelMap: { "linkedin|davidtacer": igB } })).rejects.toMatchObject({ code: "PLATFORM_MISMATCH" });
+    // An old import saved LinkedIn rows on the Instagram channel (no guard then): reproduce it directly.
+    const v = await importView(db, B, importId);
+    const li = v.groups.find((g) => g.platform === "linkedin")!;
+    await sql`update plan_imports set settings = jsonb_set(settings, '{channelMap}', ${sql.json({ [li.key]: igB })}) where id = ${importId}`;
+    expect((await importView(db, B, importId)).groups.find((g) => g.key === li.key)!.channelId).toBeNull(); // ignored now
+    await sql`update plan_imports set status = 'imported' where id = ${importId}`;
+    // Simulate what the old code created: the LinkedIn rows as Instagram posts of this import.
+    const brandB = (await sql`select brand_id from channels where id = ${igB}`)[0].brand_id as string;
+    const pv = (await sql`select current_profile_version_id v from brands where id = ${brandB}`)[0].v as string;
+    const liItems = v.items.filter((i) => i.platform === "linkedin");
+    for (const i of liItems) {
+      await sql`insert into posts (id, org_id, brand_id, channel_id, profile_version_id, brief, status, format, plan, import_id, created_by, media_status)
+        values (${crypto.randomUUID()}, ${B.orgId}, ${brandB}, ${igB}, ${pv}, 'x', 'planned', 'text', ${sql.json({ sourceRef: i.ref })}, ${importId}, ${B.userId}, 'ready')`;
+    }
+    const liB = (await addChannel(db, B, brandB, { ...chan("linkedin", "davidtacer"), language: "en" })).id;
+    await reopenImport(db, B, importId);
+    const counts = await confirmImport(db, B, importId);
+    expect(counts).toMatchObject({ moved: liItems.length, created: 3 });
+    const onLi = await sql`select media_status, visual from posts where channel_id = ${liB}`;
+    expect(onLi).toHaveLength(liItems.length);
+    expect(onLi.every((p) => p.media_status === "none" && p.visual === null)).toBe(true);
+    expect((await sql`select count(*)::int n from posts where channel_id = ${igB} and import_id = ${importId}`)[0].n).toBe(3);
   });
 
   it("an editor can import too", async () => {
