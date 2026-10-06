@@ -7,6 +7,7 @@ import { getDb } from "@/server/db/client";
 import { POST_STATUSES } from "@/server/db/schema";
 import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
+import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
@@ -62,4 +63,21 @@ export async function setPostStatusAction(f: FormData): Promise<void> {
   if (!to.success) return;
   await setPostStatus(getDb(), ctx, postId, to.data).catch(() => undefined);
   revalidatePath(`/app/posts/${postId}`);
+}
+
+/** New slot from the post page (TASK-013): empty date = off the plan. */
+export async function reschedulePostAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  const date = String(f.get("date") ?? "").trim() || null;
+  const time = String(f.get("time") ?? "").trim() || null;
+  let error: string | null = null;
+  try {
+    await reschedulePost(getDb(), ctx, id, { date, time: date ? time : null });
+  } catch (e) {
+    error = code(e);
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?slotError=${error}` : ""}`);
 }

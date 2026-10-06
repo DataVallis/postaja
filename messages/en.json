@@ -484,7 +484,11 @@
     "publishedAt": "Published",
     "planSource": "Source",
     "planImport": "import",
-    "plannedHint": "The post is planned and has no text yet. Write it below, or Postaja will write it (bulk creation comes next)."
+    "plannedHint": "The post is planned and has no text yet. Write it below, or Postaja will write it (bulk creation comes next).",
+    "slotDate": "Day",
+    "slotTime": "Time",
+    "slotSave": "Save slot",
+    "slotInvalid": "The slot is not valid."
   },
   "Connect": {
     "title": "Claude",
@@ -544,7 +548,8 @@
     "toLight": "Light theme",
     "account": "Account",
     "signOut": "Sign out",
-    "import": "Plan import"
+    "import": "Plan import",
+    "plan": "Plan"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -569,7 +574,11 @@
       "spend": "AI spend",
       "ofCap": "of {cap} $ this month",
       "planned": "Planned"
-    }
+    },
+    "today": "Today",
+    "todayHint": "{n, plural, =0 {Nothing planned for today.} one {# post planned for today.} other {# posts planned for today.}}",
+    "openPlan": "Open plan →",
+    "time": "Time"
   },
   "PostsList": {
     "title": "Posts",
@@ -743,5 +752,39 @@
     "carousel": "carousel",
     "thread": "thread",
     "video": "video"
+  },
+  "Plan": {
+    "title": "Plan",
+    "description": "All posts of all brands by day. Click a day for the day view, a post to open it.",
+    "allBrands": "Brand: all",
+    "allPlatforms": "Platform: all",
+    "platform": "Platform",
+    "apply": "Filter",
+    "tabsLabel": "Plan views",
+    "tabs": {
+      "calendar": "Calendar",
+      "unscheduled": "No slot",
+      "history": "History"
+    },
+    "prev": "Previous",
+    "next": "Next",
+    "today": "Today",
+    "viewLabel": "View",
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
+    "time": "Time",
+    "format": "Format",
+    "status": "Status",
+    "emptyDay": "No posts on this day.",
+    "emptyRange": "No posts in this period.",
+    "more": "+{n} more",
+    "noUnscheduled": "Every post has a slot.",
+    "publishedOn": "Published",
+    "noHistory": "Nothing published yet.",
+    "pagination": "Pages",
+    "pageOf": "Page {page} of {pages}"
   }
 }

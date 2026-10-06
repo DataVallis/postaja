@@ -6,6 +6,8 @@ import { getRequestContext } from "@/server/auth/session";
 import { listBrands } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
 import { listOrgPosts, orgOverview } from "@/server/posts/overview";
+import { calendarPosts } from "@/server/posts/calendar";
+import { todayIn } from "@/lib/dates";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +35,8 @@ export default async function Dashboard() {
   }
 
   const db = getDb();
-  const [o, recent, brandList] = await Promise.all([orgOverview(db, org), listOrgPosts(db, org, {}), listBrands(db, org)]);
+  const today = todayIn();
+  const [o, recent, brandList, todays] = await Promise.all([orgOverview(db, org), listOrgPosts(db, org, {}), listBrands(db, org), calendarPosts(db, org, today, today)]);
   const isOwner = org.role === "owner";
   return (
     <>
@@ -60,6 +63,23 @@ export default async function Dashboard() {
             <Stat label={t("stats.published")} value={o.publishedThisMonth} hint={t("stats.thisMonth")} />
             <Stat label={t("stats.spend")} value={`${usd(o.spentMicroUsd)} $`} hint={t("stats.ofCap", { cap: usd(o.capMicroUsd) })} />
           </div>
+
+          <Section id="today-h" title={t("today")} description={t("todayHint", { n: todays.length })}
+            actions={<Link href={`/app/plan?view=day`} className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline">{t("openPlan")}</Link>}>
+            {todays.length ? (
+              <DataTable testId="today-posts" head={[t("time"), tp("post"), tp("brand"), tp("channel"), t("status")]}>
+                {todays.map((p) => (
+                  <tr key={p.id}>
+                    <td className={`${td} whitespace-nowrap text-muted`}>{p.scheduledTime ?? "—"}</td>
+                    <td className={`${td} min-w-48 max-w-md`}><Link href={`/app/posts/${p.id}`} className="line-clamp-1 font-medium hover:underline">{p.caption?.split("\n")[0] || p.topic || p.brief}</Link></td>
+                    <td className={td}>{p.brandName}</td>
+                    <td className={`${td} whitespace-nowrap text-muted`}>{p.platform ? `${p.platform} · ${p.handle}` : "—"}</td>
+                    <td className={td}><Badge tone={STATUS_TONE[p.status]} dot>{tp(`status.${p.status}`)}</Badge></td>
+                  </tr>
+                ))}
+              </DataTable>
+            ) : null}
+          </Section>
 
           <Section id="recent-h" title={t("recent")} actions={<Link href="/app/posts" className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline">{t("seeAll")}</Link>}>
             <DataTable
