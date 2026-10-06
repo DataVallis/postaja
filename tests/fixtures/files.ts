@@ -159,3 +159,61 @@ export function makeDocx(paragraphs: { text: string; style?: string; list?: bool
     { name: "word/document.xml", bytes: enc.encode(doc), deflate: true },
   ]);
 }
+
+const xmlEsc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * A minimal .xlsx. Strings go to sharedStrings (or inline when `inline`), numbers stay numbers. Sheets are listed in
+ * workbook.xml in the given order but stored under reversed part names, to prove the relationships are followed.
+ */
+export function makeXlsx(sheets: { name: string; rows: (string | number | boolean | null)[][]; inline?: boolean }[]): Uint8Array {
+  const enc = new TextEncoder();
+  const shared: string[] = [];
+  const col = (i: number) => String.fromCharCode(65 + i);
+  const parts = sheets.map((sh, si) => {
+    const rows = sh.rows.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => {
+      const ref = `${col(ci)}${ri + 1}`;
+      if (v === null) return "";
+      if (typeof v === "number") return `<c r="${ref}"><v>${v}</v></c>`;
+      if (typeof v === "boolean") return `<c r="${ref}" t="b"><v>${v ? 1 : 0}</v></c>`;
+      if (sh.inline) return `<c r="${ref}" t="inlineStr"><is><t>${xmlEsc(v)}</t></is></c>`;
+      shared.push(v);
+      return `<c r="${ref}" t="s"><v>${shared.length - 1}</v></c>`;
+    }).join("")}</row>`).join("");
+    return { path: `worksheets/sheet${sheets.length - si}.xml`, xml: `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>` };
+  });
+  const workbook = `<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${xmlEsc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`;
+  const wbRels = `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${parts.map((p, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="${p.path}"/>`).join("")}</Relationships>`;
+  // Shared strings with one rich-text item split into two runs, as Excel writes formatted cells.
+  const sst = `<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${shared.map((s) => {
+    const half = Math.ceil(s.length / 2);
+    return s.length > 3 ? `<si><r><t xml:space="preserve">${xmlEsc(s.slice(0, half))}</t></r><r><t>${xmlEsc(s.slice(half))}</t></r></si>` : `<si><t>${xmlEsc(s)}</t></si>`;
+  }).join("")}</sst>`;
+  return makeZipEntries([
+    { name: "[Content_Types].xml", bytes: enc.encode('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>') },
+    { name: "_rels/.rels", bytes: enc.encode('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>') },
+    { name: "xl/workbook.xml", bytes: enc.encode(workbook), deflate: true },
+    { name: "xl/_rels/workbook.xml.rels", bytes: enc.encode(wbRels) },
+    { name: "xl/sharedStrings.xml", bytes: enc.encode(sst), deflate: true },
+    ...parts.map((p) => ({ name: `xl/${p.path}`, bytes: enc.encode(p.xml), deflate: true })),
+  ]);
+}
+
+/** A minimal .pptx: each slide is a list of paragraphs (each split into two runs); slide parts stored in reverse order. */
+export function makePptx(slides: string[][]): Uint8Array {
+  const enc = new TextEncoder();
+  const n = slides.length;
+  const slideXml = (paras: string[]) => `<?xml version="1.0"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:sp><p:txBody>${paras.map((t) => {
+    const half = Math.ceil(t.length / 2);
+    return `<a:p><a:r><a:t>${xmlEsc(t.slice(0, half))}</a:t></a:r><a:r><a:t>${xmlEsc(t.slice(half))}</a:t></a:r></a:p>`;
+  }).join("")}<a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
+  const pres = `<?xml version="1.0"?><p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>`).join("")}</p:sldIdLst></p:presentation>`;
+  const presRels = `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slides.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${n - i}.xml"/>`).join("")}</Relationships>`;
+  return makeZipEntries([
+    { name: "[Content_Types].xml", bytes: enc.encode('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>') },
+    { name: "_rels/.rels", bytes: enc.encode('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>') },
+    { name: "ppt/presentation.xml", bytes: enc.encode(pres) },
+    { name: "ppt/_rels/presentation.xml.rels", bytes: enc.encode(presRels) },
+    ...slides.map((s, i) => ({ name: `ppt/slides/slide${n - i}.xml`, bytes: enc.encode(slideXml(s)), deflate: true })),
+  ]);
+}

@@ -1,8 +1,9 @@
 // Text post generation (TASK-007, ADR-036): CGP + materials + effective rules → Claude (forced tool, zod-checked) →
 // machine rule check → at most one automatic fix → ready | needs_review | failed. Every call is cost-capped and logged.
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { checkText, checkThread, effectiveRules, type RuleLayer, type RuleSet, type Violation } from "@/lib/rules";
+import { extractPendingSources } from "../brands/files";
 import { getBrandDetail, BrandError } from "../brands/service";
 import type { Db } from "../db/client";
 import { brandSources, modelRegistry, posts, usageLedger, type PostContent, type PostStatus } from "../db/schema";
@@ -14,10 +15,9 @@ import { getPlatformRuleSet } from "../rules/repo";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { buildPostPrompt, MATERIALS_MAX_CHARS } from "./prompt";
+import { selectMaterials } from "./retrieve";
 
 export const MAX_OUTPUT_TOKENS = 2000;
-/** Text materials larger than this are skipped (PDF/Office extraction is a later task). */
-const MATERIAL_FILE_MAX = 1024 * 1024;
 
 export class PostError extends Error {
   constructor(public readonly code: "NOT_FOUND" | "ARCHIVED" | "NO_MODEL" | "BAD_STATE") {
@@ -78,21 +78,18 @@ export async function rulesFor(db: Db, ctx: OrgContext, brandId: string, channel
   return { ...detail, channel, profile: p, rules, cta: p.rules.ctaPhrases ?? [] };
 }
 
-/** Plain-text materials (TXT/MD/CSV) of the brand, newest first, within the prompt budget. */
-async function textMaterials(db: Db, storage: Storage, ctx: OrgContext, brandId: string) {
-  const rows = (await forOrg(db, ctx)
-    .select(brandSources, and(eq(brandSources.brandId, brandId), inArray(brandSources.kind, ["text", "csv"])))) as (typeof brandSources.$inferSelect)[];
-  rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  const out: { name: string; text: string }[] = [];
-  let budget = MATERIALS_MAX_CHARS;
-  for (const r of rows) {
-    if (budget <= 0) break;
-    if (r.sizeBytes > MATERIAL_FILE_MAX) continue;
-    const text = new TextDecoder().decode(await storage.get(r.storageKey)).replace(/^﻿/, "");
-    out.push({ name: r.filename, text: text.slice(0, budget) });
-    budget -= Math.min(text.length, budget);
-  }
-  return out;
+/**
+ * The brand's knowledge base for this request (TASK-009, ADR-039): text of every source (PDF, Word, Excel, PowerPoint,
+ * TXT/MD/CSV), read at upload; older uploads are read now. All of it when it fits, else the passages that match the brief.
+ */
+export async function materialsFor(db: Db, storage: Storage, ctx: OrgContext, brandId: string, brief: string) {
+  await extractPendingSources(db, storage, ctx, brandId);
+  const rows = await db
+    .select({ name: brandSources.filename, text: sql<string>`${brandSources.extract}->>'text'`, createdAt: brandSources.createdAt })
+    .from(brandSources)
+    .where(and(eq(brandSources.orgId, ctx.orgId), eq(brandSources.brandId, brandId), eq(brandSources.status, "extracted")))
+    .orderBy(desc(brandSources.createdAt));
+  return selectMaterials(rows.filter((r) => r.text).map((r) => ({ name: r.name, text: r.text })), brief, MATERIALS_MAX_CHARS);
 }
 
 export type GenerateDeps = { llm: LlmClient; storage: Storage; now?: Date };
@@ -104,7 +101,7 @@ export async function generatePost(db: Db, deps: GenerateDeps, ctx: OrgContext, 
   if (r.brand.archivedAt) throw new PostError("ARCHIVED");
   const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "text"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
   if (!model) throw new PostError("NO_MODEL");
-  const materials = await textMaterials(db, deps.storage, ctx, req.brandId);
+  const materials = await materialsFor(db, deps.storage, ctx, req.brandId, req.brief);
 
   const postId = crypto.randomUUID();
   const s = forOrg(db, ctx);

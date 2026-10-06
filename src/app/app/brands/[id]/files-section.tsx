@@ -84,6 +84,7 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
 
       <div className="grid gap-3">
         <h3 className="font-semibold">{t("sources")}</h3>
+        <p className="text-sm text-muted">{t("knowledgeHint")}</p>
         {files.sources.length === 0 ? <p className="text-sm text-muted">{t("noSources")}</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm" data-testid="sources">
@@ -104,7 +105,12 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
                     <td className="py-2 pr-4"><span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs dark:bg-paper/10">{t(`kinds.${s.kind}`)}</span></td>
                     <td className="py-2 pr-4 text-right tabular-nums">{size(s.sizeBytes)}</td>
                     <td className="hidden py-2 pr-4 sm:table-cell">{f.dateTime(s.createdAt, { dateStyle: "medium" })}</td>
-                    <td className="py-2 pr-4 text-muted">{t(`statuses.${s.status}`)}</td>
+                    <td className="py-2 pr-4 text-muted" data-testid="source-text">
+                      {s.kind === "image" ? t("imageNote")
+                        : s.status === "extracted" && s.textChars != null ? t("textChars", { n: f.number(s.textChars) })
+                        : s.status === "failed" ? (t.has(`failReasons.${s.error}`) ? t(`failReasons.${s.error as "NO_TEXT"}`) : t("statuses.failed"))
+                        : t(`statuses.${s.status}`)}
+                    </td>
                     {isOwner ? <td className="py-1"><Delete brandId={brandId} table="source" id={s.id} label={t("delete", { name: s.filename })} /></td> : null}
                   </tr>
                 ))}

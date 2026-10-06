@@ -311,10 +311,10 @@
         "image": "slika"
       },
       "statuses": {
-        "uploaded": "naloženo",
+        "uploaded": "še ni prebrano",
         "extracting": "v obdelavi",
         "extracted": "prebrano",
-        "failed": "napaka"
+        "failed": "ni besedila"
       },
       "errors": {
         "TOO_LARGE": "prevelika datoteka (logotip in font do 10 MB, vir do 50 MB, ZIP do 100 MB).",
@@ -334,7 +334,15 @@
         "UNSUPPORTED_COMPRESSION": "datoteka v ZIP-u je stisnjena na nepodprt način.",
         "CORRUPT": "datoteka v ZIP-u je poškodovana.",
         "failed": "nalaganje ni uspelo, poskusi znova."
-      }
+      },
+      "textChars": "{n} znakov besedila",
+      "imageNote": "slika",
+      "failReasons": {
+        "NO_TEXT": "brez besedila (skeniran dokument?)",
+        "INVALID_FILE": "datoteke ni bilo mogoče prebrati",
+        "UNSUPPORTED_TYPE": "vrsta ni podprta"
+      },
+      "knowledgeHint": "Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo."
     },
     "cgpImport": {
       "fromComputer": "Uvozi iz dokumenta",

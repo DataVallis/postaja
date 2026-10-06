@@ -60,7 +60,7 @@ describe("upload → S3 → row", () => {
     expect(r).toMatchObject({ table: "source", kind: "pdf" });
     const [row] = await db.select().from(brandSources).where(eq(brandSources.id, r.id));
     expect(row.storageKey).toMatch(new RegExp(`^org/${A.orgId}/brand/${brandA}/pdf/[0-9a-f-]{36}\\.pdf$`));
-    expect(row).toMatchObject({ orgId: A.orgId, filename: "Cenik 2026 – č.pdf", contentType: "application/pdf", sizeBytes: bytes.length, status: "uploaded", createdBy: A.userId });
+    expect(row).toMatchObject({ orgId: A.orgId, filename: "Cenik 2026 – č.pdf", contentType: "application/pdf", sizeBytes: bytes.length, status: "failed", error: "INVALID_FILE", createdBy: A.userId }); // the stub PDF has no readable text (TASK-009)
     const got = await fetchBytes(await brandFileUrl(db, s3, A, "source", r.id));
     expect(got.status).toBe(200);
     expect(got.body).toEqual(bytes);

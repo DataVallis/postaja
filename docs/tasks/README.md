@@ -17,8 +17,8 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-006 | ~~Brand ingestion: extract + synthesize CGP proposal + review/accept~~ | — | **Dropped** (ADR-035: owner provides the CGP) |
 | TASK-007 | Post generation core: CGP + materials + effective rules → text (Claude, JSON schema) → rule check → one auto-fix → `needs_review`; cost recorded | TASK-005c, owner `ANTHROPIC_API_KEY` (set 2026-10-06) | Done (PR #18, deployed) |
 | TASK-008 | CGP from a document: upload DOCX/PDF/MD/TXT → text copied verbatim into the CGP editor, owner saves a version | TASK-005c | Done (PR #19, deployed) |
-| TASK-009 | Material text for generation: PDF/DOCX (+ XLSX/PPTX) sources → extracted text cached on `brand_sources.extract`, used in the post prompt | TASK-008 | Planned |
-| TASK-010a | Claude → Postaja over MCP: OAuth 2.1 (DCR, PKCE, consent), `/api/mcp` with `list_brands`, `get_brand`, `propose_cgp` (draft), `add_material`; `/app/connect` | TASK-008 | In review |
-| TASK-010b | MCP post tools: `create_post` (generate from a brief), `list_posts`, `set_post_status` | TASK-010a | Planned |
+| TASK-009 | Knowledge base: PDF/DOCX/XLSX/PPTX/TXT/CSV text read at upload into `brand_sources.extract`; per post the passages matching the brief (BM25) | TASK-008 | In review |
+| TASK-010a | Claude → Postaja over MCP: OAuth 2.1 (DCR, PKCE, consent), `/api/mcp` with `list_brands`, `get_brand`, `propose_cgp` (draft), `add_material`; `/app/connect` | TASK-008 | Live on dev (PR #20; owner tried it) |
+| TASK-010b | ~~MCP post tools~~ → **Graphics and files from Claude** into the brand (images as references/logos, documents) — how Claude hands over the bytes is open (owner question) | TASK-010a | Planned (ADR-039) |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.
