@@ -120,6 +120,20 @@
       "when": 1791286290070,
       "tag": "0016_seed_image_model",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791289989662,
+      "tag": "0017_brand_designs",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791289997298,
+      "tag": "0018_seed_style_image_model",
+      "breakpoints": true
     }
   ]
 }

@@ -5,11 +5,13 @@ import { z } from "zod";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
-import { addChannel, BrandError, createBrand, removeChannel, saveImageTemplate, saveProfile, setBrandArchived } from "@/server/brands/service";
+import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
 import { discardDraft } from "@/server/mcp/service";
+import { DesignError, requestDesign, activateDesign } from "@/server/design/service";
+import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 export type ActionState = { error?: string; ok?: string } | undefined;
 
@@ -145,31 +147,28 @@ export async function discardCgpDraftAction(f: FormData): Promise<void> {
   revalidatePath(`/app/brands/${str(f, "brandId")}`);
 }
 
-/** Image template and colours (TASK-015) → a new profile version. Owner only. */
-export async function saveImageTemplateAction(_p: ActionState, f: FormData): Promise<ActionState> {
+
+/** "Ustvari vizualno podobo" / "Popravi" (TASK-017): queued for Claude; the tab refreshes until the version is ready. */
+export async function requestDesignAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();
-  if (!ctx) return { error: "forbidden" };
+  if (!ctx) redirect("/login");
   const brandId = str(f, "brandId");
-  const color = (k: string) => (/^#[0-9a-fA-F]{6}$/.test(str(f, k)) ? str(f, k) : undefined);
+  const instruction = str(f, "instruction");
+  let error: string | null = null;
   try {
-    const r = await saveImageTemplate(getDb(), ctx, brandId, {
-      template: {
-        layout: str(f, "layout") as "card",
-        background: str(f, "background") as "ai",
-        label: str(f, "label") as "category",
-        accentLine: str(f, "accentLine") as "last",
-        uppercase: f.get("uppercase") === "on",
-        typeface: str(f, "typeface") as "sans",
-        overlay: Number(str(f, "overlay") || "0.65"),
-        footerText: str(f, "footerText"),
-        logoId: str(f, "logoId") || null,
-        fontId: str(f, "fontId") || null,
-      },
-      colors: { background: color("bg"), text: color("fg"), accent: color("accent") },
-    });
-    revalidatePath(`/app/brands/${brandId}`);
-    return { ok: `v${r.version}` };
+    await requestDesign(getDb(), bossQueue(await getBoss()), ctx, brandId, instruction ? { instruction } : { brief: String(f.get("brief") ?? "") });
   } catch (e) {
-    return { error: errorCode(e) };
+    error = e instanceof DesignError ? e.code : e instanceof z.ZodError ? "INVALID" : "FAILED";
   }
+  revalidatePath(`/app/brands/${brandId}`);
+  redirect(`/app/brands/${brandId}?tab=design${error ? `&designError=${error}` : ""}`);
+}
+
+export async function activateDesignAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const brandId = str(f, "brandId");
+  await activateDesign(getDb(), ctx, str(f, "designId")).catch(() => undefined);
+  revalidatePath(`/app/brands/${brandId}`);
+  redirect(`/app/brands/${brandId}?tab=design`);
 }

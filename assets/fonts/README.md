@@ -1,8 +1,12 @@
 # Built-in image fonts
 
-Used by the image renderer (`src/server/images/render.ts`) when a brand has no font of its own.
+Used by the image renderer (`src/server/design/render.ts`) when a brand design picks a built-in family (or as the
+fallback after a brand font). Each file is the Fontsource Latin + Latin Extended subsets merged with fontTools, so
+č š ž ć đ are covered (checked by `src/server/design/design.test.ts`). All OFL-1.1, licences next to the files.
 
-- `Inter-Bold.woff` — Inter 700, from `@fontsource/inter@5.3.0` (latin + latin-ext subsets merged with fontTools). OFL-1.1, see `LICENSE-Inter.txt`.
-- `JetBrainsMono-Bold.woff` — JetBrains Mono 700, from `@fontsource/jetbrains-mono@5.3.0` (latin + latin-ext merged). OFL-1.1, see `LICENSE-JetBrainsMono.txt`.
-
-Both cover č š ž ć đ (checked by `src/server/images/render.test.ts`).
+| Family key | Files | Source |
+|---|---|---|
+| `sans` | `Inter-Regular.woff`, `Inter-Bold.woff` | `@fontsource/inter@5.3.0` |
+| `grotesk` | `SpaceGrotesk-Regular.woff`, `SpaceGrotesk-Bold.woff` | `@fontsource/space-grotesk@5.3.0` |
+| `serif` | `PlayfairDisplay-Regular.woff`, `PlayfairDisplay-Bold.woff` | `@fontsource/playfair-display@5.3.0` |
+| `mono` | `JetBrainsMono-Regular.woff`, `JetBrainsMono-Bold.woff` | `@fontsource/jetbrains-mono@5.3.0` |

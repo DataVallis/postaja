@@ -8,17 +8,46 @@ import http from "node:http";
 import sharp from "sharp";
 
 const port = Number(process.env.MOCK_ANTHROPIC_PORT ?? 3199);
+/** Same shape as tests/fixtures/design.ts cardDesign (the mock is plain JS). */
+const DESIGN = {
+  summary: "Dark night-blue cards, one red accent, bold white headlines with the key words in red, a thin red rule above a logo footer.",
+  illustrationStyle: "Moody product photography, deep blue shadows, single red rim light",
+  palette: { background: "#0b0f1a", surface: "#161c2c", text: "#f5f3ee", muted: "#9aa3b5", accent: "#e0112b" },
+  typography: { heading: "sans", body: "sans" },
+  templates: [
+    { id: "cover", name: "Naslovnica", use: "Single image or carousel cover",
+      background: { type: "illustration", color: "background", overlay: { color: "background", opacity: 0.8, fade: "bottom" } },
+      elements: [
+        { type: "text", slot: "label", x: 7, y: 34, w: 60, h: 5, color: "text", fill: "accent", maxSize: 2.4, minSize: 1.6, padding: 1.2, letterSpacing: 0.18, uppercase: true },
+        { type: "text", slot: "headline", x: 7, y: 41, w: 86, h: 36, color: "text", emphasis: "accent", maxSize: 9, minSize: 4 },
+        { type: "shape", x: 0, y: 84.5, w: 100, h: 0.3, color: "accent" },
+        { type: "image", source: "logo", x: 7, y: 88, w: 24, h: 7 },
+        { type: "text", slot: "footer", x: 36, y: 88, w: 57, h: 7, color: "text", maxSize: 3.6, minSize: 2, valign: "middle" },
+      ],
+      sample: { label: "The problem", headline: "Daš. Zaklenjeno je.\n*Izplača se v korakih.*", footer: "Polygon" } },
+    { id: "points", name: "Seznam", use: "Carousel inner slide",
+      background: { type: "color", color: "surface" },
+      elements: [
+        { type: "text", slot: "number", x: 7, y: 7, w: 20, h: 8, color: "accent", maxSize: 6 },
+        { type: "text", slot: "headline", x: 7, y: 18, w: 86, h: 30, color: "text", emphasis: "accent", maxSize: 7, minSize: 3.5 },
+        { type: "shape", x: 7, y: 90, w: 12, h: 0.6, color: "accent" },
+      ],
+      sample: { number: "02", headline: "Kako *deluje*" } },
+  ],
+};
 const base = `http://127.0.0.1:${port}`;
 const falPrompts = new Map();
+/** What the app asked fal for (model, number of style references); GET /fal-log returns it for a test to check. */
+const falLog = [];
 let falSeq = 0;
 
 function fal(req, res) {
   const send = (status, body, type = "application/json") => { res.writeHead(status, { "content-type": type }); res.end(type === "application/json" ? JSON.stringify(body) : body); };
   // Result files are public on fal's CDN; everything else needs the key.
   if (!req.url.startsWith("/fal-files/") && req.headers.authorization !== "Key e2e-not-a-real-key") return send(401, { detail: "bad key" });
-  const status = req.url.match(/^\/fal-ai\/flux-pro\/requests\/([\w-]+)\/status$/);
+  const status = req.url.match(/^\/fal-ai\/[\w-]+\/requests\/([\w-]+)\/status$/);
   if (status) return send(200, { status: "COMPLETED" });
-  const result = req.url.match(/^\/fal-ai\/flux-pro\/requests\/([\w-]+)$/);
+  const result = req.url.match(/^\/fal-ai\/[\w-]+\/requests\/([\w-]+)$/);
   if (result) {
     const { prompt, width, height } = falPrompts.get(result[1]) ?? {};
     return send(200, { images: [{ url: `${base}/fal-files/${result[1]}.jpg?w=${width}&h=${height}`, width, height, content_type: "image/jpeg" }], has_nsfw_concepts: [String(prompt).includes("ZAVRNI")] });
@@ -31,14 +60,17 @@ function fal(req, res) {
     sharp(Buffer.from(svg)).jpeg().toBuffer().then((b) => send(200, b, "image/jpeg"));
     return;
   }
-  if (req.method === "POST" && req.url === "/fal-ai/flux-pro/v1.1") {
+  const submit = req.method === "POST" && req.url.match(/^\/fal-ai\/([\w-]+)\/[\w.\/-]+$/);
+  if (submit) {
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
       const r = JSON.parse(body);
       const id = `req-${++falSeq}`;
-      falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height });
-      send(200, { request_id: id, status_url: `${base}/fal-ai/flux-pro/requests/${id}/status`, response_url: `${base}/fal-ai/flux-pro/requests/${id}` });
+      falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height, references: r.image_urls?.length ?? 0 });
+      falLog.push({ model: req.url.slice(1), references: r.image_urls?.length ?? 0 });
+      const app = `fal-ai/${submit[1]}`;
+      send(200, { request_id: id, status_url: `${base}/${app}/requests/${id}/status`, response_url: `${base}/${app}/requests/${id}` });
     });
     return;
   }
@@ -47,13 +79,16 @@ function fal(req, res) {
 
 http
   .createServer((req, res) => {
+    if (req.url === "/fal-log") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(falLog)); return; }
     if (req.url?.startsWith("/fal-")) return fal(req, res);
     if (req.method !== "POST" || !req.url?.startsWith("/v1/messages")) { res.writeHead(404).end(); return; }
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
       const r = JSON.parse(body);
-      const user = String(r.messages?.[0]?.content ?? "");
+      // The user turn is a string, or blocks (pictures + captions + the text last) when images are sent.
+      const content = r.messages?.[0]?.content ?? "";
+      const user = typeof content === "string" ? content : content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
       const tool = r.tools?.[0]?.name;
       const reply = (name, input) => {
         res.writeHead(200, { "content-type": "application/json" });
@@ -63,6 +98,23 @@ http
           usage: { input_tokens: 900, output_tokens: 120, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
         }));
       };
+      // Brand design (TASK-017): a fixed two-template design; a revision bumps the headlines and notes the request.
+      if (tool === "submit_brand_design") {
+        const current = user.match(/<current_design>\n([\s\S]*?)\n<\/current_design>/);
+        if (!current) return reply(tool, DESIGN);
+        const d = JSON.parse(current[1]);
+        const request = user.match(/<owner_request>\n([\s\S]*?)\n<\/owner_request>/)?.[1] ?? "";
+        d.summary = `${d.summary} Popravek: ${request}`.slice(0, 800);
+        for (const t of d.templates) for (const e of t.elements) if (e.slot === "headline") e.maxSize = Math.min(20, e.maxSize + 1);
+        return reply(tool, d);
+      }
+      // Post images: the cover with the plan's overlay text (or topic); carousels add one "points" slide per plan slide.
+      if (tool === "plan_post_images") {
+        const plan = JSON.parse(user.match(/<plan>(.*)<\/plan>/)[1]);
+        const cover = { templateId: "cover", slots: { headline: plan.overlayText ?? plan.topic ?? "Objava", ...(plan.category ? { label: plan.category } : {}), footer: "Polygon" }, illustration: `Illustration for ${plan.topic ?? "post"}` };
+        const slides = [cover, ...(plan.slides ?? []).map((x, i) => ({ templateId: "points", slots: { number: `0${i + 1}`, headline: x }, illustration: null }))];
+        return reply(tool, { slides });
+      }
       // Plan import (TASK-012): name the columns like the header heuristic does.
       if (tool === "map_plan_columns") {
         const req = JSON.parse(user);

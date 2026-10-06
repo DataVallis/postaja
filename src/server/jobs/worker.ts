@@ -1,4 +1,4 @@
-// Workers (ADR-042, ADR-043). Two posts are written and two posts' images are made at a time per process: fast enough
+// Workers (ADR-042, ADR-043, ADR-044). Two posts are written and two posts' images are made at a time per process: fast enough
 // for a day of posts across brands, gentle on the providers' rate limits and on the shared dev server.
 import { getDb } from "../db/client";
 import { getStorage } from "../files/storage";
@@ -6,6 +6,7 @@ import { createAnthropicClient } from "../llm/anthropic";
 import { POST_TEXT_QUEUE, runBulkItem, type PostTextJob } from "../bulk/service";
 import { createFalClient } from "../images/fal";
 import { POST_IMAGE_QUEUE, runImageJob, type PostImageJob } from "../images/service";
+import { DESIGN_QUEUE, runDesignJob, type DesignJob } from "../design/service";
 import { getBoss } from "./boss";
 
 export async function startWorkers() {
@@ -18,6 +19,9 @@ export async function startWorkers() {
   await boss.work<PostTextJob | PostImageJob>(POST_IMAGE_QUEUE, { localConcurrency: 2, pollingIntervalSeconds: 2 }, async ([job]) => {
     if ("itemId" in job.data && !("postId" in job.data)) await runBulkItem(getDb(), deps, job.data);
     else await runImageJob(getDb(), deps, job.data as PostImageJob);
+  });
+  await boss.work<DesignJob>(DESIGN_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
+    await runDesignJob(getDb(), deps, job.data);
   });
   console.log("[jobs] workers started");
 }

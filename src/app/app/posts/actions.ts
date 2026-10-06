@@ -9,7 +9,7 @@ import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
-import { ImageJobError, requestImages, setImageText } from "@/server/images/service";
+import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
@@ -117,14 +117,21 @@ export async function requestImagesAction(f: FormData): Promise<void> {
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
 }
 
-/** Text on the images, by hand (one block per slide). */
-export async function saveImageTextAction(f: FormData): Promise<void> {
+/** The words on the images, edited per image and slot, then re-rendered on the same illustrations (no image cost). */
+export async function saveSlidesAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();
   if (!ctx) return;
   const id = String(f.get("postId") ?? "");
+  const slides: Record<string, string>[] = [];
+  for (const [k, v] of f.entries()) {
+    const m = k.match(/^s(\d{1,2})\.([a-z]+)$/);
+    if (!m) continue;
+    (slides[Number(m[1])] ??= {})[m[2]] = String(v);
+  }
   let error: string | null = null;
   try {
-    await setImageText(getDb(), ctx, id, String(f.get("imageText") ?? ""));
+    await setSlideTexts(getDb(), ctx, id, Array.from(slides, (s) => s ?? {}));
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "text");
   } catch (e) {
     error = e instanceof ImageJobError ? e.code : "INVALID";
   }

@@ -2,12 +2,12 @@ import type { NextRequest } from "next/server";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { getStorage } from "@/server/files/storage";
-import { handlePreview } from "@/server/images/http";
+import { handleDesignPreview } from "@/server/images/http";
 
 export const dynamic = "force-dynamic";
 
-/** GET → PNG preview of the brand's image template with the query's unsaved changes (TASK-015). */
+/** GET ?template=<id>&shape=portrait|square|landscape → PNG preview of a brand design template (TASK-017). */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  return handlePreview(req, id, { db: getDb(), storage: getStorage(), getCtx: orgContextForAction });
+  return handleDesignPreview(req, id, { db: getDb(), storage: getStorage(), getCtx: orgContextForAction });
 }

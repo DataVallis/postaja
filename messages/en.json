@@ -380,7 +380,7 @@
     "tabs": {
       "posts": "Posts",
       "files": "Files",
-      "images": "Images",
+      "design": "Visual identity",
       "profile": "Profile (CGP)",
       "channels": "Channels",
       "versions": "Versions"
@@ -395,12 +395,7 @@
     },
     "versionCol": "Version",
     "savedAt": "Saved",
-    "noteCol": "Note",
-    "imagesTitle": "Image template",
-    "imagesIntro": "How Postaja lays out post images: AI background, your colours, font and logo. Postaja draws the text itself, so č, š and ž are always right.",
-    "imagesSample": "You give. It's locked.\nIt's paid out in steps.",
-    "imagesSampleLabel": "Category",
-    "templateNote": "Image template"
+    "noteCol": "Note"
   },
   "Posts": {
     "title": "Posts",
@@ -840,7 +835,6 @@
   },
   "Images": {
     "title": "Images",
-    "templateLink": "Brand template",
     "status": {
       "none": "No images",
       "queued": "Queued",
@@ -849,17 +843,12 @@
       "failed": "Failed"
     },
     "working": "Making the images … this page refreshes by itself.",
-    "empty": "This post has no images yet. Postaja makes a background from the plan's image description and puts the text on it using the brand template.",
-    "noKey": "AI backgrounds are not set up (the fal.ai key is missing). Images use the brand colour when you choose “Brand colour” in the template.",
+    "empty": "This post has no images yet. Claude picks a brand template, writes the words and describes the illustration; Postaja draws the image.",
+    "noKey": "The AI illustration key (fal.ai) is not set; templates with an illustration will not work.",
     "generate": "Make images",
     "regenerate": "New images",
-    "refreshText": "Refresh text",
     "imageAlt": "Image {n}",
     "download": "Download {n}",
-    "textLabel": "Text on the image",
-    "textHint": "The headline on the image; each line stays a line. “Refresh text” puts it on the existing background at no cost.",
-    "textHintCarousel": "One paragraph per slide (blank line between). At most 20.",
-    "textSave": "Save text",
     "errors": {
       "FAILED": "The images could not be made. Try again.",
       "RETRY": "Something went wrong; the images will be made again.",
@@ -872,59 +861,90 @@
       "NO_ACCESS": "The member who asked for the images no longer has access.",
       "NOT_FOUND": "The post no longer exists.",
       "BAD_STATE": "The images are already being made, or the post is skipped.",
-      "INVALID": "Too many slides (at most 20) or the text is too long."
+      "INVALID": "Too many slides (at most 20) or the text is too long.",
+      "NO_DESIGN": "The brand has no visual identity yet.",
+      "INVALID_OUTPUT": "Claude did not return a valid image plan. Try again.",
+      "LLM_PROVIDER": "Claude did not respond. Try again.",
+      "NOT_CONFIGURED": "The Claude (Anthropic) key is not set."
     },
-    "templateTitle": "Template",
-    "layout": "Layout",
-    "layouts": {
-      "card": "Card (label, headline, footer with logo)",
-      "center": "Centre (headline in the middle)",
-      "photo": "Picture only (with logo)"
+    "designLink": "Brand visual identity",
+    "noDesign": "The brand has no visual identity yet, so images cannot be made.",
+    "createDesign": "Create visual identity",
+    "textsTitle": "Words on the images",
+    "textsHint": "Correct the words and save — the images are redrawn on the same illustrations at no cost. Words in *asterisks* are emphasised.",
+    "slideN": "Image {n} · {template}",
+    "saveAndRefresh": "Save and refresh",
+    "slots": {
+      "headline": "Headline",
+      "subhead": "Subhead",
+      "label": "Label",
+      "body": "Text",
+      "cta": "Call to action",
+      "number": "Number",
+      "footer": "Footer"
+    }
+  },
+  "Design": {
+    "title": "Visual identity",
+    "intro": "Claude designs this brand's own set of image templates — from the CGP, your description, colours, logo and past posts. For each post it then picks a template and describes the illustration, and Postaja draws the image. Every brand has its own look.",
+    "briefLabel": "How should the graphics look?",
+    "briefHint": "Describe the style in your own words: mood, composition, what you like in past posts, what to avoid. May be empty if examples are uploaded.",
+    "create": "Create visual identity",
+    "recreate": "Create from scratch",
+    "recreateTitle": "Create a completely new identity from the description",
+    "working": "Claude is designing the visual identity … this takes up to a minute; the page refreshes by itself.",
+    "revising": "Claude is revising the design as you asked …",
+    "failed": "The last version failed: {reason}",
+    "inputs": {
+      "cgp": "CGP",
+      "examples": "{n, plural, =0 {No past post examples} one {# past post example} other {# past post examples}}",
+      "logo": "Logo",
+      "font": "Brand font (optional)"
     },
-    "background": "Background",
-    "backgrounds": {
-      "ai": "AI background (fal.ai)",
-      "plain": "Brand colour"
-    },
-    "label": "Label",
-    "labels": {
-      "category": "Category from the plan",
-      "none": "None"
-    },
-    "accentLine": "Accent line",
-    "accentLines": {
-      "last": "Last",
-      "first": "First",
-      "none": "None"
-    },
-    "typeface": "Built-in typeface",
-    "typefaces": {
-      "sans": "Inter (sans serif)",
-      "mono": "JetBrains Mono (code)"
-    },
-    "font": "Brand font",
-    "fontBuiltin": "Built-in",
-    "logo": "Logo",
-    "logoFirst": "First uploaded",
-    "logoNone": "No logo",
-    "footerText": "Footer text",
-    "overlay": "Background darkening: {n}%",
-    "uppercase": "Headline in capitals",
-    "colors": {
-      "bg": "Background",
-      "fg": "Text",
-      "accent": "Accent"
-    },
-    "saveTemplate": "Save template",
-    "preview": "Preview",
-    "previewAlt": "Image preview using the template",
-    "previewShape": "Preview shape",
+    "examplesHint": "Upload a few images of past posts to Files for the best result — Claude sees them and derives the style; the image generator uses them as a reference.",
+    "toFiles": "Open Files",
+    "ownerOnly": "The brand owner creates the visual identity.",
+    "version": "Version {v}",
+    "palette": "Colours",
+    "typography": "Fonts: {heading} / {body}",
+    "illustrationStyle": "Illustration style",
+    "templates": "{n, plural, one {# template} other {# templates}}",
+    "shapeLabel": "Preview shape",
     "shapes": {
-      "portrait": "Portrait 4:5",
-      "square": "Square 1:1",
-      "landscape": "Landscape 16:9"
+      "portrait": "4:5",
+      "square": "1:1",
+      "landscape": "16:9"
     },
-    "previewText": "Preview text",
-    "previewHint": "The preview shows a stand-in photo instead of the AI background, so it costs nothing."
+    "previewAlt": "Preview of the {name} template",
+    "reviseLabel": "What should I change?",
+    "reviseHint": "E.g. “bigger headline, more air, red only on the key word” or “add a quote template”. Claude sees the current templates and changes only what you ask.",
+    "revise": "Revise",
+    "versionCol": "Version",
+    "whatCol": "What",
+    "statusCol": "Status",
+    "dateCol": "Date",
+    "fromScratch": "New from description",
+    "inUse": "In use",
+    "activate": "Use",
+    "status": {
+      "generating": "generating",
+      "ready": "ready",
+      "failed": "failed"
+    },
+    "errors": {
+      "FAILED": "It did not work.",
+      "FORBIDDEN": "Only the owner can change the visual identity.",
+      "NOT_FOUND": "Brand or version not found.",
+      "ARCHIVED": "The brand is archived.",
+      "BUSY": "Claude is already designing — wait until it finishes.",
+      "NO_DESIGN": "Create the visual identity first.",
+      "INVALID": "The text is too long or too short.",
+      "INVALID_OUTPUT": "Claude did not return a valid design. Try again or add to the description.",
+      "SPEND_CAP": "The monthly spend cap has been reached.",
+      "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
+      "PROVIDER": "Claude did not respond. Try again.",
+      "NO_TOOL_CALL": "Claude did not return a design. Try again.",
+      "NO_ACCESS": "The member who asked no longer has access."
+    }
   }
 }

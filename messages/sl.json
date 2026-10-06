@@ -380,7 +380,7 @@
     "tabs": {
       "posts": "Objave",
       "files": "Datoteke",
-      "images": "Slike",
+      "design": "Vizualna podoba",
       "profile": "Profil (CGP)",
       "channels": "Kanali",
       "versions": "Verzije"
@@ -395,12 +395,7 @@
     },
     "versionCol": "Verzija",
     "savedAt": "Shranjeno",
-    "noteCol": "Opomba",
-    "imagesTitle": "Predloga za slike",
-    "imagesIntro": "Tako Postaja postavi slike objav: AI ozadje, tvoje barve, pisava in logotip. Tekst na sliki vedno nariše Postaja, zato so č, š in ž vedno pravilni.",
-    "imagesSample": "Daš. Zaklenjeno je.\nIzplača se v korakih.",
-    "imagesSampleLabel": "Kategorija",
-    "templateNote": "Predloga za slike"
+    "noteCol": "Opomba"
   },
   "Posts": {
     "title": "Objave",
@@ -840,7 +835,6 @@
   },
   "Images": {
     "title": "Slike",
-    "templateLink": "Predloga branda",
     "status": {
       "none": "Ni slik",
       "queued": "V vrsti",
@@ -849,17 +843,12 @@
       "failed": "Napaka"
     },
     "working": "Slike nastajajo … stran se osveži sama.",
-    "empty": "Objava še nima slik. Postaja naredi ozadje iz opisa slike v planu in nanj postavi tekst po predlogi branda.",
-    "noKey": "AI ozadja niso nastavljena (manjka ključ fal.ai). Slike bodo na barvi branda, ko izbereš »Barva branda« v predlogi.",
+    "empty": "Objava še nima slik. Claude izbere predlogo branda, napiše tekst in opis ilustracije, Postaja pa nariše sliko.",
+    "noKey": "Ključ za AI ilustracije (fal.ai) ni nastavljen; predloge z ilustracijo ne bodo delovale.",
     "generate": "Ustvari slike",
     "regenerate": "Nove slike",
-    "refreshText": "Osveži tekst",
     "imageAlt": "Slika {n}",
     "download": "Prenesi {n}",
-    "textLabel": "Tekst na sliki",
-    "textHint": "Naslov na sliki. Vsaka vrstica je svoja vrstica; z »Osveži tekst« ga postaviš na obstoječe ozadje brez novih stroškov.",
-    "textHintCarousel": "En odstavek za vsak diapozitiv (prazna vrstica vmes). Največ 20.",
-    "textSave": "Shrani tekst",
     "errors": {
       "FAILED": "Slik ni bilo mogoče narediti. Poskusi znova.",
       "RETRY": "Prišlo je do napake, slike se bodo naredile znova.",
@@ -872,59 +861,90 @@
       "NO_ACCESS": "Član, ki je zahteval slike, nima več dostopa.",
       "NOT_FOUND": "Objave ni več.",
       "BAD_STATE": "Slike se že delajo ali objava je preskočena.",
-      "INVALID": "Preveč diapozitivov (največ 20) ali predolgo besedilo."
+      "INVALID": "Preveč diapozitivov (največ 20) ali predolgo besedilo.",
+      "NO_DESIGN": "Brand še nima vizualne podobe.",
+      "INVALID_OUTPUT": "Claude ni vrnil veljavnega predloga slik. Poskusi znova.",
+      "LLM_PROVIDER": "Claude se ni odzval. Poskusi znova.",
+      "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen."
     },
-    "templateTitle": "Predloga",
-    "layout": "Postavitev",
-    "layouts": {
-      "card": "Kartica (oznaka, naslov, noga z logom)",
-      "center": "Sredina (naslov na sredini)",
-      "photo": "Samo slika (z logom)"
+    "designLink": "Vizualna podoba branda",
+    "noDesign": "Brand še nima vizualne podobe, zato slik še ni mogoče narediti.",
+    "createDesign": "Ustvari vizualno podobo",
+    "textsTitle": "Tekst na slikah",
+    "textsHint": "Popravi besede in shrani — slike se na istih ilustracijah izrišejo znova, brez novih stroškov. Besede v *zvezdicah* so v poudarku.",
+    "slideN": "Slika {n} · {template}",
+    "saveAndRefresh": "Shrani in osveži",
+    "slots": {
+      "headline": "Naslov",
+      "subhead": "Podnaslov",
+      "label": "Oznaka",
+      "body": "Besedilo",
+      "cta": "Poziv",
+      "number": "Številka",
+      "footer": "Noga"
+    }
+  },
+  "Design": {
+    "title": "Vizualna podoba",
+    "intro": "Claude za ta brand oblikuje lasten nabor predlog za slike — iz CGP-ja, tvojega opisa, barv, logotipa in preteklih objav. Nato za vsako objavo izbere predlogo in napiše opis ilustracije, Postaja pa nariše sliko. Vsak brand ima svojo podobo.",
+    "briefLabel": "Kako naj grafike izgledajo?",
+    "briefHint": "Opiši slog s svojimi besedami: vzdušje, kompozicijo, kaj ti je pri preteklih objavah všeč, česa ne želiš. Lahko je tudi prazno, če so naloženi primeri.",
+    "create": "Ustvari vizualno podobo",
+    "recreate": "Ustvari na novo",
+    "recreateTitle": "Ustvari povsem novo podobo iz opisa",
+    "working": "Claude oblikuje vizualno podobo … to traja do minuto, stran se osveži sama.",
+    "revising": "Claude popravlja podobo po tvojih navodilih …",
+    "failed": "Zadnja verzija ni uspela: {reason}",
+    "inputs": {
+      "cgp": "CGP",
+      "examples": "{n, plural, =0 {Ni primerov preteklih objav} one {# primer pretekle objave} two {# primera preteklih objav} few {# primeri preteklih objav} other {# primerov preteklih objav}}",
+      "logo": "Logotip",
+      "font": "Pisava branda (neobvezno)"
     },
-    "background": "Ozadje",
-    "backgrounds": {
-      "ai": "AI ozadje (fal.ai)",
-      "plain": "Barva branda"
-    },
-    "label": "Oznaka",
-    "labels": {
-      "category": "Kategorija iz plana",
-      "none": "Brez"
-    },
-    "accentLine": "Vrstica v poudarku",
-    "accentLines": {
-      "last": "Zadnja",
-      "first": "Prva",
-      "none": "Nobena"
-    },
-    "typeface": "Vgrajena pisava",
-    "typefaces": {
-      "sans": "Inter (brez serifov)",
-      "mono": "JetBrains Mono (koda)"
-    },
-    "font": "Pisava branda",
-    "fontBuiltin": "Vgrajena",
-    "logo": "Logotip",
-    "logoFirst": "Prvi naloženi",
-    "logoNone": "Brez logotipa",
-    "footerText": "Tekst v nogi",
-    "overlay": "Zatemnitev ozadja: {n} %",
-    "uppercase": "Naslov z velikimi črkami",
-    "colors": {
-      "bg": "Ozadje",
-      "fg": "Tekst",
-      "accent": "Poudarek"
-    },
-    "saveTemplate": "Shrani predlogo",
-    "preview": "Predogled",
-    "previewAlt": "Predogled slike po predlogi",
-    "previewShape": "Oblika predogleda",
+    "examplesHint": "Najboljši rezultat dobiš, če v Datoteke naložiš nekaj slik preteklih objav — Claude jih vidi in iz njih izpelje slog, generator slik pa jih uporabi kot referenco.",
+    "toFiles": "Odpri Datoteke",
+    "ownerOnly": "Vizualno podobo ustvari lastnik branda.",
+    "version": "Verzija {v}",
+    "palette": "Barve",
+    "typography": "Pisave: {heading} / {body}",
+    "illustrationStyle": "Slog ilustracij",
+    "templates": "{n, plural, one {# predloga} two {# predlogi} few {# predloge} other {# predlog}}",
+    "shapeLabel": "Oblika predogleda",
     "shapes": {
-      "portrait": "Pokončna 4:5",
-      "square": "Kvadrat 1:1",
-      "landscape": "Ležeča 16:9"
+      "portrait": "4:5",
+      "square": "1:1",
+      "landscape": "16:9"
     },
-    "previewText": "Tekst za predogled",
-    "previewHint": "Predogled namesto AI ozadja pokaže nadomestno fotografijo, zato je brezplačen."
+    "previewAlt": "Predogled predloge {name}",
+    "reviseLabel": "Kaj naj spremenim?",
+    "reviseHint": "Npr. »naslov večji, več zraka, rdeča samo pri ključni besedi« ali »dodaj predlogo za citat«. Claude vidi trenutne predloge in spremeni samo to, kar želiš.",
+    "revise": "Popravi",
+    "versionCol": "Verzija",
+    "whatCol": "Kaj",
+    "statusCol": "Stanje",
+    "dateCol": "Datum",
+    "fromScratch": "Nova iz opisa",
+    "inUse": "V uporabi",
+    "activate": "Uporabi",
+    "status": {
+      "generating": "nastaja",
+      "ready": "pripravljena",
+      "failed": "ni uspela"
+    },
+    "errors": {
+      "FAILED": "Ni uspelo.",
+      "FORBIDDEN": "Vizualno podobo lahko ureja samo lastnik.",
+      "NOT_FOUND": "Brand ali verzija ne obstaja.",
+      "ARCHIVED": "Brand je arhiviran.",
+      "BUSY": "Claude že oblikuje — počakaj, da konča.",
+      "NO_DESIGN": "Najprej ustvari vizualno podobo.",
+      "INVALID": "Opis je predolg ali prekratek.",
+      "INVALID_OUTPUT": "Claude ni vrnil veljavne podobe. Poskusi znova ali dopolni opis.",
+      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov.",
+      "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
+      "PROVIDER": "Claude se ni odzval. Poskusi znova.",
+      "NO_TOOL_CALL": "Claude ni vrnil podobe. Poskusi znova.",
+      "NO_ACCESS": "Član, ki je zahteval podobo, nima več dostopa."
+    }
   }
 }

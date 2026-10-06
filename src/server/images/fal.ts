@@ -3,7 +3,12 @@
 import sharp from "sharp";
 import { MAX_INPUT_PIXELS } from "../files/images";
 
-export type ImageRequest = { model: string; prompt: string; width: number; height: number };
+export type ImageRequest = {
+  model: string; prompt: string; width: number; height: number;
+  /** Style references (data: URIs of the brand's example images), for models that take them. */
+  references?: string[];
+  negativePrompt?: string;
+};
 export type ImageResult = { bytes: Uint8Array; contentType: string; width: number; height: number };
 export interface ImageClient {
   generate(req: ImageRequest): Promise<ImageResult>;
@@ -57,13 +62,7 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
         const r = await f(new URL(`/${app}`, base), {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            prompt: req.prompt,
-            image_size: { width: req.width, height: req.height },
-            num_images: 1,
-            output_format: "jpeg",
-            enable_safety_checker: true,
-          }),
+          body: JSON.stringify(requestBody(app, req)),
           signal: AbortSignal.timeout(30_000),
         });
         if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER");
@@ -113,6 +112,23 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
       }
     },
   };
+}
+
+/** The body each model family expects. Ideogram takes style references and a negative prompt; FLUX neither. */
+export function requestBody(app: string, req: ImageRequest): Record<string, unknown> {
+  if (app.startsWith("fal-ai/ideogram/")) {
+    return {
+      prompt: req.prompt,
+      image_size: { width: req.width, height: req.height },
+      rendering_speed: "BALANCED",
+      style: "AUTO",
+      expand_prompt: false,
+      num_images: 1,
+      ...(req.negativePrompt ? { negative_prompt: req.negativePrompt } : {}),
+      ...(req.references?.length ? { image_urls: req.references } : {}),
+    };
+  }
+  return { prompt: req.prompt, image_size: { width: req.width, height: req.height }, num_images: 1, output_format: "jpeg", enable_safety_checker: true };
 }
 
 /** Size to ask the model for: the slide's aspect ratio within `maxPixels`, sides multiples of 16 (≥ 256). */

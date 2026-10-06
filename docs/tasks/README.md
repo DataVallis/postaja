@@ -24,6 +24,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-013 | **Plan and history**: planned posts with date/time per channel; table + calendar (week/month) across all brands; history of published posts | TASK-012 | Done (PR #24, deployed) |
 | TASK-014 | **Bulk creation**: create all planned posts of one brand, or of every brand for a chosen day, in the background (pg-boss worker), progress + cost cap | TASK-013 | Done (PR #25, deployed) |
 | TASK-015 | **Images**: AI background from the image prompt (fal.ai, `FAL_KEY` from owner) + brand templates for text/logo overlays (Satori) matching the owner's examples; carousels slide by slide | TASK-013 | Done (PR #27) |
+| TASK-017 | **Brand visual identity by Claude**: per-brand design spec from CGP + description + past posts, revise in words, versions; per-post template/words/illustration by Claude; fal illustrations with style references (ADR-044) | TASK-015 | Done (PR #28) |
 | TASK-016 | **One-click download**: a post (images + caption with hashtags) or a whole day as ZIP | TASK-015 | Planned |
 | TASK-010b | ~~MCP post tools~~ → **Graphics and files from Claude** into the brand (images as references/logos, documents) — how Claude hands over the bytes is open (owner question) | TASK-010a | Planned (ADR-039) |
 

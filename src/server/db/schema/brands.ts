@@ -3,7 +3,6 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { organization } from "./org";
-import type { BrandTemplate } from "../../images/template";
 import { formatPresets, type Platform } from "./platform";
 
 export type Pillar = { name: string; description: string; share: number };
@@ -22,8 +21,6 @@ export type BrandVisual = {
   colors: { primary?: string; secondary?: string; background?: string; text?: string; accent?: string };
   imageStyle: string;
   negativePrompt: string;
-  /** How Postaja lays out the post images (TASK-015); absent = defaults. */
-  template?: BrandTemplate;
 };
 export const POST_TYPES = ["text", "single_image", "carousel", "animation", "video", "ad"] as const;
 export type PostType = (typeof POST_TYPES)[number];
@@ -38,6 +35,8 @@ export const brands = pgTable(
     website: text("website"),
     languages: text("languages").array().notNull().default(sql`ARRAY['sl']::text[]`),
     currentProfileVersionId: text("current_profile_version_id"),
+    /** The brand design (TASK-017) used for new images; a ready version of brand_designs. */
+    currentDesignId: text("current_design_id"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

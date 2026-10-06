@@ -17,13 +17,16 @@ export const modelRegistry = pgTable(
     id: text("id").primaryKey(),
     provider: text("provider").$type<"anthropic" | "fal">().notNull(),
     modelKey: text("model_key").notNull(),
-    kind: text("kind").$type<"text" | "image">().notNull(),
+    /** "image_style": an image model that takes the brand's example images as style reference (TASK-017). */
+    kind: text("kind").$type<"text" | "image" | "image_style">().notNull(),
     label: text("label").notNull(),
     inputPerMtok: bigint("input_per_mtok", { mode: "bigint" }).notNull(),
     outputPerMtok: bigint("output_per_mtok", { mode: "bigint" }).notNull(),
     cacheWritePerMtok: bigint("cache_write_per_mtok", { mode: "bigint" }).notNull(),
     cacheReadPerMtok: bigint("cache_read_per_mtok", { mode: "bigint" }).notNull(),
     perMegapixel: bigint("per_megapixel", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Image models priced per picture (micro-USD), added to the per-megapixel price. */
+    perImage: bigint("per_image", { mode: "bigint" }).notNull().default(sql`0`),
     isDefault: boolean("is_default").notNull().default(false),
     enabled: boolean("enabled").notNull().default(true),
     source: text("source").notNull(),
@@ -33,7 +36,7 @@ export const modelRegistry = pgTable(
     uniqueIndex("model_registry_provider_key_uq").on(t.provider, t.modelKey),
     // At most one default per kind.
     uniqueIndex("model_registry_default_uq").on(t.kind).where(sql`${t.isDefault}`),
-    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0 and ${t.perMegapixel} >= 0`),
+    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0 and ${t.perMegapixel} >= 0 and ${t.perImage} >= 0`),
   ],
 );
 
@@ -43,6 +46,9 @@ export type PostContent = { caption: string; hashtags: string[]; parts?: string[
 /** Images of a post (TASK-015): none yet → queued → rendering → ready | failed. */
 export const MEDIA_STATUSES = ["none", "queued", "rendering", "ready", "failed"] as const;
 export type MediaStatus = (typeof MEDIA_STATUSES)[number];
+/** What Claude chose for a post's images (TASK-017): a template of the brand design per slide, the words on it, and
+ *  what the illustration should show (null when the template has none). The owner can edit the words. */
+export type PostVisual = { designId: string; slides: { templateId: string; slots: Record<string, string>; illustration: string | null }[] };
 export const POST_FORMATS = ["text", "image", "carousel", "thread", "video"] as const;
 export type PostFormat = (typeof POST_FORMATS)[number];
 /** What a content plan says about a post beyond its text (TASK-012). Everything optional; shown on the post page. */
@@ -75,6 +81,7 @@ export const posts = pgTable(
     fixAttempts: integer("fix_attempts").notNull().default(0),
     model: text("model"),
     error: text("error"),
+    visual: jsonb("visual").$type<PostVisual>(),
     mediaStatus: text("media_status").$type<MediaStatus>().notNull().default("none"),
     mediaError: text("media_error"),
     /** Who asked for the images last; the worker acts as this member (ADR-043). */
