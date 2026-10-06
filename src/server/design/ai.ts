@@ -1,6 +1,7 @@
 // What Postaja asks Claude for images (TASK-017, ADR-044): a brand's visual system (from scratch or revised), and per
 // post which template each image uses, the words on it and what the illustration shows. Prompts and tools only.
 import { z } from "zod";
+import { languageName } from "@/lib/language";
 import type { ImageBlock, StructuredRequest } from "../llm/types";
 import { designJsonSchema, nullableSlotTexts, templateSlots, needsIllustration, type DesignSpec } from "./spec";
 
@@ -151,9 +152,12 @@ export function postVisualRequest(spec: DesignSpec, p: PostVisualInputs, invalid
       text: `You are the art director of Postaja. For one post you choose, from the brand's own templates, the template of each image,
 the words on it and what its illustration shows. Keep the brand's common thread: ${spec.summary}
 Rules:
-- On-image words come from the plan: if the plan has text for the image (overlay text) or slide texts, use them verbatim (you may
-  split them over the template's slots and mark the key words with *…* for emphasis). Otherwise write short words in the post's
-  language from the topic — a headline is at most ~10 words. Never invent facts, prices or dates.
+- Every word on the images is in the post's language (the language attribute of <post>), whatever language the plan, brief
+  or caption is written in.
+- On-image words come from the plan: if the plan has text for the image (overlay text) or slide texts, use them verbatim when
+  they are in the post's language, otherwise translate them faithfully (same meaning, names, numbers). You may split them over
+  the template's slots and mark the key words with *…* for emphasis. Without such text, write short words from the topic —
+  a headline is at most ~10 words. Never invent facts, prices or dates.
 - Fill only the slots the template has; keep each about as long as the template's sample.
 - Carousel: one image per slide of the plan (a cover first if the plan has no cover slide); otherwise one image. At most ${MAX_SLIDES}.
 - Illustration: only for templates that show one (illustration=true), else null. Describe the subject and composition concretely
@@ -163,7 +167,7 @@ Rules:
     }],
     user: [
       `<templates>\n${JSON.stringify(templates)}\n</templates>`,
-      `<post brand="${p.brandName}" language="${p.language}" platform="${p.platform ?? "?"}" format="${p.format}">`,
+      `<post brand="${p.brandName}" language="${languageName(p.language)}" platform="${p.platform ?? "?"}" format="${p.format}">`,
       `<brief>${p.brief}</brief>`,
       `<plan>${JSON.stringify(p.plan)}</plan>`,
       p.caption ? `<caption>${p.caption.slice(0, 3000)}</caption>` : "",

@@ -2,6 +2,7 @@
 // machine rule check → at most one automatic fix → ready | needs_review | failed. Every call is cost-capped and logged.
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import { postLanguage } from "@/lib/language";
 import { checkText, checkThread, effectiveRules, type RuleLayer, type RuleSet, type Violation } from "@/lib/rules";
 import { extractPendingSources } from "../brands/files";
 import { getBrandDetail, BrandError } from "../brands/service";
@@ -120,7 +121,7 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
     const prompt = buildPostPrompt({
       brand: { name: r.brand.name },
       profile: { version: r.profile.version, cgp: r.profile.cgp, pillars: r.profile.pillars, ctaPhrases: r.cta },
-      channel: { platform: r.channel.platform, handle: r.channel.handle, language: r.channel.language },
+      channel: { platform: r.channel.platform, handle: r.channel.handle, language: postLanguage(r.channel.language, r.brand.languages) },
       rules: r.rules,
       materials,
       brief,

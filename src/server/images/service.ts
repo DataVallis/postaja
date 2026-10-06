@@ -5,6 +5,7 @@
 // the stored illustrations at no image cost.
 import { and, asc, eq, inArray, lt, or } from "drizzle-orm";
 import { z } from "zod";
+import { postLanguage } from "@/lib/language";
 import type { Db } from "../db/client";
 import { brands, formatPresets, modelRegistry, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
@@ -170,7 +171,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
 
   // Re-plan for new images, or when the words were planned for another design version.
   const replan = mode === "new" || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
-  const visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, { brandName: brand.name, platform: channel?.platform ?? null, language: channel?.language ?? brand.languages[0] ?? "sl" }) : p.visual!;
+  const visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages) }) : p.visual!;
 
   const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
   const oldIllustrations = new Map(old.filter((m) => m.kind === "background").map((m) => [m.position, m]));
