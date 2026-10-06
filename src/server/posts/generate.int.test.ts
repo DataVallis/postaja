@@ -121,7 +121,7 @@ describe("generatePost", () => {
     await up(B, brandB, "tajno.txt", new TextEncoder().encode("SECRET-OF-B"));
     const other = (await createBrand(db, A, { name: "Drugi", slug: "drugi", languages: ["sl"] })).id;
     await up(A, other, "drugi.txt", new TextEncoder().encode("OTHER-BRAND"));
-    expect(await sql`select filename, status, error, (extract->>'chars')::int as chars from brand_sources where brand_id = ${brandA} order by filename`).toEqual([
+    expect(await sql`select filename, status, error, (extract->>'chars')::int as chars from brand_sources where brand_id = ${brandA} order by filename collate "C"`).toEqual([
       { filename: "CGP.pdf", status: "extracted", error: null, chars: 131 },
       { filename: "cenik.csv", status: "extracted", error: null, chars: 10 },
       { filename: "o nas.docx", status: "extracted", error: null, chars: 19 },
