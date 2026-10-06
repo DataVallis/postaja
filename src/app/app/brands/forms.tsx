@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
+import { CgpImport } from "./cgp-import";
 import { useTranslations } from "next-intl";
 import { addChannelAction, createBrandAction, saveProfileAction, type ActionState } from "./actions";
 
@@ -50,6 +51,8 @@ export function NewBrandForm() {
 
 type ProfileProps = {
   brandId: string;
+  /** Documents among the brand's sources that can be imported as the CGP (owner only). */
+  cgpSources?: { id: string; filename: string }[];
   readOnly: boolean;
   cgp: string;
   pillarsText: string;
@@ -61,12 +64,14 @@ export function ProfileForm(p: ProfileProps) {
   const t = useTranslations("Brands");
   const [state, action, pending] = useActionState(saveProfileAction, undefined);
   const dis = p.readOnly || pending;
+  const cgpRef = useRef<HTMLTextAreaElement>(null);
   return (
     <form action={action} className="grid gap-6">
       <input type="hidden" name="brandId" value={p.brandId} />
       <fieldset disabled={p.readOnly} className="grid gap-6">
         <Field id="cgp" label={t("cgp")} hint={t("cgpHint")}>
-          <textarea id="cgp" name="cgp" rows={12} defaultValue={p.cgp} aria-describedby="cgp-hint" className={`${input} font-mono text-sm`} />
+          {!p.readOnly ? <CgpImport brandId={p.brandId} sources={p.cgpSources ?? []} onText={(text) => { if (cgpRef.current) { cgpRef.current.value = text; cgpRef.current.focus(); } }} /> : null}
+          <textarea ref={cgpRef} id="cgp" name="cgp" rows={12} defaultValue={p.cgp} aria-describedby="cgp-hint" className={`${input} font-mono text-sm`} />
         </Field>
         <Field id="pillars" label={t("pillars")} hint={t("pillarsHint")}>
           <textarea id="pillars" name="pillars" rows={4} defaultValue={p.pillarsText} aria-describedby="pillars-hint" className={`${input} font-mono text-sm`} />

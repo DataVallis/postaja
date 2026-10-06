@@ -261,3 +261,51 @@ export async function uploadAuto(
   }
   return out;
 }
+
+/** CGPs longer than this are refused (same limit as the profile editor). */
+export const CGP_MAX_CHARS = 50_000;
+export const CGP_IMPORT_MAX_BYTES = 20 * MB;
+
+export class CgpImportError extends Error {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "ARCHIVED" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "INVALID_FILE" | "NO_TEXT" | "TOO_LONG", public readonly detail?: string) {
+    super(code);
+  }
+}
+
+/**
+ * Owner only: the text of a document — uploaded now, or one of the brand's sources — for the CGP editor (ADR-037).
+ * Nothing is saved here; the owner reviews it in the editor and saves a new profile version.
+ */
+export async function cgpTextFromDocument(
+  db: Db,
+  storage: Storage,
+  ctx: OrgContext,
+  brandId: string,
+  from: { file: { filename: string; bytes: Uint8Array } } | { sourceId: string },
+): Promise<{ text: string; filename: string; kind: "pdf" | "docx" | "text" }> {
+  if (ctx.role !== "owner") throw new CgpImportError("FORBIDDEN");
+  const brand = await brandOf(db, ctx, brandId).catch(() => { throw new CgpImportError("NOT_FOUND"); });
+  if (brand.archivedAt) throw new CgpImportError("ARCHIVED");
+  let filename: string;
+  let bytes: Uint8Array;
+  if ("file" in from) {
+    filename = cleanFilename(from.file.filename);
+    bytes = from.file.bytes;
+  } else {
+    const [src] = (await forOrg(db, ctx).select(brandSources, and(eq(brandSources.id, from.sourceId), eq(brandSources.brandId, brandId)))) as (typeof brandSources.$inferSelect)[];
+    if (!src) throw new CgpImportError("NOT_FOUND");
+    filename = src.filename;
+    bytes = await storage.get(src.storageKey);
+  }
+  if (bytes.byteLength > CGP_IMPORT_MAX_BYTES) throw new CgpImportError("TOO_LARGE");
+  const { documentText, ExtractError } = await import("../files/extract");
+  let r;
+  try {
+    r = await documentText(bytes);
+  } catch (e) {
+    if (e instanceof ExtractError) throw new CgpImportError(e.code);
+    throw e;
+  }
+  if (r.text.length > CGP_MAX_CHARS) throw new CgpImportError("TOO_LONG", String(r.text.length));
+  return { text: r.text, filename, kind: r.kind };
+}

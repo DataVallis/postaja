@@ -177,7 +177,7 @@
     "create": "Ustvari",
     "profile": "Profil (CGP)",
     "cgp": "CGP — navodila za AI",
-    "cgpHint": "Kdo smo, publika, ton, kaj delamo in česa ne. Kasneje ga bo AI sestavil iz tvojih dokumentov.",
+    "cgpHint": "Kdo smo, publika, ton, kaj delamo in česa ne. Prilepi ga ali uvozi iz dokumenta — po njem Postaja piše vse objave.",
     "pillars": "Stebri vsebine",
     "pillarsHint": "Ena vrstica na steber: Ime | delež % | opis. Skupaj največ 100 %.",
     "bannedWords": "Prepovedane besede",
@@ -331,6 +331,26 @@
         "UNSUPPORTED_COMPRESSION": "datoteka v ZIP-u je stisnjena na nepodprt način.",
         "CORRUPT": "datoteka v ZIP-u je poškodovana.",
         "failed": "nalaganje ni uspelo, poskusi znova."
+      }
+    },
+    "cgpImport": {
+      "fromComputer": "Uvozi iz dokumenta",
+      "or": "ali iz naloženega vira:",
+      "fromSource": "Naložen vir",
+      "useSource": "Uvozi",
+      "reading": "Berem …",
+      "hint": "Word (DOCX), PDF, MD ali TXT. Besedilo se prenese dobesedno, brez AI. Preglej ga in klikni »Shrani novo verzijo«.",
+      "inserted": "Besedilo iz »{name}« je vstavljeno ({chars} znakov). Preglej ga in shrani novo verzijo.",
+      "errors": {
+        "UNSUPPORTED_TYPE": "Ta vrsta datoteke ni podprta — uporabi DOCX, PDF, MD ali TXT.",
+        "INVALID_FILE": "Dokumenta ni mogoče prebrati (poškodovan ali zaklenjen z geslom).",
+        "NO_TEXT": "V dokumentu ni besedila (morda je skeniran PDF).",
+        "TOO_LONG": "Besedilo je predolgo ({detail} znakov, največ 50.000).",
+        "TOO_LARGE": "Dokument je večji od 20 MB.",
+        "FORBIDDEN": "CGP ureja lastnik.",
+        "NOT_FOUND": "Vir ne obstaja.",
+        "ARCHIVED": "Brand je arhiviran.",
+        "failed": "Uvoz ni uspel, poskusi znova."
       }
     }
   },
