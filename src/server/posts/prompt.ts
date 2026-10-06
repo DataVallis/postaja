@@ -1,11 +1,11 @@
 // Prompt assembly for a text post (TASK-007, architecture §6). Pure: same input → same prompt; easy to test.
 // Order matters for prompt caching: fixed base → brand block (cached) → channel/post block → the request.
+import { LANGUAGE_NAMES as LANG } from "@/lib/language";
 import type { RuleSet, Violation } from "@/lib/rules";
 import type { StructuredRequest } from "../llm/types";
 
 export const PROMPT_VERSION = "post-text-v1";
 
-const LANG: Record<string, string> = { sl: "Slovenian", en: "English", de: "German", hr: "Croatian", it: "Italian" };
 /** Material text sent to the model per post (characters, all materials together). */
 export const MATERIALS_MAX_CHARS = 60_000;
 

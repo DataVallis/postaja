@@ -245,6 +245,18 @@ describe("post images from the design", () => {
     expect(costs.some((c) => c.model.startsWith("claude"))).toBe(true);
   });
 
+  it("the words follow the brand's language even when the channel was left on another one", async () => {
+    await design();
+    await sql`update brands set languages = ARRAY['en']::text[] where id = ${brandA}`; // channel igA is "sl"
+    const id = await post();
+    const { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id, "new");
+    const claude = fakeClaude();
+    await runImages(jobs, claude, fakeImages().client);
+    expect(claude.calls[0].user).toContain('language="English"');
+    expect(claude.calls[0].system[0].text).toContain("translate them faithfully");
+  });
+
   it("without past posts the default image model is used; a carousel gets one image per slide and only the cover is illustrated", async () => {
     await design();
     const id = await post({ format: "carousel", plan: { topic: "Koraki", slides: ["Ena", "Dva"] } });
