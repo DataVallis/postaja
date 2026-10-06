@@ -7,9 +7,7 @@ import { z } from "zod";
 import { isIsoDate } from "@/lib/dates";
 import type { Db } from "../db/client";
 import { brands, bulkItems, bulkRuns, posts, type BulkScope, type BulkStep } from "../db/schema";
-import { ImageError } from "../images/fal";
-import { ImageJobError, POST_IMAGE_QUEUE, renderPostImages, type ImageDeps, type PostImageJob } from "../images/service";
-import { SpendCapError } from "../llm/spend";
+import { imageFailureCode, POST_IMAGE_QUEUE, renderPostImages, type ImageDeps, type PostImageJob } from "../images/service";
 import { generateForPost, PostError, type GenerateDeps } from "../posts/generate";
 import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
@@ -19,7 +17,7 @@ export const POST_TEXT_QUEUE = "post-text";
 export type PostTextJob = { itemId: string };
 export type QueueJob = PostTextJob | PostImageJob;
 /** Where jobs go; pg-boss in the app, an in-memory stand-in in tests. */
-export type JobQueue = { send(name: typeof POST_TEXT_QUEUE | typeof POST_IMAGE_QUEUE, data: QueueJob, key: string): Promise<void> };
+export type JobQueue = { send(name: string, data: QueueJob | { designId: string }, key: string): Promise<void> };
 export const BULK_STEPS = ["text", "image"] as const;
 
 export class BulkError extends Error {
@@ -36,7 +34,7 @@ export const scopeSchema = z.discriminatedUnion("kind", [
 
 /**
  * Text: planned (or failed) posts without text. Images: posts without images yet (or whose images failed), not skipped
- * or published. Both: with a channel, of live brands in the scope — this org only.
+ * or published, of brands that have a design. Both: with a channel, of live brands in the scope — this org only.
  */
 export async function bulkCandidates(db: Db, ctx: OrgContext, scope: BulkScope, step: BulkStep = "text"): Promise<string[]> {
   const s = scopeSchema.parse(scope);
@@ -57,7 +55,8 @@ export async function bulkCandidates(db: Db, ctx: OrgContext, scope: BulkScope, 
   const rows = await db
     .select({ id: posts.id })
     .from(posts)
-    .innerJoin(brands, and(eq(brands.id, posts.brandId), eq(brands.orgId, ctx.orgId), isNull(brands.archivedAt)))
+    // Images need the brand's design (TASK-017): brands without one are left out of the image step.
+    .innerJoin(brands, and(eq(brands.id, posts.brandId), eq(brands.orgId, ctx.orgId), isNull(brands.archivedAt), ...(step === "image" ? [isNotNull(brands.currentDesignId)] : [])))
     .where(and(...where))
     .orderBy(posts.scheduledOn, sql`${posts.scheduledTime} asc nulls last`, posts.createdAt)
     .limit(BULK_MAX + 1);
@@ -152,10 +151,10 @@ async function runImageItem(
   if (!claimed.length) return set("skipped", "HAS_IMAGES");
   const failPost = (code: string) => db.update(posts).set({ mediaStatus: "failed", mediaError: code, updatedAt: new Date() }).where(eq(posts.id, postId));
   try {
-    await renderPostImages(db, { images: deps.images ?? null, storage: deps.storage, now: deps.now }, ctx, postId, "new");
+    await renderPostImages(db, { llm: deps.llm, images: deps.images ?? null, storage: deps.storage, now: deps.now }, ctx, postId, "new");
     return set("done");
   } catch (e) {
-    const code = e instanceof ImageError ? e.code : e instanceof SpendCapError ? "SPEND_CAP" : e instanceof ImageJobError ? e.code : null;
+    const code = imageFailureCode(e);
     if (code) {
       await failPost(code);
       return set("failed", code);

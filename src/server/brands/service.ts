@@ -1,10 +1,10 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "../db/client";
-import { brandAssets, brandProfileVersions, brands, cgpDrafts, channels, formatPresets, orgSettings } from "../db/schema";
+import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, orgSettings } from "../db/schema";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
-import { brandInput, channelInput, profileInput, templateSchema, visualSchema } from "./schemas";
+import { brandInput, channelInput, profileInput } from "./schemas";
 
 export class BrandError extends Error {
   constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "LIMIT_REACHED" | "DUPLICATE" | "PRESET_MISMATCH" | "ARCHIVED" | "LANGUAGE_NOT_IN_BRAND") {
@@ -102,16 +102,6 @@ export async function saveProfile(db: Db, ctx: OrgContext, brandId: string, inpu
       .select({ max: sql<number>`coalesce(max(${brandProfileVersions.version}), 0)::int` })
       .from(brandProfileVersions)
       .where(eq(brandProfileVersions.brandId, brandId));
-    // The image template is edited on its own tab; a profile save without one keeps the current template.
-    if (!data.visual.template) {
-      const [cur] = await tx
-        .select({ visual: brandProfileVersions.visual })
-        .from(brandProfileVersions)
-        .where(and(eq(brandProfileVersions.brandId, brandId), eq(brandProfileVersions.orgId, ctx.orgId)))
-        .orderBy(desc(brandProfileVersions.version))
-        .limit(1);
-      if (cur?.visual.template) data.visual.template = cur.visual.template;
-    }
     const id = crypto.randomUUID();
     const t = forOrg(tx as unknown as Db, ctx);
     await t.insert(brandProfileVersions, { id, brandId, version: max + 1, ...data, createdBy: ctx.userId });
@@ -120,30 +110,6 @@ export async function saveProfile(db: Db, ctx: OrgContext, brandId: string, inpu
     await t.update(cgpDrafts, { status: "used", resolvedAt: new Date() }, and(eq(cgpDrafts.brandId, brandId), eq(cgpDrafts.status, "pending")));
     return { id, version: max + 1 };
   });
-}
-
-export const TEMPLATE_NOTE = "image-template";
-
-/**
- * Owner saves the image template and colours (TASK-015) as a new profile version; CGP, rules and pillars stay as they
- * are. A chosen logo or font must be one of this brand's own assets.
- */
-export async function saveImageTemplate(
-  db: Db, ctx: OrgContext, brandId: string,
-  input: { template: z.input<typeof templateSchema>; colors: { background?: string; text?: string; accent?: string } },
-) {
-  requireOwner(ctx);
-  const { profile } = await getBrandDetail(db, ctx, brandId);
-  if (!profile) throw new BrandError("NOT_FOUND");
-  const template = templateSchema.parse(input.template);
-  for (const [id, kind] of [[template.logoId, "logo"], [template.fontId, "font"]] as const) {
-    if (!id || id === "none") continue;
-    const [a] = await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.id, id), eq(brandAssets.brandId, brandId), eq(brandAssets.kind, kind)));
-    if (!a) throw new BrandError("NOT_FOUND");
-  }
-  if (template.fontId === "none") template.fontId = null;
-  const visual = visualSchema.parse({ ...profile.visual, colors: { ...profile.visual.colors, ...input.colors }, template });
-  return saveProfile(db, ctx, brandId, { cgp: profile.cgp, rules: profile.rules, pillars: profile.pillars, visual, note: TEMPLATE_NOTE });
 }
 
 async function checkPreset(db: Db, platform: string, key?: string) {

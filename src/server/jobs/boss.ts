@@ -1,8 +1,9 @@
 // Background jobs (ADR-007, ADR-042): pg-boss on the app's own Postgres (schema "pgboss"). The web process only sends;
 // workers run where RUN_WORKER=1 — on dev that is the web container itself, later a separate Kamal role.
 import { PgBoss } from "pg-boss";
-import { POST_TEXT_QUEUE, type JobQueue, type QueueJob } from "../bulk/service";
+import { POST_TEXT_QUEUE, type JobQueue } from "../bulk/service";
 import { POST_IMAGE_QUEUE } from "../images/service";
+import { DESIGN_QUEUE } from "../design/service";
 
 let started: Promise<PgBoss> | undefined;
 
@@ -17,6 +18,8 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
     await boss.createQueue(POST_TEXT_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 300 }).catch(() => undefined);
     // Images (TASK-015): the provider can queue for a while; one retry, at most 10 minutes per post.
     await boss.createQueue(POST_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 600 }).catch(() => undefined);
+    // Brand designs (TASK-017): one Claude call with pictures, a few renders; no automatic retry (the owner sees why).
+    await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 600 }).catch(() => undefined);
     return boss;
   })();
   return started;
@@ -25,7 +28,7 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
 /** The app's queue: singleton per post and step, so the same post is never queued twice at once. */
 export function bossQueue(boss: PgBoss): JobQueue {
   return {
-    async send(name, data: QueueJob, key) {
+    async send(name, data, key) {
       await boss.send(name, data, { singletonKey: key });
     },
   };

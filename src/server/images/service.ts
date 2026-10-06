@@ -1,32 +1,37 @@
-// Post images (TASK-015, ADR-043): a member asks for images → the post is claimed (media_status queued) and one job is
-// queued → a worker generates the background (fal, cost-capped) and renders the brand template with the plan's
-// texts → PNGs in S3 + post_media rows. "Osveži tekst" re-renders on the stored background, at no image cost.
+// Post images (TASK-015/017, ADR-043/044): a member asks for images → the post is claimed (media_status queued) and a
+// job is queued → the worker asks Claude which of the brand's templates each image uses, with what words and what
+// illustration (the brand's common thread); fal.ai makes the illustrations in the brand's style (its past posts as
+// reference); Postaja renders every image → PNGs in S3 + post_media rows. "Osveži tekst" re-renders the edited words on
+// the stored illustrations at no image cost.
 import { and, asc, eq, inArray, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
-import { brandAssets, brands, formatPresets, modelRegistry, posts, postMedia, usageLedger, type Platform, type PostPlan } from "../db/schema";
-import { templateSchema } from "../brands/schemas";
+import { brands, formatPresets, modelRegistry, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
+import { postVisualRequest, postVisualSchema, issues } from "../design/ai";
+import { renderTemplate } from "../design/render";
+import { brandAssetBytes, brandExamples, currentDesign } from "../design/service";
+import { needsIllustration, SLOTS, type DesignSpec, type Template } from "../design/spec";
 import type { Storage } from "../files/storage";
+import { cappedCall } from "../llm/call";
 import { reserve, release, SpendCapError } from "../llm/spend";
+import { LlmError, type LlmClient } from "../llm/types";
 import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { billedMegapixels, generationSize, ImageError, type ImageClient } from "./fal";
-import { renderSlides, type SlideText } from "./render";
-import { DEFAULT_COLORS, DEFAULT_TEMPLATE, type BrandTemplate, type Colors } from "./template";
 
 export const POST_IMAGE_QUEUE = "post-image";
 export type ImageMode = "new" | "text";
 export type PostImageJob = { postId: string; mode: ImageMode };
-export const MAX_SLIDES = 20;
+export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID") {
+  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT") {
     super(code);
   }
 }
 
-export type ImageDeps = { images: ImageClient | null; storage: Storage; now?: Date };
+export type ImageDeps = { llm: LlmClient; images: ImageClient | null; storage: Storage; now?: Date };
 
 /** Feed sizes when a channel has no image preset of its own (ADR-022 presets). */
 const PLATFORM_DEFAULT: Partial<Record<Platform, string>> = {
@@ -42,52 +47,16 @@ export async function slideSize(db: Db, platform: Platform | null, presetKey: st
   return { width: 1080, height: 1080, preset: null };
 }
 
-export function brandTemplate(visual: { template?: unknown } | null | undefined): BrandTemplate {
-  const r = templateSchema.safeParse(visual?.template ?? {});
-  return r.success ? r.data : DEFAULT_TEMPLATE;
+/** What the image model gets: Claude's subject, the design's illustration style, never letters (ADR-009). */
+export function illustrationPrompt(subject: string, spec: DesignSpec): string {
+  return [subject.trim().slice(0, 1500), `Style: ${spec.illustrationStyle}`, "No text, no letters, no numbers, no logos, no watermarks."].join("\n");
 }
 
-export function brandColors(colors: { primary?: string; background?: string; text?: string; accent?: string } | undefined): Colors {
-  return {
-    background: colors?.background ?? DEFAULT_COLORS.background,
-    text: colors?.text ?? DEFAULT_COLORS.text,
-    accent: colors?.accent ?? colors?.primary ?? DEFAULT_COLORS.accent,
-  };
-}
-
-/**
- * Texts on the images, from the plan's own words: carousel slides one per image; otherwise the overlay text, the topic,
- * or the brief. The label (category chip) goes on the first image only.
- */
-export function slideTexts(p: { format: string; brief: string; plan: PostPlan }, tpl: BrandTemplate): SlideText[] {
-  const label = tpl.label === "category" ? p.plan.category?.trim() || null : null;
-  if (tpl.layout === "photo") return [{ label: null, headline: null }];
-  const slides = (p.plan.slides ?? []).map((s) => s.trim()).filter(Boolean);
-  if (p.format === "carousel" && slides.length) return slides.slice(0, MAX_SLIDES).map((headline, i) => ({ label: i === 0 ? label : null, headline }));
-  const headline = (p.plan.overlayText ?? p.plan.topic ?? p.brief).trim().slice(0, 300);
-  return [{ label, headline: headline || null }];
-}
-
-/** What the image model is asked for: the plan's picture, the brand's look, and never any letters (ADR-009). */
-export function backgroundPrompt(p: { brief: string; plan: PostPlan }, visual: { imageStyle?: string; negativePrompt?: string }): string {
-  const subject = (p.plan.imagePrompt ?? p.plan.topic ?? p.brief).trim().slice(0, 1200);
-  const parts = [
-    subject,
-    visual.imageStyle?.trim() ? `Style: ${visual.imageStyle.trim().slice(0, 500)}` : "",
-    "No text, no letters, no numbers, no words, no logos, no watermarks. Leave calm, uncluttered space for a headline.",
-    visual.negativePrompt?.trim() ? `Avoid: ${visual.negativePrompt.trim().slice(0, 300)}` : "",
-  ];
-  return parts.filter(Boolean).join("\n");
-}
-
-/** The template's logo (null = the brand's first logo, "none" = no logo) and font (null = built-in), as bytes. */
-export async function brandAssetsFor(db: Db, storage: Storage, ctx: OrgContext, brandId: string, tpl: BrandTemplate) {
-  const assets = (await forOrg(db, ctx).select(brandAssets, eq(brandAssets.brandId, brandId))) as (typeof brandAssets.$inferSelect)[];
-  assets.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const logoRow = tpl.logoId === "none" ? undefined : tpl.logoId ? assets.find((a) => a.id === tpl.logoId && a.kind === "logo") : assets.find((a) => a.kind === "logo");
-  const fontRow = tpl.fontId ? assets.find((a) => a.id === tpl.fontId && a.kind === "font") : undefined;
-  const [logo, brandFont] = await Promise.all([logoRow ? storage.get(logoRow.storageKey) : null, fontRow ? storage.get(fontRow.storageKey) : null]);
-  return { logo, brandFont };
+/** The illustration's shape: the whole slide for a full-bleed background, else the image box of the template. */
+export function illustrationShape(t: Template, size: { width: number; height: number }) {
+  if (t.background.type === "illustration") return size;
+  const box = t.elements.find((e) => e.type === "image" && e.source === "illustration");
+  return box ? { width: (box.w / 100) * size.width, height: (box.h / 100) * size.height } : size;
 }
 
 const STALE_MS = 10 * 60 * 1000;
@@ -98,6 +67,7 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
+  if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
   const claimed = await forOrg(db, ctx).update(
     posts,
     { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, updatedAt: new Date() },
@@ -128,7 +98,7 @@ export async function postMediaUrl(db: Db, storage: Storage, ctx: OrgContext, me
     .where(and(eq(postMedia.id, mediaId), eq(postMedia.orgId, ctx.orgId)));
   if (!m) throw new ImageJobError("NOT_FOUND");
   const ext = m.type === "image/png" ? "png" : "jpg";
-  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : "ozadje"}.${ext}`;
+  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : `ilustracija-${m.position + 1}`}.${ext}`;
   return storage.presignGet(m.key, { filename, contentType: m.type, inline: !download });
 }
 
@@ -136,87 +106,122 @@ const key = (orgId: string, postId: string, ext: string) => `org/${orgId}/posts/
 
 type MediaRow = Omit<typeof postMedia.$inferInsert, "orgId">;
 
-/**
- * Makes the images of one post as `ctx` (the member who asked). Throws ImageError / SpendCapError for expected
- * provider/cost outcomes; the caller records them on the post.
- */
-export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode) {
-  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
-  if (!p) throw new ImageJobError("NOT_FOUND");
-  const { profile, channels: chans } = await getBrandDetail(db, ctx, p.brandId);
-  const visual = profile?.visual ?? { colors: {}, imageStyle: "", negativePrompt: "" };
-  const tpl = brandTemplate(visual);
-  const colors = brandColors(visual.colors);
-  const channel = chans.find((c) => c.id === p.channelId) ?? null;
-  const size = await slideSize(db, channel?.platform ?? null, channel?.defaultPresetKey ?? null);
-
-  const { logo, brandFont } = await brandAssetsFor(db, deps.storage, ctx, p.brandId, tpl);
-
-  const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
-  const oldBackground = old.find((m) => m.kind === "background");
-  const newRows: MediaRow[] = [];
-  let background: Uint8Array | null = null;
-  if (tpl.background === "ai") {
-    if (mode === "text" && oldBackground) {
-      background = await deps.storage.get(oldBackground.storageKey);
-    } else {
-      const bg = await generateBackground(db, deps, ctx, p, visual, size);
-      background = bg.bytes;
-      const k = key(ctx.orgId, postId, "jpg");
-      await deps.storage.put(k, bg.bytes, "image/jpeg");
-      newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: 0, storageKey: k, contentType: "image/jpeg", width: bg.width, height: bg.height, sizeBytes: bg.bytes.byteLength, model: bg.model, prompt: bg.prompt });
+/** Claude's plan for the post's images (one retry with the validation errors). */
+async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect, spec: DesignSpec, designId: string, where: { brandName: string; platform: Platform | null; language: string }): Promise<PostVisual> {
+  const schema = postVisualSchema(spec);
+  let invalid: { draft: unknown; errors: string } | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const req = postVisualRequest(spec, {
+      ...where, format: p.format, brief: p.brief, plan: p.plan as Record<string, unknown>, caption: p.content?.caption ?? null,
+    }, invalid);
+    const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now }, req);
+    const parsed = schema.safeParse(out.input);
+    if (parsed.success) {
+      return {
+        designId,
+        slides: parsed.data.slides.map((s) => {
+          const t = spec.templates.find((x) => x.id === s.templateId)!;
+          const slots = Object.fromEntries(Object.entries(s.slots).filter(([, v]) => typeof v === "string" && v.trim())) as Record<string, string>;
+          return { templateId: s.templateId, slots, illustration: needsIllustration(t) ? (s.illustration?.trim() || p.plan.imagePrompt || p.plan.topic || p.brief) : null };
+        }),
+      };
     }
+    invalid = { draft: out.input, errors: issues(parsed.error) };
   }
-
-  const pngs = await renderSlides(tpl, colors, size, slideTexts(p, tpl), { logo, brandFont, background });
-  for (let i = 0; i < pngs.length; i++) {
-    const k = key(ctx.orgId, postId, "png");
-    await deps.storage.put(k, pngs[i], "image/png");
-    newRows.push({ id: crypto.randomUUID(), postId, kind: "slide", position: i, storageKey: k, contentType: "image/png", width: size.width, height: size.height, sizeBytes: pngs[i].byteLength });
-  }
-
-  // Swap in one transaction; the replaced objects are deleted afterwards (best effort — the rows decide access).
-  const replaceBackground = newRows.some((r) => r.kind === "background") || tpl.background === "plain";
-  const replaced = old.filter((m) => m.kind === "slide" || replaceBackground);
-  await db.transaction(async (tx) => {
-    const t = forOrg(tx as unknown as Db, ctx);
-    if (replaced.length) await t.delete(postMedia, inArray(postMedia.id, replaced.map((m) => m.id)));
-    for (const r of newRows) await t.insert(postMedia, r);
-    await t.update(posts, { mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(posts.id, postId));
-  });
-  await Promise.all(replaced.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
-  return pngs.length;
+  throw new ImageJobError("INVALID_OUTPUT");
 }
 
-async function generateBackground(
-  db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect,
-  visual: { imageStyle?: string; negativePrompt?: string }, size: { width: number; height: number },
-) {
+/** One illustration: the brand's style-reference model when it has past posts, else the default image model. */
+async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect, prompt: string, shape: { width: number; height: number }, references: string[]) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
-  const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "image"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
+  const pick = async (kind: "image" | "image_style") =>
+    (await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true))))[0];
+  const model = (references.length ? await pick("image_style") : undefined) ?? (await pick("image"));
   if (!model) throw new ImageError("IMAGE_PROVIDER");
-  const gen = generationSize(size.width, size.height);
-  const mp = billedMegapixels(gen.width, gen.height);
-  const cost = BigInt(mp) * model.perMegapixel;
-  const prompt = backgroundPrompt(p, visual);
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: model.provider, model: model.modelKey, estimate: cost, now: deps.now });
+  const gen = generationSize(shape.width, shape.height);
+  const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now });
   let out;
   try {
-    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen });
+    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: "text, letters, words, watermark, logo" });
   } catch (e) {
     await release(db, ledgerId);
     throw e;
   }
   const billed = billedMegapixels(out.width, out.height);
-  await db.update(usageLedger).set({ state: "settled", megapixels: billed, costMicroUsd: BigInt(billed) * model.perMegapixel }).where(eq(usageLedger.id, ledgerId));
-  return { ...out, model: model.modelKey, prompt };
+  await db.update(usageLedger).set({ state: "settled", megapixels: billed, costMicroUsd: price(billed) }).where(eq(usageLedger.id, ledgerId));
+  return { ...out, model: model.modelKey };
+}
+
+/**
+ * Makes the images of one post as `ctx` (the member who asked). Throws ImageError / SpendCapError / LlmError /
+ * ImageJobError for expected outcomes; the caller records them on the post.
+ */
+export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode) {
+  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
+  if (!p) throw new ImageJobError("NOT_FOUND");
+  const design = await currentDesign(db, ctx, p.brandId);
+  if (!design?.spec) throw new ImageJobError("NO_DESIGN");
+  const spec = design.spec;
+  const { brand, channels: chans } = await getBrandDetail(db, ctx, p.brandId);
+  const channel = chans.find((c) => c.id === p.channelId) ?? null;
+  const size = await slideSize(db, channel?.platform ?? null, channel?.defaultPresetKey ?? null);
+  const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
+
+  // Re-plan for new images, or when the words were planned for another design version.
+  const replan = mode === "new" || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
+  const visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, { brandName: brand.name, platform: channel?.platform ?? null, language: channel?.language ?? brand.languages[0] ?? "sl" }) : p.visual!;
+
+  const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
+  const oldIllustrations = new Map(old.filter((m) => m.kind === "background").map((m) => [m.position, m]));
+  let references: string[] | null = null;
+  const newRows: MediaRow[] = [];
+  const keptIllustrations = new Set<string>();
+  const pngs: Uint8Array[] = [];
+  for (const [i, slide] of visual.slides.entries()) {
+    const t = spec.templates.find((x) => x.id === slide.templateId)!;
+    let illustration: Uint8Array | null = null;
+    if (needsIllustration(t)) {
+      const prev = oldIllustrations.get(i);
+      if (!replan && prev) {
+        illustration = await deps.storage.get(prev.storageKey);
+        keptIllustrations.add(prev.id);
+      } else {
+        references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
+        const prompt = illustrationPrompt(slide.illustration ?? p.brief, spec);
+        const out = await generateIllustration(db, deps, ctx, p, prompt, illustrationShape(t, size), references);
+        illustration = out.bytes;
+        const k = key(ctx.orgId, postId, "jpg");
+        await deps.storage.put(k, out.bytes, "image/jpeg");
+        newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt });
+      }
+    }
+    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, brandFont: assets.font }));
+  }
+  for (const [i, png] of pngs.entries()) {
+    const k = key(ctx.orgId, postId, "png");
+    await deps.storage.put(k, png, "image/png");
+    newRows.push({ id: crypto.randomUUID(), postId, kind: "slide", position: i, storageKey: k, contentType: "image/png", width: size.width, height: size.height, sizeBytes: png.byteLength });
+  }
+
+  // Swap in one transaction; the replaced objects are deleted afterwards (best effort — the rows decide access).
+  const replaced = old.filter((m) => !keptIllustrations.has(m.id));
+  await db.transaction(async (tx) => {
+    const t = forOrg(tx as unknown as Db, ctx);
+    if (replaced.length) await t.delete(postMedia, inArray(postMedia.id, replaced.map((m) => m.id)));
+    for (const r of newRows) await t.insert(postMedia, r);
+    await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(posts.id, postId));
+  });
+  await Promise.all(replaced.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
+  return pngs.length;
 }
 
 /** Outcome codes shown on the post page. */
-function failureCode(e: unknown): string | null {
+export function imageFailureCode(e: unknown): string | null {
   if (e instanceof ImageError) return e.code;
   if (e instanceof SpendCapError) return "SPEND_CAP";
   if (e instanceof ImageJobError) return e.code;
+  if (e instanceof LlmError) return e.code === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : "LLM_PROVIDER";
   return null;
 }
 
@@ -225,7 +230,7 @@ function failureCode(e: unknown): string | null {
  * failures are recorded on the post; anything else puts the post back in the queue state and rethrows (one retry).
  */
 export async function runImageJob(db: Db, deps: ImageDeps, job: PostImageJob): Promise<"done" | "skipped" | "failed"> {
-  const [p] = await db.select({ id: posts.id, orgId: posts.orgId, by: posts.mediaRequestedBy, status: posts.mediaStatus }).from(posts).where(eq(posts.id, job.postId));
+  const [p] = await db.select({ id: posts.id, orgId: posts.orgId, by: posts.mediaRequestedBy }).from(posts).where(eq(posts.id, job.postId));
   if (!p) return "skipped";
   const claimed = await db.update(posts).set({ mediaStatus: "rendering", updatedAt: new Date() }).where(and(eq(posts.id, p.id), eq(posts.mediaStatus, "queued"))).returning({ id: posts.id });
   if (!claimed.length) return "skipped";
@@ -245,30 +250,30 @@ export async function runImageJob(db: Db, deps: ImageDeps, job: PostImageJob): P
     await renderPostImages(db, deps, ctx, p.id, job.mode);
     return "done";
   } catch (e) {
-    const code = failureCode(e);
+    const code = imageFailureCode(e);
     if (code) return fail(code);
     await db.update(posts).set({ mediaStatus: "queued" }).where(and(eq(posts.id, p.id), eq(posts.mediaStatus, "rendering")));
     throw e;
   }
 }
 
-/** Saves the text on the images by hand (one block per slide, blank line between) — any member (TASK-015). */
-export async function setImageText(db: Db, ctx: OrgContext, postId: string, text: string) {
-  const body = z.string().max(5000).parse(text).replace(/\r\n/g, "\n").trim();
+const slotsInput = z.array(z.partialRecord(z.enum(SLOTS), z.string().max(600))).max(20);
+
+/** The owner/editor edits the words on the images (per image, per slot); "Osveži tekst" then re-renders them. */
+export async function setSlideTexts(db: Db, ctx: OrgContext, postId: string, slides: z.input<typeof slotsInput>) {
+  const edits = slotsInput.parse(slides);
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
-  const blocks = body.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
-  if (blocks.length > MAX_SLIDES) throw new ImageJobError("INVALID");
-  const plan: PostPlan = { ...p.plan };
-  if (p.format === "carousel") {
-    if (blocks.length) plan.slides = blocks; else delete plan.slides;
-  } else if (body) plan.overlayText = body; else delete plan.overlayText;
-  await forOrg(db, ctx).update(posts, { plan, updatedAt: new Date() }, eq(posts.id, postId));
+  if (!p.visual) throw new ImageJobError("BAD_STATE");
+  const visual: PostVisual = {
+    ...p.visual,
+    slides: p.visual.slides.map((s, i) => {
+      const e = edits[i];
+      if (!e) return s;
+      const slots = { ...s.slots };
+      for (const [k, v] of Object.entries(e)) { if (v?.trim()) slots[k] = v.trim(); else delete slots[k]; }
+      return { ...s, slots };
+    }),
+  };
+  await forOrg(db, ctx).update(posts, { visual, updatedAt: new Date() }, eq(posts.id, postId));
 }
-
-/** The text currently used on the images, for the edit field. */
-export function imageText(p: { format: string; brief: string; plan: PostPlan }): string {
-  if (p.format === "carousel" && p.plan.slides?.length) return p.plan.slides.join("\n\n");
-  return p.plan.overlayText ?? p.plan.topic ?? "";
-}
-

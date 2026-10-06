@@ -13,7 +13,18 @@ export function createAnthropicClient(apiKey: string | undefined = process.env.A
           model: req.model,
           max_tokens: req.maxTokens,
           system: req.system.map((b) => ({ type: "text" as const, text: b.text, ...(b.cache ? { cache_control: { type: "ephemeral" as const } } : {}) })),
-          messages: [{ role: "user", content: req.user }],
+          messages: [{
+            role: "user",
+            content: req.images?.length
+              ? [
+                  ...req.images.flatMap((im) => [
+                    ...(im.caption ? [{ type: "text" as const, text: im.caption }] : []),
+                    { type: "image" as const, source: { type: "base64" as const, media_type: im.mediaType, data: im.data } },
+                  ]),
+                  { type: "text" as const, text: req.user },
+                ]
+              : req.user,
+          }],
           tools: [{ name: req.tool.name, description: req.tool.description, input_schema: req.tool.inputSchema as Anthropic.Tool.InputSchema }],
           tool_choice: { type: "tool", name: req.tool.name },
         });

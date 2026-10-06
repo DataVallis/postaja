@@ -4,10 +4,14 @@ export type SystemBlock = { text: string; cache?: boolean };
 export type ToolSpec = { name: string; description: string; inputSchema: Record<string, unknown> };
 export type Usage = { inputTokens: number; outputTokens: number; cacheWriteTokens: number; cacheReadTokens: number };
 
+export type ImageBlock = { mediaType: "image/jpeg" | "image/png"; data: string /* base64 */; caption?: string };
+
 export type StructuredRequest = {
   model: string;
   system: SystemBlock[];
   user: string;
+  /** Pictures shown to the model before the text (brand examples, logo, rendered previews). */
+  images?: ImageBlock[];
   tool: ToolSpec;
   maxTokens: number;
 };

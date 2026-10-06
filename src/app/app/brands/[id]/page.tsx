@@ -17,19 +17,19 @@ import { listPosts } from "@/server/posts/generate";
 import { pendingDraft } from "@/server/mcp/service";
 import { bulkCandidates } from "@/server/bulk/service";
 import { todayIn } from "@/lib/dates";
-import { brandColors, brandTemplate } from "@/server/images/service";
-import { TEMPLATE_NOTE } from "@/server/brands/service";
-import { TemplateForm } from "./template-form";
+import { listDesigns } from "@/server/design/service";
+import { DesignSection } from "./design-section";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["posts", "files", "images", "profile", "channels", "versions"] as const;
+const TABS = ["posts", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
-  const raw = (await searchParams).tab;
+  const sp = await searchParams;
+  const raw = sp.tab;
   const tab: Tab = (TABS as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "posts";
   const db = getDb();
   const detail = await getBrandDetail(db, org, id).catch((e) => {
@@ -37,7 +37,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
     throw e;
   });
   const { brand, profile, channels } = detail;
-  const [versions, presets, platformRows, files, recentPosts, draft] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id)]);
+  const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
   const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
@@ -85,7 +85,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         tabs={[
           { key: "posts", label: t("tabs.posts"), href: href("posts"), count: recentPosts.length },
           { key: "files", label: t("tabs.files"), href: href("files"), count: files.sources.length + files.logos.length + files.fonts.length },
-          { key: "images", label: t("tabs.images"), href: href("images") },
+          { key: "design", label: t("tabs.design"), href: href("design"), count: designs.filter((d) => d.status === "ready").length },
           { key: "profile", label: t("tabs.profile"), href: href("profile") },
           { key: "channels", label: t("tabs.channels"), href: href("channels"), count: channels.length },
           { key: "versions", label: t("tabs.versions"), href: href("versions"), count: versions.length },
@@ -98,22 +98,18 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
 
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 
-      {tab === "images" ? (
-        <section aria-labelledby="images-h" className="grid gap-4">
-          <div>
-            <h2 id="images-h" className="text-base font-semibold">{t("imagesTitle")}</h2>
-            <p className="text-sm text-muted">{t("imagesIntro")}</p>
-          </div>
-          <TemplateForm
-            brandId={brand.id}
-            template={brandTemplate(profile?.visual)}
-            colors={brandColors(profile?.visual.colors)}
-            logos={files.logos.map((l) => ({ id: l.id, filename: l.filename }))}
-            fonts={files.fonts.map((l) => ({ id: l.id, filename: l.filename }))}
-            readOnly={!isOwner || brand.archivedAt !== null || !profile}
-            sample={{ text: t("imagesSample"), label: profile?.pillars[0]?.name ?? t("imagesSampleLabel") }}
-          />
-        </section>
+      {tab === "design" ? (
+        <DesignSection
+          brandId={brand.id}
+          designs={designs}
+          currentId={brand.currentDesignId}
+          isOwner={isOwner}
+          archived={brand.archivedAt !== null}
+          inputs={{ cgp: !!profile?.cgp.trim(), examples: files.sources.filter((s) => s.kind === "image").length, logo: files.logos.length > 0, font: files.fonts.length > 0 }}
+          shape={sp.shape === "square" || sp.shape === "landscape" ? sp.shape : "portrait"}
+          error={sp.designError}
+          filesHref={href("files")}
+        />
       ) : null}
 
       {tab === "profile" ? (
@@ -176,7 +172,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
               <tr key={v.id}>
                 <td className={`${td} font-medium`}>v{v.version}</td>
                 <td className={`${td} text-muted`}>{f.dateTime(v.createdAt, { dateStyle: "medium", timeStyle: "short" })}</td>
-                <td className={td}>{v.note ? (v.note === "created" ? t("createdNote") : v.note === TEMPLATE_NOTE ? t("templateNote") : v.note) : "—"}</td>
+                <td className={td}>{v.note ? (v.note === "created" ? t("createdNote") : v.note) : "—"}</td>
               </tr>
             ))}
           </DataTable>

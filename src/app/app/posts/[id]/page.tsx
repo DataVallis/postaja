@@ -9,9 +9,9 @@ import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
 import { reschedulePostAction, retryPostAction, setPostStatusAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
-import { brandTemplate, imageText, listPostMedia } from "@/server/images/service";
-import { postMedia } from "@/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { listPostMedia } from "@/server/images/service";
+import { currentDesign } from "@/server/design/service";
+import { templateSlots } from "@/server/design/spec";
 import { ImagesSection } from "./images-section";
 
 export const dynamic = "force-dynamic";
@@ -40,8 +40,8 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
-  const [background] = await db.select({ id: postMedia.id }).from(postMedia).where(and(eq(postMedia.orgId, org.orgId), eq(postMedia.postId, post.id), eq(postMedia.kind, "background")));
-  const template = brandTemplate(ctx?.profile.visual);
+  const design = await currentDesign(db, org, post.brandId);
+  const templates = design?.spec ? design.spec.templates.map((tp) => ({ id: tp.id, name: tp.name, slots: templateSlots(tp) })) : null;
   const editable = post.status === "planned" || post.status === "ready" || post.status === "needs_review" || post.status === "approved";
   const tf = await getTranslations("PostFormats");
   const ti = await getTranslations("Import");
@@ -102,13 +102,11 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         status={post.mediaStatus}
         error={post.mediaError}
         media={media}
-        imageText={imageText(post)}
-        carousel={post.format === "carousel"}
-        canRefreshText={media.length > 0 && (template.background === "plain" || !!background)}
-        aiBackground={template.background === "ai"}
+        visual={post.visual}
+        templates={templates}
         aiConfigured={!!process.env.FAL_KEY}
         requestError={imageError}
-        brandHref={`/app/brands/${post.brandId}`}
+        designHref={`/app/brands/${post.brandId}?tab=design`}
       />
 
       <Card className="p-5" data-testid="plan">

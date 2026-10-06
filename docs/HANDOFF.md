@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-06: TASK-017 brand visual identity designed by Claude (replaces TASK-015's fixed layouts after owner feedback; brand tab *Vizualna podoba*, revisions in words, versions; post images planned by Claude, illustrations via fal with the brand's past posts as style reference; ADR-044) — PR #28.
 - 2026-10-06: TASK-015 images (fal.ai background + brand template via Satori; brand "Slike" tab with live preview; post images with download and free text refresh; bulk image step; `FAL_KEY` wired into deploy; ADR-043) — PR #27.
 - 2026-10-06: Fix logo thumbnails sticking out of their cards (owner screenshot) — PR #26, deployed. TASK-014 deployed (Deploy dev d64587e green).
 - 2026-10-06: TASK-014 bulk creation (day across brands, brand range, single planned post; pg-boss workers in the web container, `RUN_WORKER=1` on dev; ADR-042) — PR #25.
@@ -87,8 +88,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 ## Next
 **Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
 Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
-Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22, done) → TASK-012 plan import (PR #23, done) → TASK-013 plan view (PR #24, done) → TASK-014 bulk (PR #25) → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (`FAL_KEY` set by owner) → TASK-016 download. TASK-010b (graphics from Claude) waits.
-Latest numbers: TASK-016, ADR-043. Latest PR: #27.
+Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22, done) → TASK-012 plan import (PR #23, done) → TASK-013 plan view (PR #24, done) → TASK-014 bulk (PR #25) → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (`FAL_KEY` set by owner) → TASK-016 download. Owner (2026-10-06): no locked templates — each brand's look is designed by Claude from its own inputs (TASK-017, ADR-044); everything runs inside Postaja. TASK-010b (graphics from Claude) waits.
+Latest numbers: TASK-017, ADR-044. Latest PR: #28.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.
