@@ -7,19 +7,23 @@ import { brandProfileVersions, brands, channels } from "./brands";
 import { organization } from "./org";
 import { planImports } from "./plans";
 
-/** Prices are micro-USD per million tokens (e.g. $2 / MTok = 2_000_000). Super admin keeps them current. */
+/**
+ * Prices are micro-USD per million tokens (e.g. $2 / MTok = 2_000_000) for text models, and micro-USD per megapixel
+ * (rounded up per image) for image models (TASK-015). Super admin keeps them current.
+ */
 export const modelRegistry = pgTable(
   "model_registry",
   {
     id: text("id").primaryKey(),
-    provider: text("provider").$type<"anthropic">().notNull(),
+    provider: text("provider").$type<"anthropic" | "fal">().notNull(),
     modelKey: text("model_key").notNull(),
-    kind: text("kind").$type<"text">().notNull(),
+    kind: text("kind").$type<"text" | "image">().notNull(),
     label: text("label").notNull(),
     inputPerMtok: bigint("input_per_mtok", { mode: "bigint" }).notNull(),
     outputPerMtok: bigint("output_per_mtok", { mode: "bigint" }).notNull(),
     cacheWritePerMtok: bigint("cache_write_per_mtok", { mode: "bigint" }).notNull(),
     cacheReadPerMtok: bigint("cache_read_per_mtok", { mode: "bigint" }).notNull(),
+    perMegapixel: bigint("per_megapixel", { mode: "bigint" }).notNull().default(sql`0`),
     isDefault: boolean("is_default").notNull().default(false),
     enabled: boolean("enabled").notNull().default(true),
     source: text("source").notNull(),
@@ -29,13 +33,16 @@ export const modelRegistry = pgTable(
     uniqueIndex("model_registry_provider_key_uq").on(t.provider, t.modelKey),
     // At most one default per kind.
     uniqueIndex("model_registry_default_uq").on(t.kind).where(sql`${t.isDefault}`),
-    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0`),
+    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0 and ${t.perMegapixel} >= 0`),
   ],
 );
 
 export const POST_STATUSES = ["planned", "generating", "ready", "needs_review", "failed", "approved", "published", "skipped"] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
 export type PostContent = { caption: string; hashtags: string[]; parts?: string[] };
+/** Images of a post (TASK-015): none yet → queued → rendering → ready | failed. */
+export const MEDIA_STATUSES = ["none", "queued", "rendering", "ready", "failed"] as const;
+export type MediaStatus = (typeof MEDIA_STATUSES)[number];
 export const POST_FORMATS = ["text", "image", "carousel", "thread", "video"] as const;
 export type PostFormat = (typeof POST_FORMATS)[number];
 /** What a content plan says about a post beyond its text (TASK-012). Everything optional; shown on the post page. */
@@ -68,6 +75,10 @@ export const posts = pgTable(
     fixAttempts: integer("fix_attempts").notNull().default(0),
     model: text("model"),
     error: text("error"),
+    mediaStatus: text("media_status").$type<MediaStatus>().notNull().default("none"),
+    mediaError: text("media_error"),
+    /** Who asked for the images last; the worker acts as this member (ADR-043). */
+    mediaRequestedBy: text("media_requested_by").references(() => user.id, { onDelete: "set null" }),
     createdBy: text("created_by").notNull().references(() => user.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -80,6 +91,7 @@ export const posts = pgTable(
     check("posts_time_ck", sql`${t.scheduledTime} is null or ${t.scheduledTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
     index("posts_org_scheduled_idx").on(t.orgId, t.scheduledOn),
     check("posts_type_ck", sql`${t.type} in ('text')`),
+    check("posts_media_status_ck", sql`${t.mediaStatus} in ('none','queued','rendering','ready','failed')`),
   ],
 );
 
@@ -98,6 +110,8 @@ export const usageLedger = pgTable(
     outputTokens: integer("output_tokens").notNull().default(0),
     cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
     cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    /** Image calls: billed megapixels (rounded up per image). */
+    megapixels: integer("megapixels").notNull().default(0),
     costMicroUsd: bigint("cost_micro_usd", { mode: "bigint" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

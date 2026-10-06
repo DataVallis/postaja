@@ -10,7 +10,7 @@ import { organization } from "./org";
 export type BulkScope =
   | { kind: "day"; date: string; brandId?: string | null }
   | { kind: "brand"; brandId: string; from: string; to: string | null };
-export type BulkStep = "text";
+export type BulkStep = "text" | "image";
 export type BulkRunStatus = "queued" | "running" | "done" | "cancelled";
 export type BulkItemStatus = "queued" | "running" | "done" | "skipped" | "failed";
 
@@ -52,6 +52,6 @@ export const bulkItems = pgTable(
     index("bulk_items_org_idx").on(t.orgId),
     uniqueIndex("bulk_items_run_post_step_uq").on(t.runId, t.postId, t.step),
     check("bulk_items_status_ck", sql`${t.status} in ('queued','running','done','skipped','failed')`),
-    check("bulk_items_step_ck", sql`${t.step} in ('text')`),
+    check("bulk_items_step_ck", sql`${t.step} in ('text','image')`),
   ],
 );

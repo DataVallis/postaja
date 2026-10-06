@@ -5,7 +5,7 @@ import { z } from "zod";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
-import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived } from "@/server/brands/service";
+import { addChannel, BrandError, createBrand, removeChannel, saveImageTemplate, saveProfile, setBrandArchived } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
@@ -143,4 +143,33 @@ export async function discardCgpDraftAction(f: FormData): Promise<void> {
   if (!ctx) return;
   await discardDraft(getDb(), ctx, str(f, "draftId")).catch(() => undefined);
   revalidatePath(`/app/brands/${str(f, "brandId")}`);
+}
+
+/** Image template and colours (TASK-015) → a new profile version. Owner only. */
+export async function saveImageTemplateAction(_p: ActionState, f: FormData): Promise<ActionState> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return { error: "forbidden" };
+  const brandId = str(f, "brandId");
+  const color = (k: string) => (/^#[0-9a-fA-F]{6}$/.test(str(f, k)) ? str(f, k) : undefined);
+  try {
+    const r = await saveImageTemplate(getDb(), ctx, brandId, {
+      template: {
+        layout: str(f, "layout") as "card",
+        background: str(f, "background") as "ai",
+        label: str(f, "label") as "category",
+        accentLine: str(f, "accentLine") as "last",
+        uppercase: f.get("uppercase") === "on",
+        typeface: str(f, "typeface") as "sans",
+        overlay: Number(str(f, "overlay") || "0.65"),
+        footerText: str(f, "footerText"),
+        logoId: str(f, "logoId") || null,
+        fontId: str(f, "fontId") || null,
+      },
+      colors: { background: color("bg"), text: color("fg"), accent: color("accent") },
+    });
+    revalidatePath(`/app/brands/${brandId}`);
+    return { ok: `v${r.version}` };
+  } catch (e) {
+    return { error: errorCode(e) };
+  }
 }

@@ -38,7 +38,7 @@ function echoLlm() {
 /** Records jobs; `drain` runs them like a worker would. */
 function memoryQueue() {
   const jobs: { name: string; data: PostTextJob; key: string }[] = [];
-  const q: JobQueue = { async send(name, data, key) { jobs.push({ name, data, key }); } };
+  const q: JobQueue = { async send(name, data, key) { jobs.push({ name, data: data as PostTextJob, key }); } };
   return { q, jobs };
 }
 

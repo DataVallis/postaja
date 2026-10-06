@@ -3,5 +3,5 @@
 set -e
 cp -r public .next/standalone/ 2>/dev/null || true
 mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/
-cp -r drizzle .next/standalone/
+cp -r drizzle assets .next/standalone/
 cd .next/standalone && exec node server.js

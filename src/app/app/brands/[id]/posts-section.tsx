@@ -31,7 +31,8 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
               <option value="30">{tb("next30")}</option>
               <option value="all">{tb("allPlanned")}</option>
             </select>
-            <button type="submit" className={buttonClass("primary")}>{tb("brandButton")}</button>
+            <button type="submit" name="steps" value="text" className={buttonClass("primary")}>{tb("brandButton")}</button>
+            <button type="submit" name="steps" value="text,image" className={buttonClass("secondary")}>{tb("bothButton")}</button>
           </form>
         </Card>
       ) : null}

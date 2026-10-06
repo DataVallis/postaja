@@ -10,3 +10,4 @@ export * from "./schema/generation";
 export * from "./schema/bulk";
 export * from "./schema/oauth";
 export * from "./schema/mcp";
+export * from "./schema/media";
