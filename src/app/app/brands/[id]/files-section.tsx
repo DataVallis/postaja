@@ -43,10 +43,11 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
           {files.logos.length === 0 ? <p className="text-sm text-muted">{t("noLogos")}</p> : null}
           <ul className="grid grid-cols-2 gap-3" data-testid="logos">
             {files.logos.map((l) => (
-              <li key={l.id} className="grid gap-2">
-                <a href={href("asset", l.id)} className="grid h-28 place-items-center rounded-xl bg-paper p-4 ring-1 ring-ink/10 focus-visible:outline-2 focus-visible:outline-fg dark:bg-paper/90">
+              <li key={l.id} className="grid min-w-0 gap-2">
+                {/* Fixed frame; the image is scaled to fit inside it whatever its size or proportions. */}
+                <a href={href("asset", l.id)} className="relative block h-28 overflow-hidden rounded-xl bg-paper ring-1 ring-line focus-visible:outline-2 focus-visible:outline-fg" data-testid="logo-frame">
                   {/* eslint-disable-next-line @next/next/no-img-element -- private presigned redirect, not optimisable */}
-                  <img src={href("asset", l.id)} alt={t("logoAlt", { name: l.filename })} className="max-h-full max-w-full object-contain" />
+                  <img src={href("asset", l.id)} alt={t("logoAlt", { name: l.filename })} className="absolute inset-0 h-full w-full object-contain p-4" />
                 </a>
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="truncate text-muted">{l.filename}</span>

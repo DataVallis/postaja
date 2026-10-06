@@ -78,6 +78,14 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await expect(log.getByRole("alert").filter({ hasText: "Brand/icon.svg" })).toContainText("te vrste datoteke ne sprejemamo");
   await expect(p.getByRole("img", { name: "Logotip Logo.png" })).toBeVisible();
   await expect.poll(() => p.getByRole("img", { name: "Logotip Logo.png" }).evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(240);
+  // A big square mark next to a wide logo stays inside its card (owner feedback 2026-10-06: images stuck out).
+  await p.getByLabel("Dodaj logotip").setInputFiles(file("mark-square.png", "image/png", await image("png", 1600, 1600)));
+  await expect(p.getByRole("img", { name: "Logotip mark-square.png" })).toBeVisible();
+  for (const frame of await p.getByTestId("logo-frame").all()) {
+    const f = (await frame.boundingBox())!;
+    const i = (await frame.getByRole("img").boundingBox())!;
+    expect(i.x >= f.x && i.y >= f.y && i.x + i.width <= f.x + f.width + 0.5 && i.y + i.height <= f.y + f.height + 0.5).toBe(true);
+  }
   await expect(p.getByTestId("fonts")).toContainText("Tiny Sans");
   await expect(p.getByTestId("fonts")).toContainText("vsi šumniki so na voljo");
   await expect(p.getByTestId("sources")).toContainText("Brief – č.pdf");
