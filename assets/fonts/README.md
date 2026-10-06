@@ -10,3 +10,4 @@ fallback after a brand font). Each file is the Fontsource Latin + Latin Extended
 | `grotesk` | `SpaceGrotesk-Regular.woff`, `SpaceGrotesk-Bold.woff` | `@fontsource/space-grotesk@5.3.0` |
 | `serif` | `PlayfairDisplay-Regular.woff`, `PlayfairDisplay-Bold.woff` | `@fontsource/playfair-display@5.3.0` |
 | `mono` | `JetBrainsMono-Regular.woff`, `JetBrainsMono-Bold.woff` | `@fontsource/jetbrains-mono@5.3.0` |
+| fallback `symbols` | `NotoSansSymbols-Regular.woff` | `@fontsource/noto-sans-symbols-2@5.3.0` + `@fontsource/noto-sans-symbols@5.3.0` (symbols subsets merged): ✓ ✗ → ★ ● ■ ▲ … |

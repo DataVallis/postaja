@@ -71,7 +71,7 @@ describe("text", () => {
 
 describe("render", () => {
   it("built-in fonts cover č š ž ć đ", () => {
-    for (const f of fs.readdirSync("assets/fonts").filter((x) => x.endsWith(".woff"))) {
+    for (const f of fs.readdirSync("assets/fonts").filter((x) => x.endsWith(".woff") && !x.startsWith("NotoSansSymbols"))) {
       expect(inspectFont(woffToSfnt(fs.readFileSync(path.join("assets/fonts", f)))).missingGlyphs, f).toEqual([]);
     }
   });
@@ -102,6 +102,21 @@ describe("render", () => {
     let red = 0;
     for (let i = 0; i < data.length; i += info.channels) if (data[i] > 190 && data[i + 1] < 60 && data[i + 2] < 80) red++;
     expect(red).toBeGreaterThan(500);
+  });
+
+  it("symbols the text fonts lack (✓ ✗ ★) are drawn from the symbols fallback, not as empty boxes", async () => {
+    const t = mono.templates[1];
+    const ink = async (label: string) => {
+      const png = await renderTemplate(mono, t, { width: 1080, height: 1080 }, { slots: { label } });
+      const { data, info } = await sharp(png).extract({ left: 86, top: 86, width: 120, height: 54 }).raw().toBuffer({ resolveWithObject: true });
+      let n = 0;
+      for (let i = 0; i < data.length; i += info.channels) if (data[i + 1] > 180) n++; // the green accent
+      return n;
+    };
+    const check = await ink("✓");
+    expect(check).toBeGreaterThan(30);
+    // A missing glyph would be drawn as the same hollow box for every character; ✓ and ★ differ.
+    expect(Math.abs((await ink("★")) - check)).toBeGreaterThan(10);
   });
 
   it("a design asking for the brand font falls back to a built-in one when none is uploaded", async () => {

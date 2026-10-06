@@ -15,6 +15,7 @@ const DSL = `How a design is described (Postaja renders it exactly; every letter
   generated illustration in a box. A template background is a colour, a gradient, or a full-bleed illustration with an overlay
   (use an overlay strong enough that text stays readable; fade "bottom" darkens towards the text).
 - Colours are palette keys (background, surface, text, muted, accent, accent2) or #hex. Keep contrast WCAG-readable.
+- Characters: any Latin text with č š ž ć đ, punctuation, arrows and simple symbols (✓ ✗ → ★ ● ■ ▲); no emoji.
 - Fonts: built-in families sans (Inter), grotesk (Space Grotesk), serif (Playfair Display), mono (JetBrains Mono), or "brand"
   (the brand's own font, only if one is uploaded). Weight 400 or 700.`;
 
