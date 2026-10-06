@@ -44,7 +44,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: product spec v0.2, architecture v0.2, ADR-001…025, manifest, brand identity (logo), brand CGP template.
 - 2026-10-05: Hetzner Cloud Firewall on the dev server (asisto 5432/6379/3000 were public; now closed). DNS for dev-postaja/postaja set.
 - 2026-10-05: TASK-001 scaffold — PR #1 merged to `dev` (31577b9), CI green.
-- 2026-10-06: TASK-005c smart uploads (dropzone, auto-sorting, ZIP, WOFF/WOFF2, language fixes; owner feedback) — PR #16.
+- 2026-10-06: Direction change (ADR-035): no AI-built CGP; owner delivers CGP + materials. TASK-006 dropped — PR #17.
+- 2026-10-06: TASK-005c smart uploads (dropzone, auto-sorting, ZIP, WOFF/WOFF2, language fixes; owner feedback) — PR #16, deployed (Deploy dev a2000e6 green).
 - 2026-10-05: TASK-005b part 2 (upload UI + routes) — PR #15, deployed (Deploy dev 1018a42 green).
 - 2026-10-05: TASK-005b part 1 (server side: S3 storage, brand_sources/brand_assets, sniffing, fonts, sharp, tenant separation) — PR #14. Part 2 = upload UI.
 - 2026-10-05: **S3 ready (owner, 19:48)**: Hetzner Object Storage, location **fsn1**, endpoint `https://fsn1.your-objectstorage.com`, bucket **`postaja-dev`** (private); secrets `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` set in GitHub environment `dev`. Owner requirement: files of each organization strictly separated.
@@ -57,20 +58,19 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: ADR-027 (dev behind host nginx) — PR #4. First deploy: Deploy dev run 37334467728 (setup=true) green; health ok with SHA 8445e2d.
 
 ## Owner's open actions
-1. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
-2. Swap 2 GB (TASK-002 Step B) — optional.
-3. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
+1. **`ANTHROPIC_API_KEY`** → GitHub → Settings → Environments → `dev` → secret (for TASK-007 on dev). Keep your own copy; never paste it in chat.
+2. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
+3. Swap 2 GB (TASK-002 Step B) — optional.
+4. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
 
 ## Next
-**TASK-006 — brand ingestion** (extract text/tables from `brand_sources`, synthesize a CGP proposal, owner reviews/accepts). TASK-005b is complete with PR #15 once merged and the owner's dev upload check passes.
-- Config: `S3_ENDPOINT=https://fsn1.your-objectstorage.com`, `S3_REGION=fsn1`, `S3_BUCKET=postaja-dev` (clear env in `config/deploy.dev.yml`); secrets `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (add to `.kamal/secrets.dev`, deploy workflow env, `env.secret`). Locally/CI: MinIO stand-in (ADR-006).
-- Owner requirement — tenant separation for files: keys `org/<orgId>/brand/<brandId>/<kind>/<uuid>.<ext>` generated server-side only (never from user input); bucket private; presigned GET ≤ 15 min issued only after `resolveOrgContext` + ownership check; DB row (`org_id`) is the source of truth for access, not the key prefix; cross-tenant tests for upload/read/delete/presign (B cannot get A's file or URL), with deliberate breaks.
-- Scope: logo, fonts (TTF/OTF, glyph check č š ž ć đ Č Š Ž Ć Đ), brand sources (PDF, DOCX, XLSX/CSV, PPTX, TXT/MD, images); size limits, MIME sniffing (magic bytes, not extension), images re-encoded with sharp.
-Then TASK-006 brand ingestion (AI builds the CGP from uploaded files).
-Latest numbers: TASK-006 (+005c in review), ADR-034. Latest PR: #16.
+**Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
+Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
+TASK-007 needs `ANTHROPIC_API_KEY` in GitHub environment `dev` (owner action). Tests mock the LLM; no key needed locally or in CI.
+Latest numbers: TASK-006 (dropped; next new task = TASK-007), ADR-035. Latest PR: #17.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.

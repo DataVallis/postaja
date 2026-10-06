@@ -6,7 +6,7 @@ Status: **Live on dev** (TASK-005b: PR #14, #15) · TASK-005c (auto-sorting, ZIP
 | What | Where |
 |---|---|
 | Bytes | S3 bucket (dev: Hetzner Object Storage `postaja-dev`, fsn1; local/CI: moto on `127.0.0.1:9000`) |
-| Rows (source of truth for access) | `brand_sources` (pdf/docx/xlsx/csv/pptx/text/image, `status` for TASK-006), `brand_assets` (logo/font, `meta`) — `drizzle/0007_brand_files.sql` |
+| Rows (source of truth for access) | `brand_sources` (pdf/docx/xlsx/csv/pptx/text/image, `status`/`extract` for text extraction used by generation, ADR-035), `brand_assets` (logo/font, `meta`) — `drizzle/0007_brand_files.sql` |
 | Key format | `org/<orgId>/brand/<brandId>/<kind>/<uuid>.<ext>` — built in `storageKey()`, never from input |
 | Service | `src/server/brands/files.ts`: `uploadBrandFile`, `listBrandFiles`, `brandFileUrl`, `deleteBrandFile` |
 | Checks | `src/server/files/sniff.ts` (magic bytes, OOXML part names), `font.ts` (cmap/name, diacritics), `images.ts` (sharp re-encode), `storage.ts` (S3 client, presign ≤ 15 min, Content-Disposition) |

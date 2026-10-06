@@ -1,6 +1,6 @@
 # Postaja — Product Spec
 
-Version 0.2 · 2026-10-05 · Owner: David Tacer (Data Vallis) · Host: `postaja.inzenirji.si`
+Version 0.3 · 2026-10-06 · Owner: David Tacer (Data Vallis) · Host: `postaja.inzenirji.si`
 Status of everything in this file: **Planned** unless marked otherwise.
 ADRs in `03-DECISIONS.md` override this file.
 
@@ -8,9 +8,10 @@ ADRs in `03-DECISIONS.md` override this file.
 
 ## 1. What Postaja is
 
-Postaja is a multi-brand AI content studio. An owner of several brands uploads whatever they have
-about each brand (PDFs, Word, Excel, decks, images, links, or the optional template); AI turns it into the
-brand's **CGP** (instructions, voice, rules, visual identity). The owner imports a content plan or lets AI
+Postaja is a multi-brand AI content studio. **It creates posts and ads from the brand's CGP and the materials
+the owner delivers** (ADR-035). The owner provides each brand's **CGP** (instructions, voice, rules, visual
+identity) and uploads **materials** (logo, fonts, documents, images, ZIPs); Postaja does **not** write or
+propose the CGP. The owner imports a content plan or lets AI
 propose one, generates ready-to-post content (text, single images, carousels, animations, video, ads in
 every required size) in one click, downloads it, publishes manually and sees what is done today.
 It never repeats a topic.
@@ -61,33 +62,26 @@ public self-serve signup and payments, team workflows beyond basic roles.
 
 ## 4. Brand profile (the brand's CGP)
 
-The CGP is built **from whatever the owner uploads** (§4.1). The template `templates/BRAND-CGP-TEMPLATE.md`
-is optional — one more source, not a required form. The structured profile below is what AI produces and
-what every generation uses.
+The CGP is **delivered by the owner** (ADR-035, supersedes ADR-018): written or pasted into the profile
+editor (the template `templates/BRAND-CGP-TEMPLATE.md` is a guide). Postaja does not generate, propose or merge
+the CGP. The structured profile below is what the owner maintains and what every generation uses.
 
-### 4.1 Brand ingestion ("upload anything")
+### 4.1 Brand materials ("upload anything") — inputs for generation
 
-1. **Upload sources** to a brand: PDF (incl. scanned), DOCX, XLSX/CSV, PPTX, MD/TXT, images (logo, past posts,
-   moodboards, brand book pages), URLs (website, existing social profile pages). Drag & drop, many at once.
-   Limits: 50 MB per file, 200 MB per brand by default (configurable per plan).
-2. **Extract** (per source, background job):
-   - PDF and images → sent to Claude directly (vision reads layouts, brand-book pages, scanned text).
-   - DOCX → text + embedded images; PPTX → slide text + slide images; XLSX/CSV → sheets as tables; URL → page text + main images.
-   - Images additionally: dominant colors (hex), detected fonts if named, style description, "is this a logo / past post / moodboard".
-   - Spreadsheets that look like a **content plan** (dates + topics/prompts) are offered for plan import (§6.1) instead of being merged into the CGP.
-3. **Synthesize** — AI merges all extracts into the structured profile (fields in the table below) and writes
-   the CGP markdown. Every field keeps **source references** (which file/page it came from).
-   Conflicts between sources (e.g. two different primary colors) are listed as questions, not silently resolved.
-4. **Review** — side-by-side: proposed profile vs. current. Owner edits, answers conflict questions, accepts.
-   Accept = new profile version (§4 versioning). Nothing is applied without the owner's accept.
-5. **Re-ingest** — adding a source later produces a **diff proposal** (only changed fields), not a rewrite.
-6. **Knowledge** — sources stay attached to the brand. Long material (price lists, product catalogues,
-   FAQs, course syllabus) is chunked and embedded; generation retrieves the relevant chunks per post
-   (facts, product names, prices) instead of stuffing everything into the prompt.
-7. Uploaded content is **data, not instructions**: text inside a source that tries to instruct the AI
-   (e.g. "ignore previous rules") is never executed; the synthesis prompt treats sources as quoted material.
-8. Logos, fonts and reference images found in sources are proposed as brand assets (owner confirms).
-   Fonts are only accepted as real font files (TTF/OTF) and must pass the diacritics check (§13).
+Materials are what Postaja creates **from**, next to the CGP. They are never turned into a CGP.
+
+1. **Upload** to a brand: one drop zone for documents (PDF, DOCX, XLSX/CSV, PPTX, MD/TXT), images, fonts
+   (TTF/OTF/WOFF/WOFF2) and whole ZIPs; files are sorted into logos, fonts and sources (ADR-033, ADR-034). **Live on dev.**
+2. **Used in generation:**
+   - Logo and fonts → rendering of single images, carousels and ads (fonts must cover the brand's language, §13).
+   - Images (product photos, past posts, moodboards) → references for image generation and for the visual style.
+   - Documents (price lists, product catalogues, FAQs, course syllabus, campaign briefs) → facts the LLM may use
+     in a post. Their text is extracted once; long material is chunked and the relevant parts are retrieved per post
+     instead of stuffing everything into the prompt (phase 2: embeddings, ADR-008).
+   - Spreadsheets that look like a **content plan** (dates + topics/prompts) are offered for plan import (§6.1).
+3. Uploaded content is **data, not instructions**: text inside a material that tries to instruct the AI
+   (e.g. "ignore previous rules") is never executed; prompts quote materials as data.
+4. The CGP always wins over a material when they disagree (e.g. a tone or colour in an old brochure).
 
 | Field | Notes |
 |---|---|
@@ -360,7 +354,7 @@ Recognised columns: `date`, `channel`, `type`, `topic`, `prompt` (image prompt),
 | Phase | Content |
 |---|---|
 | 0 | Scaffold, CI, Kamal deploy of an empty app to dev (`postaja.inzenirji.si` dev host) |
-| 1 — MVP for David | Auth, orgs, super admin basics, **brand ingestion from any files** + CGP review/versioning, rules, channels, **format presets**, text + single image + carousel (PNG + PDF), CSV/XLSX import, AI suggestions, no-repeat, dashboard, export, cost tracking and caps |
+| 1 — MVP for David | Auth, orgs, super admin basics, brand materials upload (done) + owner-provided CGP with versioning, rules, channels, **format presets**, text + single image + carousel (PNG + PDF), CSV/XLSX import, AI suggestions, no-repeat, dashboard, export, cost tracking and caps |
 | 1b | **Ads** (static, multi-placement, copy variants, `copy.csv`), **Animation** of images (§5.6), **competitor research** (§4.3) |
 | 2 | **Video posts** (§5.7), personas (DNA + passport, LoRA), persona video, brand knowledge retrieval, BYOK, consistency check |
 | 3 — selling | Landing page, self-serve signup, Stripe, onboarding, impersonation, direct publishing / scheduling / ad-manager upload where platform APIs allow |
@@ -369,7 +363,7 @@ Recognised columns: `date`, `channel`, `type`, `topic`, `prompt` (image prompt),
 
 ## 15. MVP acceptance (phase 1)
 
-- Each of David's brands is configured **from his existing files** (no template filled by hand), reviewed and accepted in under 20 minutes per brand.
+- Each of David's brands is configured with his own CGP and materials (logo, fonts, documents) in under 20 minutes per brand.
 - Every output's pixel size matches its format preset exactly (automated check).
 - No output marked `ready` violates a platform, channel or brand rule (chars, hashtags, dimensions) without a logged override.
 - David's four brands are configured; on a normal day he generates, reviews, downloads and marks as published all channels in **under 15 minutes**.
