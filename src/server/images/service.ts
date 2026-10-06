@@ -221,7 +221,7 @@ export function imageFailureCode(e: unknown): string | null {
   if (e instanceof ImageError) return e.code;
   if (e instanceof SpendCapError) return "SPEND_CAP";
   if (e instanceof ImageJobError) return e.code;
-  if (e instanceof LlmError) return e.code === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : "LLM_PROVIDER";
+  if (e instanceof LlmError) return e.code === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : `LLM_PROVIDER:${e.message}`.slice(0, 200);
   return null;
 }
 

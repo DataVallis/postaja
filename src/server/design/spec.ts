@@ -9,6 +9,17 @@ export const FAMILIES = ["sans", "grotesk", "serif", "mono"] as const;
 export const PALETTE_KEYS = ["background", "surface", "text", "muted", "accent", "accent2"] as const;
 export type PaletteKey = (typeof PALETTE_KEYS)[number];
 
+/** { headline?, subhead?, … } as plain optional properties (simpler for the tool's JSON schema than a record). */
+export function slotTexts(max: number) {
+  const v = z.string().max(max).optional();
+  return z.object(Object.fromEntries(SLOTS.map((k) => [k, v])) as Record<Slot, typeof v>);
+}
+/** The same, where Claude may also answer null for an unused slot. */
+export function nullableSlotTexts(max: number) {
+  const v = z.string().max(max).nullable().optional();
+  return z.object(Object.fromEntries(SLOTS.map((k) => [k, v])) as Record<Slot, typeof v>);
+}
+
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 /** A palette key or an explicit #rrggbb. */
 const colorRef = z.union([z.enum(PALETTE_KEYS), hex]);
@@ -83,7 +94,7 @@ export const templateSchema = z.object({
   }),
   elements: z.array(elementSchema).min(1).max(24),
   /** Example content for the preview, in the brand's language. */
-  sample: z.partialRecord(z.enum(SLOTS), z.string().max(400)).default({}),
+  sample: slotTexts(400).default({}),
 });
 export type Template = z.infer<typeof templateSchema>;
 

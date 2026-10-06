@@ -44,7 +44,8 @@ describe("spec", () => {
     const s = designJsonSchema();
     expect(s.type).toBe("object");
     expect(Object.keys(s.properties as object)).toEqual(["summary", "illustrationStyle", "palette", "typography", "templates"]);
-    expect(JSON.stringify(s)).not.toContain("$schema");
+    // Plain JSON Schema only: no $schema, $ref or record constructs (an API 400 on dev, 2026-10-06, made us strict).
+    for (const k of ["$schema", "$ref", "propertyNames"]) expect(JSON.stringify(s)).not.toContain(k);
   });
 });
 

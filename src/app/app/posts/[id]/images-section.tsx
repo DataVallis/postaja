@@ -43,7 +43,15 @@ export async function ImagesSection(props: {
       {!props.templates ? (
         <p className="text-sm" data-testid="no-design">{t("noDesign")} <Link href={props.designHref} className="underline underline-offset-4">{t("createDesign")}</Link></p>
       ) : null}
-      {props.status === "failed" ? <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm">{t(`errors.${props.error ?? "FAILED"}`)}</p> : null}
+      {props.status === "failed" ? (() => {
+        const [code, ...rest] = (props.error ?? "FAILED").split(":");
+        return (
+          <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm">
+            {t.has(`errors.${code}`) ? t(`errors.${code}`) : t("errors.FAILED")}
+            {rest.length ? <span className="mt-1 block text-xs text-muted">{rest.join(":")}</span> : null}
+          </p>
+        );
+      })() : null}
       {props.requestError ? <p role="alert" className="text-sm text-danger">{t(`errors.${props.requestError}`)}</p> : null}
       {props.templates && !props.aiConfigured ? <p className="text-sm text-muted">{t("noKey")}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
