@@ -264,7 +264,8 @@
       "language_not_in_brand": "Jezik kanala mora biti eden od jezikov branda."
     },
     "ok": {
-      "channelAdded": "Kanal je dodan."
+      "channelAdded": "Kanal je dodan.",
+      "channelSaved": "Kanal je shranjen."
     },
     "chHashtagsMax": "Največ hashtagov na kanalu",
     "linksNotClickable": "povezave niso klikljive",
@@ -403,7 +404,10 @@
       "option": "{label} · {input} / {output}",
       "save": "Shrani model",
       "saved": "Shranjeno."
-    }
+    },
+    "editChannel": "Uredi kanal",
+    "saveChannel": "Shrani kanal",
+    "channelLanguageMismatch": "Jezik kanala ({lang}) ni med jeziki branda — objave so v jeziku branda. Popravi ga v »Uredi kanal«."
   },
   "Posts": {
     "title": "Objave",
@@ -754,7 +758,9 @@
       "char_count": "Število znakov"
     },
     "rereadColumns": "Preberi znova",
-    "discard": "Zavrzi uvoz"
+    "discard": "Zavrzi uvoz",
+    "reopen": "Uvozi manjkajoče",
+    "reopenHint": "Si dodal kanal (npr. X ali LinkedIn), ki ga ob uvozu še ni bilo? Odpri uvoz znova, poveži platformo s kanalom in uvozi — že uvožene objave se ne podvojijo."
   },
   "PostFormats": {
     "text": "besedilo",

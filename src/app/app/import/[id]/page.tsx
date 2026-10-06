@@ -7,7 +7,7 @@ import { getDb } from "@/server/db/client";
 import { PLAN_FIELDS, PLAN_PLATFORMS, type ColumnMapping } from "@/server/plans/mapping";
 import { groupKey, ImportError, importView } from "@/server/plans/service";
 import type { PlanTable } from "@/server/plans/table";
-import { discardImportAction, saveImportAction, saveMappingAction } from "../actions";
+import { discardImportAction, reopenImportAction, saveImportAction, saveMappingAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,14 @@ export default async function ImportReview({ params, searchParams }: { params: P
       {r.status === "imported" ? (
         <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
           <span>{t("doneSummary", { n: r.createdCount })}</span>
-          <Link href={`/app/posts?import=${r.id}`} className={buttonClass("primary", "sm")}>{t("seePosts")}</Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <form action={reopenImportAction} data-testid="reopen-import">
+              <input type="hidden" name="importId" value={r.id} />
+              <button type="submit" className={buttonClass("secondary", "sm")}>{t("reopen")}</button>
+            </form>
+            <Link href={`/app/posts?import=${r.id}`} className={buttonClass("primary", "sm")}>{t("seePosts")}</Link>
+          </div>
+          <p className="w-full text-xs text-muted">{t("reopenHint")}</p>
         </Card>
       ) : null}
 

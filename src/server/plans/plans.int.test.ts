@@ -12,7 +12,7 @@ import { LlmError } from "../llm/types";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { editPost } from "../posts/generate";
-import { confirmImport, discardImport, importView, listImports, startImport, updateImport } from "./service";
+import { confirmImport, discardImport, importView, listImports, reopenImport, startImport, updateImport } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -181,6 +181,19 @@ describe("confirming", () => {
     const other = await start(A, plan()).id;
     await discardImport(db, A, other);
     await expect(confirmImport(db, A, other)).rejects.toMatchObject({ code: "BAD_STATE" });
+  });
+
+  it("rows without a channel at import time can be imported later: add the channel, reopen, import — nothing doubles", async () => {
+    const bImport = await start(B, plan()).id;
+    expect(await confirmImport(db, B, bImport)).toMatchObject({ created: 3, noChannel: 2 }); // only Instagram existed
+    const brandB = (await sql`select brand_id from channels where id = ${igB}`)[0].brand_id as string;
+    const liB = (await addChannel(db, B, brandB, { ...chan("linkedin", "davidtacer"), language: "en" })).id;
+    await expect(reopenImport(db, A, bImport)).rejects.toMatchObject({ code: "BAD_STATE" }); // other org
+    await reopenImport(db, B, bImport);
+    expect((await importView(db, B, bImport)).groups.find((g) => g.platform === "linkedin")!.channelId).toBe(liB); // suggested now
+    expect(await confirmImport(db, B, bImport)).toMatchObject({ created: 1, duplicates: 3, noChannel: 1 });
+    expect((await sql`select created_count, status from plan_imports where id = ${bImport}`)[0]).toEqual({ created_count: 4, status: "imported" });
+    await expect(reopenImport(db, A, await start(A, plan()).id)).rejects.toMatchObject({ code: "BAD_STATE" }); // a draft is not "imported"
   });
 
   it("an editor can import too", async () => {

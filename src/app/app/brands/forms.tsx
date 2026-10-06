@@ -2,7 +2,7 @@
 import { useActionState, useRef, useState } from "react";
 import { CgpImport } from "./cgp-import";
 import { useTranslations } from "next-intl";
-import { addChannelAction, createBrandAction, discardCgpDraftAction, saveProfileAction, type ActionState } from "./actions";
+import { addChannelAction, createBrandAction, discardCgpDraftAction, saveProfileAction, updateChannelAction, type ActionState } from "./actions";
 
 export const input = "rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal disabled:opacity-60";
 const button = "rounded-lg bg-signal px-4 py-2 font-semibold text-ink disabled:opacity-60";
@@ -142,41 +142,52 @@ export function ProfileForm(p: ProfileProps) {
   );
 }
 
-export function ChannelForm({ brandId, languages, presets }: { brandId: string; languages: string[]; presets: { key: string; platform: string; width: number; height: number; media: string }[] }) {
+export type ChannelValues = {
+  id: string; platform: string; handle: string; language: string; goal: { postsPerDay: number; weekdays: number[] };
+  rules: { hashtagsMax?: number }; allowedTypes: string[]; defaultPresetKey: string | null;
+};
+
+/** Add a channel, or edit one (`channel` given; the platform stays). Field ids are unique per form on the page. */
+export function ChannelForm({ brandId, languages, presets, channel }: { brandId: string; languages: string[]; presets: { key: string; platform: string; width: number; height: number; media: string }[]; channel?: ChannelValues }) {
   const t = useTranslations("Brands");
-  const [state, action, pending] = useActionState(addChannelAction, undefined);
-  const [platform, setPlatform] = useState<string>("instagram");
+  const [state, action, pending] = useActionState(channel ? updateChannelAction : addChannelAction, undefined);
+  const [platform, setPlatform] = useState<string>(channel?.platform ?? "instagram");
+  const p = channel ? `ch-${channel.id.slice(0, 8)}-` : "";
+  // A channel language outside the brand's languages (an old channel) is shown so the owner sees and changes it.
+  const langs = LANGS.filter((l) => languages.includes(l) || l === channel?.language);
   return (
-    <form action={action} className="grid gap-4 rounded-xl border border-line p-4">
+    <form action={action} className="grid gap-4 rounded-xl border border-line p-4" data-testid={channel ? "channel-edit" : "channel-add"}>
       <input type="hidden" name="brandId" value={brandId} />
+      {channel ? <input type="hidden" name="channelId" value={channel.id} /> : null}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field id="platform" label={t("platform")}>
-          <select id="platform" name="platform" value={platform} onChange={(e) => setPlatform(e.target.value)} className={input}>
-            {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+        <Field id={`${p}platform`} label={t("platform")}>
+          <select id={`${p}platform`} name="platform" value={platform} onChange={(e) => setPlatform(e.target.value)} disabled={!!channel} className={input}>
+            {PLATFORMS.map((pl) => <option key={pl} value={pl}>{pl}</option>)}
           </select>
         </Field>
-        <Field id="handle" label={t("handle")}><input id="handle" name="handle" required className={input} /></Field>
-        <Field id="language" label={t("language")}>
-          <select id="language" name="language" defaultValue={languages[0]} className={input}>
-            {LANGS.filter((l) => languages.includes(l)).map((l) => <option key={l} value={l}>{t(`lang.${l}`)}</option>)}
+        {channel ? <input type="hidden" name="platform" value={platform} /> : null}
+        <Field id={`${p}handle`} label={t("handle")}><input id={`${p}handle`} name="handle" required defaultValue={channel?.handle} className={input} /></Field>
+        <Field id={`${p}language`} label={t("language")}>
+          <select id={`${p}language`} name="language" defaultValue={channel && languages.includes(channel.language) ? channel.language : languages[0]} className={input}>
+            {langs.map((l) => <option key={l} value={l}>{t(`lang.${l}`)}</option>)}
           </select>
         </Field>
-        <Field id="postsPerDay" label={t("postsPerDay")}><input id="postsPerDay" name="postsPerDay" type="number" min={0} max={10} defaultValue={1} className={input} /></Field>
-        <Field id="defaultPresetKey" label={t("defaultPreset")}>
-          <select id="defaultPresetKey" name="defaultPresetKey" className={input} key={platform}>
+        <Field id={`${p}postsPerDay`} label={t("postsPerDay")}><input id={`${p}postsPerDay`} name="postsPerDay" type="number" min={0} max={10} defaultValue={channel?.goal.postsPerDay ?? 1} className={input} /></Field>
+        <Field id={`${p}defaultPresetKey`} label={t("defaultPreset")}>
+          <select id={`${p}defaultPresetKey`} name="defaultPresetKey" className={input} key={platform} defaultValue={channel?.defaultPresetKey ?? ""}>
             <option value="">—</option>
-            {presets.filter((p) => p.platform === platform).map((p) => (
-              <option key={p.key} value={p.key}>{p.key} · {p.width}×{p.height} {p.media}</option>
+            {presets.filter((pr) => pr.platform === platform).map((pr) => (
+              <option key={pr.key} value={pr.key}>{pr.key} · {pr.width}×{pr.height} {pr.media}</option>
             ))}
           </select>
         </Field>
-        <Field id="chHashtagsMax" label={t("chHashtagsMax")}><input id="chHashtagsMax" name="chHashtagsMax" type="number" min={0} className={input} /></Field>
+        <Field id={`${p}chHashtagsMax`} label={t("chHashtagsMax")}><input id={`${p}chHashtagsMax`} name="chHashtagsMax" type="number" min={0} defaultValue={channel?.rules.hashtagsMax} className={input} /></Field>
       </div>
       <fieldset className="flex flex-wrap gap-4">
         <legend className="mb-1 text-sm font-medium">{t("weekdays")}</legend>
         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
           <label key={d} className="flex items-center gap-1 text-sm">
-            <input type="checkbox" name="weekdays" value={d} defaultChecked={d <= 5} /> {t(`days.${d}`)}
+            <input type="checkbox" name="weekdays" value={d} defaultChecked={channel ? channel.goal.weekdays.includes(d) : d <= 5} /> {t(`days.${d}`)}
           </label>
         ))}
       </fieldset>
@@ -184,12 +195,26 @@ export function ChannelForm({ brandId, languages, presets }: { brandId: string; 
         <legend className="mb-1 text-sm font-medium">{t("allowedTypes")}</legend>
         {TYPES.map((ty) => (
           <label key={ty} className="flex items-center gap-1 text-sm">
-            <input type="checkbox" name="allowedTypes" value={ty} defaultChecked={ty === "single_image" || ty === "carousel"} /> {t(`types.${ty}`)}
+            <input type="checkbox" name="allowedTypes" value={ty} defaultChecked={channel ? channel.allowedTypes.includes(ty) : ty === "single_image" || ty === "carousel"} /> {t(`types.${ty}`)}
           </label>
         ))}
       </fieldset>
-      <button type="submit" disabled={pending} className={button}>{t("addChannel")}</button>
+      <button type="submit" disabled={pending} className={button}>{channel ? t("saveChannel") : t("addChannel")}</button>
       <Feedback state={state} />
     </form>
+  );
+}
+
+/** "Uredi kanal": the edit form is only mounted when opened, so a page with several channels has one form at a time. */
+export function ChannelEdit(props: Parameters<typeof ChannelForm>[0] & { channel: ChannelValues }) {
+  const t = useTranslations("Brands");
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline">
+        {t("editChannel")}
+      </button>
+      {open ? <div className="mt-3"><ChannelForm {...props} /></div> : null}
+    </div>
   );
 }

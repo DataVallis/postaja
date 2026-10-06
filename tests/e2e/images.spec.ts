@@ -57,6 +57,13 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.getByLabel("Profil (@ime)").fill("@cherr");
   await p.getByRole("button", { name: "Dodaj kanal" }).click();
   await expect(p.getByTestId("channels")).toContainText("@cherr");
+  // Edit the channel: the language list and the handle are changeable afterwards.
+  await p.getByTestId("channels").getByRole("button", { name: "Uredi kanal" }).click();
+  const edit = p.getByTestId("channel-edit");
+  await edit.getByLabel("Profil (@ime)").fill("@cherr.io");
+  await edit.getByRole("button", { name: "Shrani kanal" }).click();
+  await expect(edit.getByRole("status")).toHaveText("Kanal je shranjen.");
+  await expect(p.getByTestId("channels")).toContainText("instagram · @cherr.io");
   // A logo and two past posts (the brand's examples).
   await tab("Datoteke");
   const logo = await sharp({ create: { width: 800, height: 200, channels: 4, background: "#ffffff" } }).png().toBuffer();

@@ -302,9 +302,18 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
       else if (status === "planned") counts.planned++;
       else if (status === "needs_review") counts.needsReview++;
     }
-    await forOrg(t, ctx).update(planImports, { status: "imported", createdCount: counts.created, importedAt: new Date() }, eq(planImports.id, id));
+    await forOrg(t, ctx).update(planImports, { status: "imported", createdCount: sql`${planImports.createdCount} + ${counts.created}`, importedAt: new Date() }, eq(planImports.id, id));
   });
   return counts;
+}
+
+/**
+ * An imported plan can be opened again — e.g. after adding the X or LinkedIn channel its rows had no channel for. The
+ * owner maps the new channels and imports again; posts that already exist are skipped as duplicates.
+ */
+export async function reopenImport(db: Db, ctx: OrgContext, id: string) {
+  const rows = await forOrg(db, ctx).update(planImports, { status: "draft" }, and(eq(planImports.id, id), eq(planImports.status, "imported"))!);
+  if (!rows.length) throw new ImportError("BAD_STATE");
 }
 
 export async function discardImport(db: Db, ctx: OrgContext, id: string) {
