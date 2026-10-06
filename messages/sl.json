@@ -333,5 +333,80 @@
         "failed": "nalaganje ni uspelo, poskusi znova."
       }
     }
+  },
+  "Posts": {
+    "title": "Objave",
+    "intro": "Napiši, kaj želiš objaviti. Postaja napiše objavo iz CGP-ja in materialov branda ter jo preveri po pravilih platforme, kanala in branda.",
+    "channel": "Kanal",
+    "brief": "Kaj objavimo?",
+    "briefPlaceholder": "npr. Napoved jesenskega tečaja, poudari zgodnjo prijavo do 15. 10.",
+    "briefHint": "Tema, poudarek, morebitna ponudba. Dejstva naj bodo v CGP-ju ali materialih.",
+    "generate": "Ustvari objavo",
+    "generating": "Pišem …",
+    "generatingHint": "Traja nekaj sekund.",
+    "noChannels": "Brand še nima kanala. Dodaj ga spodaj v razdelku Kanali.",
+    "brand": "Brand",
+    "post": "Objava",
+    "briefWas": "Naročilo",
+    "text": "Besedilo",
+    "part": "Del {n} od {of}",
+    "save": "Shrani spremembe",
+    "copy": "Kopiraj besedilo",
+    "copied": "Kopirano",
+    "chars": "{n} / {max} znakov",
+    "over": "preveč",
+    "tags": "{n} / {max} hashtagov",
+    "retry": "Poskusi znova",
+    "failuresTitle": "Objava krši pravila — popravi besedilo ali jo vseeno odobri:",
+    "cost": "strošek {usd} $",
+    "fixed": "samodejno popravljeno enkrat",
+    "ok": {
+      "saved": "Shranjeno, vsa pravila so izpolnjena.",
+      "savedWithIssues": "Shranjeno, a objava še krši pravila (spodaj)."
+    },
+    "status": {
+      "generating": "v pripravi",
+      "ready": "pripravljena",
+      "needs_review": "za pregled",
+      "failed": "ni uspelo",
+      "approved": "odobrena",
+      "published": "objavljena",
+      "skipped": "preskočena"
+    },
+    "to": {
+      "approved": "Odobri",
+      "published": "Označi kot objavljeno",
+      "skipped": "Preskoči",
+      "ready": "Vrni v pripravljene"
+    },
+    "violations": {
+      "caption_too_long": "Predolgo: {actual} znakov, dovoljeno {limit}.",
+      "too_many_hashtags": "Preveč hashtagov: {actual}, dovoljeno {limit}.",
+      "too_many_mentions": "Preveč omemb: {actual}, dovoljeno {limit}.",
+      "too_many_emoji": "Preveč emojijev: {actual}, dovoljeno {limit}.",
+      "links_not_allowed": "Povezave v besedilu niso dovoljene.",
+      "banned_word": "Prepovedana beseda: »{actual}«.",
+      "regex_must": "Manjka obvezni vzorec {limit}.",
+      "regex_must_not": "Vsebuje prepovedan vzorec {limit}.",
+      "missing_cta": "Objava se mora končati s CTA ({limit}).",
+      "thread_part_too_long": "Del {part} je predolg: {actual} znakov, dovoljeno {limit}.",
+      "too_many_thread_parts": "Preveč delov niti: {actual}, dovoljeno {limit}.",
+      "too_few_slides": "Premalo slajdov: {actual}, najmanj {limit}.",
+      "too_many_slides": "Preveč slajdov: {actual}, največ {limit}."
+    },
+    "errors": {
+      "SPEND_CAP": "Mesečni limit porabe organizacije je dosežen. Super admin ga lahko poviša.",
+      "PROVIDER": "AI storitev trenutno ne odgovarja. Poskusi znova čez minuto.",
+      "NOT_CONFIGURED": "AI ključ na strežniku ni nastavljen.",
+      "INVALID_OUTPUT": "AI je dvakrat vrnil neveljaven odgovor. Poskusi znova ali preoblikuj naročilo.",
+      "NO_TOOL_CALL": "AI ni vrnil objave. Poskusi znova.",
+      "NOT_FOUND": "Brand ali kanal ne obstaja.",
+      "ARCHIVED": "Brand je arhiviran.",
+      "NO_MODEL": "Ni nastavljenega AI modela (super admin).",
+      "BAD_STATE": "Objave v tem stanju ni mogoče urejati.",
+      "INVALID": "Preveri vnos (naročilo vsaj 3 znake).",
+      "FORBIDDEN": "Nimaš dostopa.",
+      "FAILED": "Nekaj ni uspelo. Poskusi znova."
+    }
   }
 }

@@ -11,6 +11,8 @@ export interface Storage {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
+  /** Whole object as bytes (server-side use only, e.g. material text for a prompt). */
+  get(key: string): Promise<Uint8Array>;
   presignGet(key: string, opts: { filename: string; contentType: string; inline: boolean; expiresIn?: number }): Promise<string>;
 }
 
@@ -66,6 +68,10 @@ export function createS3Storage(cfg: S3Config): Storage & { client: S3Client; bu
         if (status === 404) return false;
         throw e;
       }
+    },
+    async get(key) {
+      const r = await client.send(new GetObjectCommand({ Bucket, Key: key }));
+      return new Uint8Array(await r.Body!.transformToByteArray());
     },
     async presignGet(key, { filename, contentType, inline, expiresIn = DEFAULT_PRESIGN_SECONDS }) {
       if (!(expiresIn > 0 && expiresIn <= MAX_PRESIGN_SECONDS)) throw new Error("PRESIGN_TOO_LONG");

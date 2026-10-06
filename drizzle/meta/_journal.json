@@ -57,6 +57,20 @@
       "when": 1791224974727,
       "tag": "0007_brand_files",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791263796586,
+      "tag": "0008_generation",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791263797604,
+      "tag": "0009_seed_model_registry",
+      "breakpoints": true
     }
   ]
 }

@@ -20,7 +20,12 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
-  webServer: {
+  webServer: [{
+    // Anthropic API stand-in (tests/e2e/mock-anthropic.mjs); reached via the SDK's ANTHROPIC_BASE_URL.
+    command: "node tests/e2e/mock-anthropic.mjs",
+    port: 3199,
+    reuseExistingServer: false,
+  }, {
     command: `PORT=${PORT} HOSTNAME=127.0.0.1 ./scripts/start-standalone.sh`,
     env: {
       BETTER_AUTH_URL: `http://127.0.0.1:${PORT}`,
@@ -30,9 +35,11 @@ export default defineConfig({
       AUTH_MAGIC_LINK_RATE_MAX: "1000",
       EMAIL_TRANSPORT: "file",
       MAIL_DIR: MAIL_DIR,
+      ANTHROPIC_API_KEY: "e2e-not-a-real-key",
+      ANTHROPIC_BASE_URL: "http://127.0.0.1:3199",
     },
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: false,
     timeout: 60_000,
-  },
+  }],
 });

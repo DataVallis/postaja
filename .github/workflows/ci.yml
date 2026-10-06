@@ -97,6 +97,7 @@ jobs:
       SMTP_PASSWORD: placeholder
       S3_ACCESS_KEY_ID: placeholder
       S3_SECRET_ACCESS_KEY: placeholder
+      ANTHROPIC_API_KEY: placeholder
       SUPERADMIN_EMAILS: admin@example.test
     steps:
       - uses: actions/checkout@v4
