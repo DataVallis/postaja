@@ -333,5 +333,80 @@
         "failed": "upload failed, try again."
       }
     }
+  },
+  "Posts": {
+    "title": "Posts",
+    "intro": "Describe what you want to post. Postaja writes it from the brand's CGP and materials and checks it against the platform, channel and brand rules.",
+    "channel": "Channel",
+    "brief": "What should we post?",
+    "briefPlaceholder": "e.g. Announce the autumn course, stress early sign-up until 15 Oct.",
+    "briefHint": "Topic, angle, any offer. Facts belong in the CGP or materials.",
+    "generate": "Create post",
+    "generating": "Writing …",
+    "generatingHint": "Takes a few seconds.",
+    "noChannels": "The brand has no channel yet. Add one below under Channels.",
+    "brand": "Brand",
+    "post": "Post",
+    "briefWas": "Request",
+    "text": "Text",
+    "part": "Part {n} of {of}",
+    "save": "Save changes",
+    "copy": "Copy text",
+    "copied": "Copied",
+    "chars": "{n} / {max} characters",
+    "over": "too long",
+    "tags": "{n} / {max} hashtags",
+    "retry": "Try again",
+    "failuresTitle": "The post breaks rules — fix the text or approve it anyway:",
+    "cost": "cost ${usd}",
+    "fixed": "auto-fixed once",
+    "ok": {
+      "saved": "Saved, all rules pass.",
+      "savedWithIssues": "Saved, but the post still breaks rules (below)."
+    },
+    "status": {
+      "generating": "generating",
+      "ready": "ready",
+      "needs_review": "needs review",
+      "failed": "failed",
+      "approved": "approved",
+      "published": "published",
+      "skipped": "skipped"
+    },
+    "to": {
+      "approved": "Approve",
+      "published": "Mark as published",
+      "skipped": "Skip",
+      "ready": "Back to ready"
+    },
+    "violations": {
+      "caption_too_long": "Too long: {actual} characters, limit {limit}.",
+      "too_many_hashtags": "Too many hashtags: {actual}, limit {limit}.",
+      "too_many_mentions": "Too many mentions: {actual}, limit {limit}.",
+      "too_many_emoji": "Too many emoji: {actual}, limit {limit}.",
+      "links_not_allowed": "Links are not allowed in the text.",
+      "banned_word": "Banned word: “{actual}”.",
+      "regex_must": "Required pattern {limit} is missing.",
+      "regex_must_not": "Contains forbidden pattern {limit}.",
+      "missing_cta": "The post must end with a CTA ({limit}).",
+      "thread_part_too_long": "Part {part} is too long: {actual} characters, limit {limit}.",
+      "too_many_thread_parts": "Too many thread parts: {actual}, limit {limit}.",
+      "too_few_slides": "Too few slides: {actual}, at least {limit}.",
+      "too_many_slides": "Too many slides: {actual}, at most {limit}."
+    },
+    "errors": {
+      "SPEND_CAP": "The organization's monthly spend cap is reached. A super admin can raise it.",
+      "PROVIDER": "The AI service is not answering. Try again in a minute.",
+      "NOT_CONFIGURED": "The AI key is not set on the server.",
+      "INVALID_OUTPUT": "The AI returned an invalid answer twice. Try again or rephrase the request.",
+      "NO_TOOL_CALL": "The AI returned no post. Try again.",
+      "NOT_FOUND": "Brand or channel not found.",
+      "ARCHIVED": "The brand is archived.",
+      "NO_MODEL": "No AI model is configured (super admin).",
+      "BAD_STATE": "A post in this state cannot be edited.",
+      "INVALID": "Check the input (request at least 3 characters).",
+      "FORBIDDEN": "No access.",
+      "FAILED": "Something went wrong. Try again."
+    }
   }
 }

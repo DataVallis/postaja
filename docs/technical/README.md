@@ -8,6 +8,7 @@
 | [admin.md](admin.md) | `src/app/admin/**`, `src/server/admin/**`, `src/server/db/schema/audit.ts`, `src/lib/money/**` | Live on dev |
 | [rules.md](rules.md) | `src/lib/rules/**`, `src/server/rules/**`, `src/server/db/schema/platform.ts`, `drizzle/0005_seed_platform_data.sql`, `src/app/admin/platform/**` | Live on dev |
 | [brand-files.md](brand-files.md) | `src/server/brands/files.ts`, `src/server/brands/files-http.ts`, `src/app/api/brands/**`, `src/app/api/brand-files/**`, `src/app/app/brands/upload-form.tsx`, `src/app/app/brands/[id]/files-section.tsx`, `src/server/files/**`, `src/server/db/schema/brand-files.ts`, `drizzle/0007_brand_files.sql`, `tests/fixtures/files.ts` | Built |
+| [posts.md](posts.md) | `src/server/posts/**`, `src/server/llm/**`, `src/server/db/schema/generation.ts`, `drizzle/0008_generation.sql`, `drizzle/0009_seed_model_registry.sql`, `src/app/app/posts/**`, `src/app/app/brands/[id]/posts-section.tsx`, `tests/e2e/mock-anthropic.mjs` | Built |
 | [brands.md](brands.md) | `src/server/brands/**`, `src/server/db/schema/brands.ts`, `src/app/app/**`, `src/server/auth/require.ts` | Live on dev |
 
 Every PR that changes covered code updates the chapter in the same PR.

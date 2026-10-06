@@ -15,7 +15,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-005b | S3 storage + uploads: logo, fonts (diacritics check), brand sources; strict per-org separation | TASK-005a | Done (PR #14, #15; deployed) |
 | TASK-005c | Smart uploads: drop zone, auto-sorting, ZIP, WOFF/WOFF2, language fixes (owner feedback 2026-10-06) | TASK-005b | Done (PR #16, deployed) |
 | TASK-006 | ~~Brand ingestion: extract + synthesize CGP proposal + review/accept~~ | — | **Dropped** (ADR-035: owner provides the CGP) |
-| TASK-007 | Post generation core: CGP + materials + effective rules → text (Claude, JSON schema) → rule check → one auto-fix → `needs_review`; cost recorded | TASK-005c, owner `ANTHROPIC_API_KEY` | Next |
+| TASK-007 | Post generation core: CGP + materials + effective rules → text (Claude, JSON schema) → rule check → one auto-fix → `needs_review`; cost recorded | TASK-005c, owner `ANTHROPIC_API_KEY` (set 2026-10-06) | In review (PR #18) |
 | TASK-008 | CGP from a document: upload DOCX/PDF/MD/TXT → text copied verbatim into the CGP editor, owner saves a version | TASK-005c | Planned |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.
