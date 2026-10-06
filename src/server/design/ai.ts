@@ -2,7 +2,7 @@
 // post which template each image uses, the words on it and what the illustration shows. Prompts and tools only.
 import { z } from "zod";
 import type { ImageBlock, StructuredRequest } from "../llm/types";
-import { designJsonSchema, SLOTS, templateSlots, needsIllustration, type DesignSpec } from "./spec";
+import { designJsonSchema, nullableSlotTexts, templateSlots, needsIllustration, type DesignSpec } from "./spec";
 
 const DSL = `How a design is described (Postaja renders it exactly; every letter is drawn by Postaja, never by an image model):
 - Canvas positions and sizes are percent: x/y/w/h of the canvas (0–100). The same template is rendered at 4:5 (1080×1350),
@@ -133,7 +133,7 @@ export function postVisualSchema(spec: DesignSpec) {
   return z.object({
     slides: z.array(z.object({
       templateId: z.enum(ids),
-      slots: z.partialRecord(z.enum(SLOTS), z.string().max(600).nullable()),
+      slots: nullableSlotTexts(600),
       illustration: z.string().max(1500).nullable(),
     })).min(1).max(MAX_SLIDES),
   });

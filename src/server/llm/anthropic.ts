@@ -29,9 +29,13 @@ export function createAnthropicClient(apiKey: string | undefined = process.env.A
           tool_choice: { type: "tool", name: req.tool.name },
         }, req.timeoutMs ? { timeout: req.timeoutMs, maxRetries: 1 } : undefined);
       } catch (e) {
-        // Status and type only — request bodies may contain brand material.
+        // Status plus Anthropic's own explanation (e.g. "tools.0.input_schema: …") — never the request body. Class names
+        // are minified in the server bundle, so the explanation is what makes a failure diagnosable.
         const status = (e as { status?: number }).status;
-        throw new LlmError("PROVIDER", `anthropic ${status ?? "network"} ${(e as Error).name}`);
+        const reason = (e as { error?: { error?: { message?: unknown } } }).error?.error?.message;
+        const detail = typeof reason === "string" ? reason.replace(/\s+/g, " ").slice(0, 300) : (e as Error).name;
+        console.error(`[llm] anthropic ${status ?? "network"}: ${detail}`);
+        throw new LlmError("PROVIDER", `anthropic ${status ?? "network"}: ${detail}`);
       }
       const call = res.content.find((c) => c.type === "tool_use");
       if (!call || call.type !== "tool_use") throw new LlmError("NO_TOOL_CALL");
