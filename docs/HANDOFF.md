@@ -58,16 +58,18 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 - 2026-10-05: ADR-027 (dev behind host nginx) — PR #4. First deploy: Deploy dev run 37334467728 (setup=true) green; health ok with SHA 8445e2d.
 
 ## Owner's open actions
-1. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
-2. Swap 2 GB (TASK-002 Step B) — optional.
-3. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
+1. **`ANTHROPIC_API_KEY`** → GitHub → Settings → Environments → `dev` → secret (for TASK-007 on dev). Keep your own copy; never paste it in chat.
+2. **Check uploads on dev** (after PR #16 deploys): https://dev-postaja.inzenirji.si/app/brands → a brand → "Datoteke branda": drop a ZIP (or files) with a logo named `logo…`, a font (WOFF2 is fine) and a PDF; the log shows where each went, the logo shows as a picture, the PDF downloads. If the upload fails with an S3 addressing error, tell the agent (fix: `S3_FORCE_PATH_STYLE=1`).
+3. Swap 2 GB (TASK-002 Step B) — optional.
+4. Rollback drill once: `kamal app containers -d dev` → `kamal rollback <previous> -d dev` (closes TASK-002).
 
 ## Parked ideas
 - Showcase on aibuilders.si as a "built with vibe coding" case.
 
 ## Next
 **Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
-Next task: chosen by the owner (see the question in the session of 2026-10-06) — candidates: content generation core (text → rule check, needs `ANTHROPIC_API_KEY`), content plan import (CSV/XLSX), material text extraction for generation context.
+Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
+TASK-007 needs `ANTHROPIC_API_KEY` in GitHub environment `dev` (owner action). Tests mock the LLM; no key needed locally or in CI.
 Latest numbers: TASK-006 (dropped; next new task = TASK-007), ADR-035. Latest PR: #17.
 
 ## Servers
