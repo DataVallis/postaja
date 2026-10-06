@@ -14,7 +14,9 @@
     "sending": "Pošiljam …",
     "sent": "Če imaš dostop, si dobil e-pošto s povezavo za prijavo. Povezava velja 10 minut.",
     "error": "Pošiljanje ni uspelo. Poskusi znova čez minuto.",
-    "linkInvalid": "Povezava je neveljavna ali je potekla. Zahtevaj novo."
+    "linkInvalid": "Povezava je neveljavna ali je potekla. Zahtevaj novo.",
+    "oauthIntro": "Claude se želi povezati s Postajo. Vpiši e-pošto, poslali ti bomo povezavo za prijavo. Odpri jo v tem brskalniku.",
+    "oauthExpired": "Zahteva za povezavo s Claude je potekla. Začni znova v Claude."
   },
   "App": {
     "signedInAs": "Prijavljen si kot",
@@ -36,7 +38,8 @@
     "adminLink": "Admin",
     "nav": "Glavna navigacija",
     "home": "Domov",
-    "brands": "Brandi"
+    "brands": "Brandi",
+    "claude": "Claude"
   },
   "Admin": {
     "nav": "Admin navigacija",
@@ -352,6 +355,14 @@
         "ARCHIVED": "Brand je arhiviran.",
         "failed": "Uvoz ni uspel, poskusi znova."
       }
+    },
+    "cgpDraft": {
+      "title": "Claude je predlagal CGP",
+      "chars": "{n} znakov",
+      "hint": "Aktivni CGP se ne spremeni, dokler predloga ne vstaviš v urejevalnik in ne shraniš nove verzije.",
+      "insertedHint": "Predlog je v urejevalniku. Preglej ga in shrani novo verzijo, ali pa osveži stran za preklic.",
+      "insert": "Vstavi v urejevalnik",
+      "discard": "Zavrzi predlog"
     }
   },
   "Posts": {
@@ -427,6 +438,45 @@
       "INVALID": "Preveri vnos (naročilo vsaj 3 znake).",
       "FORBIDDEN": "Nimaš dostopa.",
       "FAILED": "Nekaj ni uspelo. Poskusi znova."
+    }
+  },
+  "Connect": {
+    "title": "Claude",
+    "intro": "Poveži svoj Claude s Postajo. Claude lahko nato v pogovoru pošlje CGP in materiale iz tvojih projektov naravnost v brand, ti pa vse pregledaš tukaj.",
+    "howTitle": "Kako povežeš",
+    "urlLabel": "Naslov MCP strežnika",
+    "step1": "V Claude (claude.ai ali namizna aplikacija) odpri Nastavitve → Konektorji in dodaj konektor po meri.",
+    "step2": "Vpiši ime Postaja in prilepi naslov zgoraj.",
+    "step3": "Klikni Poveži. Odpre se Postaja: prijavi se z e-pošto in povezavo iz pošte odpri v istem brskalniku.",
+    "step4": "Potrdi dostop. Nato v pogovoru reci npr. »Pošlji ta CGP v Postajo za brand inzenirji«.",
+    "codeLabel": "Claude Code (terminal)",
+    "tools": "Claude vidi brande tvoje organizacije in njihove CGP-je. Lastnik lahko prek Claude predlaga CGP (shrani se kot predlog, ki ga potrdiš na strani branda) in doda besedilne materiale.",
+    "editorNote": "Kot urednik lahko prek Claude brande samo bereš; predloge CGP in materiale dodaja lastnik.",
+    "connections": "Povezane aplikacije",
+    "none": "Še nobena aplikacija ni povezana.",
+    "claudeCode": "Claude Code",
+    "since": "povezano {when}",
+    "disconnect": "Prekini povezavo",
+    "activity": "Zadnja dejanja Claude",
+    "noActivity": "Claude še ni ničesar naredil.",
+    "ok": "uspešno",
+    "failed": "napaka ({error})",
+    "copy": "Kopiraj",
+    "copied": "Kopirano",
+    "consent": {
+      "title": "{client} želi dostop do Postaje",
+      "who": "Prijavljen si kot {email}, organizacija {org}.",
+      "canRead": "brati brande, CGP-je, kanale in seznam materialov",
+      "canPropose": "predlagati CGP (aktivni CGP spremeniš samo ti, ko shraniš verzijo)",
+      "canAdd": "dodajati besedilne materiale brandom",
+      "cannot": "objavljati, brisati ali spreminjati nastavitev",
+      "redirect": "Po potrditvi se vrneš v {host}. Povezavo lahko kadar koli prekineš na strani Claude v Postaji.",
+      "allow": "Dovoli",
+      "deny": "Zavrni",
+      "working": "Povezujem …",
+      "failed": "Potrditev ni uspela. Začni znova v Claude.",
+      "invalid": "Ta zahteva za povezavo je neveljavna ali je potekla. Začni znova v Claude.",
+      "noOrg": "Nisi član nobene organizacije, zato Claude ne more dostopati do Postaje."
     }
   }
 }

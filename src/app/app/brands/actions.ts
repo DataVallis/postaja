@@ -9,6 +9,7 @@ import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBra
 import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
+import { discardDraft } from "@/server/mcp/service";
 
 export type ActionState = { error?: string; ok?: string } | undefined;
 
@@ -133,5 +134,13 @@ export async function deleteBrandFileAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const table = str(f, "table") === "asset" ? "asset" : "source";
   await deleteBrandFile(getDb(), getStorage(), ctx, table, str(f, "fileId")).catch(() => undefined);
+  revalidatePath(`/app/brands/${str(f, "brandId")}`);
+}
+
+/** Owner only (checked in the service): drops the CGP Claude proposed through MCP (ADR-038). */
+export async function discardCgpDraftAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  await discardDraft(getDb(), ctx, str(f, "draftId")).catch(() => undefined);
   revalidatePath(`/app/brands/${str(f, "brandId")}`);
 }

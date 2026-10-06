@@ -1,3 +1,6 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+# One @better-auth/core instance for better-auth and its OAuth/MCP plugins (their peer @better-auth/utils must match).
+overrides:
+  "@better-auth/utils": 0.4.2

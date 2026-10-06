@@ -11,6 +11,7 @@ import { ChannelForm, ProfileForm } from "../forms";
 import { FilesSection } from "./files-section";
 import { PostsSection } from "./posts-section";
 import { listPosts } from "@/server/posts/generate";
+import { pendingDraft } from "@/server/mcp/service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
     throw e;
   });
   const { brand, profile, channels } = detail;
-  const [versions, presets, platformRows, files, recentPosts] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10)]);
+  const [versions, presets, platformRows, files, recentPosts, draft] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id)]);
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
   const f = await getFormatter();
@@ -65,6 +66,7 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
           readOnly={!isOwner}
           cgpSources={files.sources.filter((s) => s.kind === "pdf" || s.kind === "docx" || s.kind === "text").map((s) => ({ id: s.id, filename: s.filename }))}
           cgp={profile?.cgp ?? ""}
+          cgpDraft={draft ? { id: draft.id, text: draft.text, note: draft.note, when: f.dateTime(draft.createdAt, { dateStyle: "medium", timeStyle: "short" }) } : null}
           pillarsText={(profile?.pillars ?? []).map((p) => `${p.name} | ${p.share}${p.description ? ` | ${p.description}` : ""}`).join("\n")}
           rules={rules}
           visual={profile?.visual ?? { colors: {}, imageStyle: "", negativePrompt: "" }}

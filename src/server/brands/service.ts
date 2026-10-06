@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "../db/client";
-import { brandProfileVersions, brands, channels, formatPresets, orgSettings } from "../db/schema";
+import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, orgSettings } from "../db/schema";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { brandInput, channelInput, profileInput } from "./schemas";
@@ -106,6 +106,8 @@ export async function saveProfile(db: Db, ctx: OrgContext, brandId: string, inpu
     const t = forOrg(tx as unknown as Db, ctx);
     await t.insert(brandProfileVersions, { id, brandId, version: max + 1, ...data, createdBy: ctx.userId });
     await t.update(brands, { currentProfileVersionId: id, updatedAt: new Date() }, eq(brands.id, brandId));
+    // A saved version settles any CGP draft Claude sent for this brand (ADR-038).
+    await t.update(cgpDrafts, { status: "used", resolvedAt: new Date() }, and(eq(cgpDrafts.brandId, brandId), eq(cgpDrafts.status, "pending")));
     return { id, version: max + 1 };
   });
 }
