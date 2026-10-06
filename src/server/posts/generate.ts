@@ -162,7 +162,8 @@ async function ownPost(db: Db, ctx: OrgContext, postId: string) {
   return p;
 }
 
-const editable: PostStatus[] = ["ready", "needs_review", "approved"];
+/** A planned post (from a plan, no text yet) can get its text by hand too (TASK-012). */
+const editable: PostStatus[] = ["planned", "ready", "needs_review", "approved"];
 
 /** Hand edit by any member: re-checked with the same rules; the result decides ready vs needs_review. */
 export async function editPost(db: Db, ctx: OrgContext, postId: string, input: { caption?: string; parts?: string[] }) {
@@ -182,15 +183,18 @@ const transitions: Partial<Record<PostStatus, PostStatus[]>> = {
   needs_review: ["approved", "skipped"],
   approved: ["published", "skipped", "ready"],
   published: ["approved"],
-  skipped: ["ready"],
+  skipped: ["ready", "planned"],
   failed: ["skipped"],
+  planned: ["skipped"],
 };
 
 /** Status moves a person makes (approve, mark published, skip). Approving a post with failures is an explicit override. */
 export async function setPostStatus(db: Db, ctx: OrgContext, postId: string, to: PostStatus) {
   const p = await ownPost(db, ctx, postId);
   if (!transitions[p.status]?.includes(to)) throw new PostError("BAD_STATE");
-  await forOrg(db, ctx).update(posts, { status: to, updatedAt: new Date() }, eq(posts.id, postId));
+  // Back from "skipped": a post with text returns to ready, a text-less plan to planned.
+  if (p.status === "skipped" && (to === "ready") !== !!p.content) throw new PostError("BAD_STATE");
+  await forOrg(db, ctx).update(posts, { status: to, updatedAt: new Date(), ...(to === "published" ? { publishedAt: new Date() } : p.status === "published" ? { publishedAt: null } : {}) }, eq(posts.id, postId));
 }
 
 export async function listPosts(db: Db, ctx: OrgContext, brandId: string, limit = 50) {

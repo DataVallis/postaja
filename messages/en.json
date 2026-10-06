@@ -433,13 +433,15 @@
       "failed": "failed",
       "approved": "approved",
       "published": "published",
-      "skipped": "skipped"
+      "skipped": "skipped",
+      "planned": "planned"
     },
     "to": {
       "approved": "Approve",
       "published": "Mark as published",
       "skipped": "Skip",
-      "ready": "Back to ready"
+      "ready": "Back to ready",
+      "planned": "Back to plan"
     },
     "violations": {
       "caption_too_long": "Too long: {actual} characters, limit {limit}.",
@@ -474,7 +476,15 @@
     "noChannelsPrefix": "The brand has no channel yet.",
     "noChannelsLink": "Add a channel",
     "statusCol": "Status",
-    "createdCol": "Created"
+    "createdCol": "Created",
+    "planTitle": "From the plan",
+    "planSlot": "Slot",
+    "planFormat": "Format",
+    "slidesN": "{n} slides",
+    "publishedAt": "Published",
+    "planSource": "Source",
+    "planImport": "import",
+    "plannedHint": "The post is planned and has no text yet. Write it below, or Postaja will write it (bulk creation comes next)."
   },
   "Connect": {
     "title": "Claude",
@@ -533,7 +543,8 @@
     "toDark": "Dark theme",
     "toLight": "Light theme",
     "account": "Account",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "import": "Plan import"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -556,7 +567,8 @@
       "published": "Published",
       "thisMonth": "this month",
       "spend": "AI spend",
-      "ofCap": "of {cap} $ this month"
+      "ofCap": "of {cap} $ this month",
+      "planned": "Planned"
     }
   },
   "PostsList": {
@@ -576,6 +588,160 @@
     "pagination": "Pages",
     "pageOf": "Page {page} of {pages} · {total} posts",
     "prev": "← Previous",
-    "next": "Next →"
+    "next": "Next →",
+    "fromImport": "Posts from one import, in plan order.",
+    "openImport": "Open import",
+    "slot": "Slot",
+    "format": "Format"
+  },
+  "Import": {
+    "title": "Plan import",
+    "description": "Upload a content plan in any shape (Excel, CSV, Word, PDF). AI recognises the columns or posts, you review and confirm. Texts stay verbatim.",
+    "history": "Imports",
+    "file": "File",
+    "kind": "Kind",
+    "statusCol": "Status",
+    "created": "Posts created",
+    "date": "Uploaded",
+    "kinds": {
+      "table": "table",
+      "document": "document"
+    },
+    "status": {
+      "draft": "to review",
+      "imported": "imported",
+      "discarded": "discarded"
+    },
+    "upload": {
+      "title": "Drop a plan here or pick it",
+      "hint": "Excel (XLSX), CSV, Word (DOCX), PDF, MD or TXT, up to 20 MB. Several sheets and platforms in one file are fine.",
+      "pick": "Pick a plan",
+      "reading": "Reading …",
+      "readingHint": "Reading “{name}”. Word and PDF can take up to a minute.",
+      "errors": {
+        "EMPTY": "The file is empty.",
+        "TOO_LARGE": "The file is larger than 20 MB.",
+        "UNSUPPORTED_TYPE": "I cannot read this kind of file. Use XLSX, CSV, DOCX, PDF, MD or TXT.",
+        "INVALID_FILE": "The file could not be read.",
+        "NO_POSTS": "No posts found in the file.",
+        "AI_FAILED": "The AI could not read the document ({detail}). Try again or upload a table.",
+        "SPEND_CAP": "The monthly AI spend cap is reached.",
+        "NO_MODEL": "No AI model is set up.",
+        "BAD_ORIGIN": "The request did not come from Postaja.",
+        "failed": "Upload failed. Try again."
+      }
+    },
+    "readByAi": "The structure was read by AI; values are read verbatim.",
+    "readByHeaders": "AI was not available; columns were recognised by their names. Check them below.",
+    "errors": {
+      "NOT_FOUND": "This import does not exist.",
+      "BAD_STATE": "This import is already finished.",
+      "INVALID": "The choice is not valid.",
+      "FAILED": "Saving failed."
+    },
+    "doneSummary": "Imported: {n} posts.",
+    "seePosts": "Open posts",
+    "stats": {
+      "items": "Posts in the plan",
+      "history": "Already published",
+      "historyHint": "go to history",
+      "noText": "Without text",
+      "noTextHint": "Postaja writes the text",
+      "warnings": "Warnings"
+    },
+    "channelsTitle": "Where the posts go",
+    "channelsHint": "For every platform and account in the plan pick a brand channel. A match is preselected.",
+    "platform": "Platform",
+    "account": "Account in the plan",
+    "count": "Posts",
+    "channel": "Channel",
+    "platforms": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "linkedin": "LinkedIn",
+      "x": "X",
+      "tiktok": "TikTok",
+      "youtube": "YouTube"
+    },
+    "noPlatform": "no platform",
+    "channelFor": "Channel for {what}",
+    "chooseChannel": "Pick a channel …",
+    "skipGroup": "Do not import",
+    "noChannels": "The organization has no channels yet.",
+    "toBrands": "Add a channel to a brand",
+    "scheduleTitle": "Plan start",
+    "scheduleHint": "The plan has relative days (+N). Pick day 0.",
+    "scheduleHintUndated": "Some posts have no date. Pick a start and a gap in days, or leave empty (no slot).",
+    "startDate": "Start day",
+    "intervalDays": "Gap (days)",
+    "confirm": "Import {n} posts",
+    "save": "Save choices",
+    "confirmHint": "Duplicates are not created twice.",
+    "itemsTitle": "Posts in the plan",
+    "itemsShown": "Showing the first {n} of {total}.",
+    "when": "Slot",
+    "format": "Format",
+    "topic": "Topic",
+    "text": "Text",
+    "warningsCol": "Warnings",
+    "unscheduled": "no slot",
+    "noTextYet": "no text yet",
+    "itemStatus": {
+      "planned": "planned",
+      "published": "published",
+      "skip": "skipped"
+    },
+    "warnings": {
+      "DATE": "date “{value}” not recognised",
+      "TIME": "time “{value}” not recognised",
+      "OFFSET": "day “{value}” not recognised",
+      "PLATFORM": "platform “{value}” not recognised",
+      "FORMAT": "format “{value}” not recognised",
+      "NO_TEXT": "no text",
+      "TEXT_CHANGED": "text is not verbatim from the document — check"
+    },
+    "columnsTitle": "Columns",
+    "columnsHint": "What each column means. Correct it and click “Read again”.",
+    "sheet": "Sheet “{name}” · {rows} rows",
+    "defaultPlatform": "Platform for the whole sheet",
+    "unnamedColumn": "Column {n}",
+    "fields": {
+      "ignore": "— do not import —",
+      "row_number": "Row number",
+      "date": "Date",
+      "time": "Time",
+      "day_offset": "Day from start (+N)",
+      "day_number": "Plan day (1, 2, …)",
+      "platform": "Platform",
+      "account": "Account / profile",
+      "format": "Format",
+      "image_type": "Image type",
+      "slide_count": "Slide count",
+      "topic": "Topic",
+      "category": "Category / pillar",
+      "audience": "Audience",
+      "text": "Post text",
+      "hashtags": "Hashtags",
+      "cta": "CTA / link",
+      "cta_hashtags": "CTA and hashtags",
+      "link": "Link",
+      "first_comment": "First comment",
+      "image_prompt": "Image prompt",
+      "overlay_text": "Text on image",
+      "slides": "Slide texts",
+      "status": "Status",
+      "published_on": "Posted on",
+      "notes": "Notes",
+      "char_count": "Character count"
+    },
+    "rereadColumns": "Read again",
+    "discard": "Discard import"
+  },
+  "PostFormats": {
+    "text": "text",
+    "image": "image",
+    "carousel": "carousel",
+    "thread": "thread",
+    "video": "video"
   }
 }

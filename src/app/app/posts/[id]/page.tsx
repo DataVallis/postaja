@@ -19,6 +19,7 @@ const NEXT: Partial<Record<PostStatus, PostStatus[]>> = {
   published: ["approved"],
   skipped: ["ready"],
   failed: ["skipped"],
+  planned: ["skipped"],
 };
 
 export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,7 +34,20 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const f = await getFormatter();
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
-  const editable = post.status === "ready" || post.status === "needs_review" || post.status === "approved";
+  const editable = post.status === "planned" || post.status === "ready" || post.status === "needs_review" || post.status === "approved";
+  const tf = await getTranslations("PostFormats");
+  const ti = await getTranslations("Import");
+  const plan = post.plan ?? {};
+  const next = (NEXT[post.status] ?? []).map((to) => (post.status === "skipped" && to === "ready" && !post.content ? "planned" : to));
+  const facts: [string, React.ReactNode][] = [
+    [t("planSlot"), post.scheduledOn ? `${f.dateTime(new Date(`${post.scheduledOn}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${post.scheduledTime ? ` · ${post.scheduledTime}` : ""}` : null],
+    [t("planFormat"), `${tf(post.format)}${plan.slideCount ? ` · ${t("slidesN", { n: plan.slideCount })}` : ""}`],
+    [ti("fields.topic"), plan.topic], [ti("fields.category"), plan.category], [ti("fields.audience"), plan.audience], [ti("fields.account"), plan.account],
+    [ti("fields.cta"), plan.cta], [ti("fields.link"), plan.link], [ti("fields.first_comment"), plan.firstComment],
+    [ti("fields.overlay_text"), plan.overlayText], [ti("fields.image_prompt"), plan.imagePrompt], [ti("fields.notes"), plan.notes],
+    [t("publishedAt"), post.publishedAt ? f.dateTime(post.publishedAt, { dateStyle: "medium" }) : null],
+    [t("planSource"), post.importId ? <Link href={`/app/import/${post.importId}`} className="underline underline-offset-4">{plan.sourceRef ?? t("planImport")}</Link> : null],
+  ];
   return (
     <div className="grid gap-8">
       <PageHeader
@@ -62,12 +76,31 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
         </div>
       ) : null}
 
-      {post.content && ctx ? (
-        <Card className="p-5"><PostEditor postId={post.id} caption={post.content.caption} parts={post.content.parts} rules={ctx.rules} readOnly={!editable} /></Card>
+      {post.status === "planned" && !post.content ? <p className="text-sm text-muted" data-testid="planned-hint">{t("plannedHint")}</p> : null}
+      {ctx && (post.content || post.status === "planned") ? (
+        <Card className="p-5"><PostEditor postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
+      <Card className="p-5" data-testid="plan">
+        <h2 className="mb-3 text-base font-semibold">{t("planTitle")}</h2>
+        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[12rem_1fr]">
+          {facts.filter(([, v]) => v).map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted">{k}</dt>
+              <dd className="whitespace-pre-line break-words">{v}</dd>
+            </div>
+          ))}
+          {plan.slides?.length ? (
+            <div className="contents">
+              <dt className="text-muted">{ti("fields.slides")}</dt>
+              <dd><ol className="grid list-decimal gap-1 pl-5">{plan.slides.map((sl, i) => <li key={i} className="whitespace-pre-line">{sl}</li>)}</ol></dd>
+            </div>
+          ) : null}
+        </dl>
+      </Card>
+
       <div className="flex flex-wrap gap-2">
-        {(NEXT[post.status] ?? []).map((to) => (
+        {next.map((to) => (
           <form key={to} action={setPostStatusAction}>
             <input type="hidden" name="postId" value={post.id} />
             <input type="hidden" name="to" value={to} />

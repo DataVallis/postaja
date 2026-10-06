@@ -75,22 +75,34 @@ const textRuns = (xml: string, tag: "t" | "a:t") => [...xml.matchAll(new RegExp(
 export const XLSX_MAX_ROWS = 5000;
 export const MATERIAL_TEXT_MAX = 300_000;
 
-/** Excel workbook → "## Sheet" + one line per non-empty row, cells joined by " | " (shared and inline strings, numbers as stored). */
-export function xlsxToText(bytes: Uint8Array): string {
+/** "B12" → 1 (zero-based column), or -1. */
+export function columnIndex(ref: string | undefined): number {
+  const m = ref?.match(/^([A-Z]{1,3})\d*$/);
+  if (!m) return -1;
+  return [...m[1]].reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0) - 1;
+}
+
+export type Sheet = { name: string; rows: string[][] };
+
+/**
+ * Workbook cells as text, each value at its own column (Excel omits empty cells, so positions come from the `r`
+ * reference). Line breaks inside cells are kept; numbers and dates stay as stored (dates are serial numbers).
+ */
+export function xlsxSheets(bytes: Uint8Array, maxRows = XLSX_MAX_ROWS): Sheet[] {
   const m = officeEntries(bytes);
   const workbook = xmlOf(m, "xl/workbook.xml");
   if (!workbook) throw new ExtractError("INVALID_FILE");
   const shared = [...(xmlOf(m, "xl/sharedStrings.xml") ?? "").matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((x) => textRuns(x[1], "t"));
   const map = rels(xmlOf(m, "xl/_rels/workbook.xml.rels"), "xl/");
-  const out: string[] = [];
+  const out: Sheet[] = [];
   for (const sh of workbook.matchAll(/<sheet\b[^>]*\/?>/g)) {
     const name = decodeXml(sh[0].match(/\bname="([^"]*)"/)?.[1] ?? "");
     const rid = sh[0].match(/\br:id="([^"]+)"/)?.[1];
     const xml = rid ? xmlOf(m, map.get(rid) ?? "") : undefined;
     if (!xml) continue;
-    const rows: string[] = [];
+    const rows: string[][] = [];
     for (const row of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
-      if (rows.length >= XLSX_MAX_ROWS) break;
+      if (rows.length >= maxRows) break;
       const cells: string[] = [];
       for (const c of (row[1] ?? "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
         const t = c[1].match(/\bt="([^"]+)"/)?.[1];
@@ -101,12 +113,26 @@ export function xlsxToText(bytes: Uint8Array): string {
         else if (t === "inlineStr") val = textRuns(body, "t");
         else if (t === "b") val = v === "1" ? "TRUE" : v === "0" ? "FALSE" : "";
         else if (v !== undefined) val = decodeXml(v);
-        cells.push(val.replace(/\s+/g, " ").trim());
+        const at = columnIndex(c[1].match(/\br="([A-Z]+\d+)"/)?.[1]);
+        const col = at >= 0 ? at : cells.length;
+        if (col > 16383) continue;
+        while (cells.length < col) cells.push("");
+        cells[col] = val.replace(/\r\n?/g, "\n").trim();
       }
       while (cells.length && !cells[cells.length - 1]) cells.pop();
-      if (cells.some(Boolean)) rows.push(cells.join(" | "));
+      rows.push(cells);
     }
-    if (rows.length) out.push(`## ${name}`, ...rows, "");
+    out.push({ name, rows });
+  }
+  return out;
+}
+
+/** Excel workbook → "## Sheet" + one line per non-empty row, cells joined by " | " (shared and inline strings, numbers as stored). */
+export function xlsxToText(bytes: Uint8Array): string {
+  const out: string[] = [];
+  for (const sh of xlsxSheets(bytes)) {
+    const rows = sh.rows.map((r) => r.map((c) => c.replace(/\s+/g, " ").trim())).filter((r) => r.some(Boolean)).map((r) => r.join(" | "));
+    if (rows.length) out.push(`## ${sh.name}`, ...rows, "");
   }
   return tidy(out.join("\n")).slice(0, MATERIAL_TEXT_MAX);
 }
