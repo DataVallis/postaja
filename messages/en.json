@@ -264,7 +264,8 @@
       "language_not_in_brand": "The channel language must be one of the brand's languages."
     },
     "ok": {
-      "channelAdded": "Channel added."
+      "channelAdded": "Channel added.",
+      "channelSaved": "Channel saved."
     },
     "chHashtagsMax": "Max hashtags on this channel",
     "linksNotClickable": "links not clickable",
@@ -403,7 +404,10 @@
       "option": "{label} · {input} / {output}",
       "save": "Save model",
       "saved": "Saved."
-    }
+    },
+    "editChannel": "Edit channel",
+    "saveChannel": "Save channel",
+    "channelLanguageMismatch": "The channel language ({lang}) is not one of the brand's languages — posts use the brand's language. Fix it under “Edit channel”."
   },
   "Posts": {
     "title": "Posts",
@@ -754,7 +758,9 @@
       "char_count": "Character count"
     },
     "rereadColumns": "Read again",
-    "discard": "Discard import"
+    "discard": "Discard import",
+    "reopen": "Import the rest",
+    "reopenHint": "Added a channel (e.g. X or LinkedIn) that did not exist at import time? Open the import again, connect the platform to the channel and import — posts already imported are not duplicated."
   },
   "PostFormats": {
     "text": "text",

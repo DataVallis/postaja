@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLAN_FIELDS, PLAN_PLATFORMS, type ColumnMapping, type PlanField, type PlanPlatform } from "@/server/plans/mapping";
-import { confirmImport, discardImport, ImportError, importView, updateImport } from "@/server/plans/service";
+import { confirmImport, discardImport, ImportError, importView, reopenImport, updateImport } from "@/server/plans/service";
 
 const back = (id: string, error?: string) => redirect(`/app/import/${id}${error ? `?error=${error}` : ""}`);
 const code = (e: unknown) => (e instanceof ImportError ? e.code : "FAILED");
@@ -70,4 +70,18 @@ export async function discardImportAction(f: FormData) {
     back(id, code(e));
   }
   redirect("/app/import");
+}
+
+/** Opens an imported plan again to import the rows that had no channel then (duplicates are skipped). */
+export async function reopenImportAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  const id = String(f.get("importId") ?? "");
+  if (!ctx) redirect("/login");
+  try {
+    await reopenImport(getDb(), ctx, id);
+  } catch (e) {
+    back(id, code(e));
+  }
+  revalidatePath(`/app/import/${id}`);
+  back(id);
 }

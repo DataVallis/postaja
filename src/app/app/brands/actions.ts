@@ -5,7 +5,7 @@ import { z } from "zod";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
-import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived, setBrandTextModel } from "@/server/brands/service";
+import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived, setBrandTextModel, updateChannel } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
@@ -106,6 +106,28 @@ export async function addChannelAction(_p: ActionState, f: FormData): Promise<Ac
     });
     revalidatePath(`/app/brands/${brandId}`);
     return { ok: "channelAdded" };
+  } catch (e) {
+    return { error: errorCode(e) };
+  }
+}
+
+/** Owner edits a channel (TASK-017 follow-up): handle, language, goal, types, preset. */
+export async function updateChannelAction(_p: ActionState, f: FormData): Promise<ActionState> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return { error: "forbidden" };
+  const brandId = str(f, "brandId");
+  try {
+    await updateChannel(getDb(), ctx, str(f, "channelId"), {
+      platform: str(f, "platform") as (typeof PLATFORMS)[number],
+      handle: str(f, "handle"),
+      language: str(f, "language") as (typeof LANGUAGES)[number],
+      goal: { postsPerDay: Number(str(f, "postsPerDay") || "0"), weekdays: f.getAll("weekdays").map(Number) },
+      rules: { hashtagsMax: optInt(f, "chHashtagsMax") },
+      allowedTypes: f.getAll("allowedTypes").map(String) as (typeof POST_TYPES)[number][],
+      defaultPresetKey: str(f, "defaultPresetKey") || undefined,
+    });
+    revalidatePath(`/app/brands/${brandId}`);
+    return { ok: "channelSaved" };
   } catch (e) {
     return { error: errorCode(e) };
   }

@@ -10,7 +10,7 @@ import { BrandError, getBrandDetail, listProfileVersions } from "@/server/brands
 import { getDb } from "@/server/db/client";
 import { getPlatformRuleSet, listPlatformRules, listPresets } from "@/server/rules/repo";
 import { archiveBrandAction, removeChannelAction } from "../actions";
-import { ChannelForm, ProfileForm } from "../forms";
+import { ChannelEdit, ChannelForm, ProfileForm } from "../forms";
 import { FilesSection } from "./files-section";
 import { PostsSection } from "./posts-section";
 import { listPosts } from "@/server/posts/generate";
@@ -155,9 +155,14 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
                       {t(`lang.${c.language as "sl"}`)} · {t("perDay", { n: c.goal.postsPerDay })} · {c.goal.weekdays.map((d) => t(`days.${d as 1}`)).join(" ")} · {c.allowedTypes.map((ty) => t(`types.${ty}`)).join(", ")}
                       {c.defaultPresetKey ? ` · ${c.defaultPresetKey}` : ""}
                     </p>
+                    {!brand.languages.includes(c.language) ? <p role="alert" className="text-warn">{t("channelLanguageMismatch", { lang: t(`lang.${c.language as "sl"}`) })}</p> : null}
                     <p data-testid={`effective-${c.platform}`}>
                       {t("effective")}: {t("chars", { n: r.captionMax ?? "∞" })} · {t("hashtags", { n: r.hashtagsMax ?? "∞" })} · {r.linksAllowed === false ? t("noLinks") : clickable.get(c.platform) === false ? t("linksNotClickable") : t("linksOk")}
                     </p>
+                    {isOwner ? (
+                      <ChannelEdit brandId={brand.id} languages={brand.languages} channel={{ id: c.id, platform: c.platform, handle: c.handle, language: c.language, goal: c.goal, rules: c.rules, allowedTypes: c.allowedTypes, defaultPresetKey: c.defaultPresetKey }}
+                        presets={presets.filter((p) => p.enabled).map((p) => ({ key: p.key, platform: p.platform, width: p.width, height: p.height, media: p.media }))} />
+                    ) : null}
                   </Card>
                 </li>
               );
