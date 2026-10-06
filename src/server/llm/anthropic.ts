@@ -27,7 +27,7 @@ export function createAnthropicClient(apiKey: string | undefined = process.env.A
           }],
           tools: [{ name: req.tool.name, description: req.tool.description, input_schema: req.tool.inputSchema as Anthropic.Tool.InputSchema }],
           tool_choice: { type: "tool", name: req.tool.name },
-        });
+        }, req.timeoutMs ? { timeout: req.timeoutMs, maxRetries: 1 } : undefined);
       } catch (e) {
         // Status and type only — request bodies may contain brand material.
         const status = (e as { status?: number }).status;

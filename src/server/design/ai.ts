@@ -85,6 +85,8 @@ export function createDesignRequest(i: DesignInputs, invalid?: { draft: unknown;
     ].filter(Boolean).join("\n\n"),
     tool,
     maxTokens: 12_000,
+    // A full design is several thousand output tokens: minutes, not seconds (the SDK default of 90 s cut it off).
+    timeoutMs: 8 * 60_000,
   };
 }
 
@@ -103,6 +105,8 @@ export function reviseDesignRequest(i: DesignInputs, current: DesignSpec, instru
     ].filter(Boolean).join("\n\n"),
     tool,
     maxTokens: 12_000,
+    // A full design is several thousand output tokens: minutes, not seconds (the SDK default of 90 s cut it off).
+    timeoutMs: 8 * 60_000,
   };
 }
 
@@ -167,5 +171,6 @@ Rules:
     ].filter(Boolean).join("\n"),
     tool: { name: "plan_post_images", description: "Choose template, words and illustration for each image of the post.", inputSchema: schema },
     maxTokens: 4000,
+    timeoutMs: 3 * 60_000,
   };
 }

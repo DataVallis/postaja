@@ -19,7 +19,7 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
     // Images (TASK-015): the provider can queue for a while; one retry, at most 10 minutes per post.
     await boss.createQueue(POST_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 600 }).catch(() => undefined);
     // Brand designs (TASK-017): one Claude call with pictures, a few renders; no automatic retry (the owner sees why).
-    await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 600 }).catch(() => undefined);
+    await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 1800 }).catch(() => undefined);
     return boss;
   })();
   return started;

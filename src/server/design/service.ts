@@ -163,7 +163,8 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
       out = await cappedCall(db, deps.llm, { orgId: d.orgId, brandId: d.brandId, postId: null, now: deps.now }, req);
     } catch (e) {
       if (e instanceof SpendCapError) return fail("SPEND_CAP");
-      if (e instanceof LlmError) return fail(e.code);
+      // Keep the provider's status for diagnosis ("PROVIDER:anthropic 400 BadRequestError"); never request content.
+      if (e instanceof LlmError) return fail(e.message && e.message !== e.code ? `${e.code}:${e.message}`.slice(0, 200) : e.code);
       throw e;
     }
     const parsed = designSpecSchema.safeParse(out.input);

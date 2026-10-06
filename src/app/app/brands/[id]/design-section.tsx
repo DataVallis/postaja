@@ -52,7 +52,12 @@ export async function DesignSection(props: {
 
       {props.error ? <p role="alert" className="rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger">{t(`errors.${props.error}`)}</p> : null}
       {working ? <p className="rounded-lg border border-signal/40 px-3 py-2 text-sm" aria-live="polite" data-testid="design-working">{latest.instruction ? t("revising") : t("working")}</p> : null}
-      {latest?.status === "failed" && !working ? <p role="alert" className="rounded-lg border border-danger/50 px-3 py-2 text-sm">{t("failed", { reason: t(`errors.${latest.error ?? "FAILED"}`) })}</p> : null}
+      {latest?.status === "failed" && !working ? (
+        <p role="alert" className="rounded-lg border border-danger/50 px-3 py-2 text-sm" data-testid="design-failed">
+          {t("failed", { reason: t.has(`errors.${(latest.error ?? "FAILED").split(":")[0]}`) ? t(`errors.${(latest.error ?? "FAILED").split(":")[0]}`) : t("errors.FAILED") })}
+          {latest.error?.includes(":") ? <span className="mt-1 block text-xs text-muted">{latest.error.slice(latest.error.indexOf(":") + 1)}</span> : null}
+        </p>
+      ) : null}
 
       {!current ? (
         <Card className="grid gap-4 p-5">
