@@ -138,8 +138,11 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
   throw new ImageJobError("INVALID_OUTPUT");
 }
 
-/** One illustration: the brand's style-reference model when it has past posts, else the default image model. */
-async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect, prompt: string, shape: { width: number; height: number }, references: string[]) {
+/**
+ * One illustration: the brand's style-reference model when it has past posts, else the default image model. `who` is
+ * what the cost is booked on (a post, or only the brand for an ad set).
+ */
+export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[]) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
   const pick = async (kind: "image" | "image_style") =>
     (await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true))))[0];
@@ -147,7 +150,7 @@ async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, p:
   if (!model) throw new ImageError("IMAGE_PROVIDER");
   const gen = generationSize(shape.width, shape.height);
   const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now });
   let out;
   try {
     out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: "text, letters, words, watermark, logo" });
@@ -222,7 +225,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
       } else {
         references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
         const prompt = illustrationPrompt(slide.illustration ?? p.brief, spec);
-        const out = await generateIllustration(db, deps, ctx, p, prompt, illustrationShape(t, size), references);
+        const out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
         illustration = out.bytes;
         const k = key(ctx.orgId, postId, "jpg");
         await deps.storage.put(k, out.bytes, "image/jpeg");

@@ -1,7 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requestAdImages, setAdSlides } from "@/server/ads/creatives";
 import { AdError, createAdSet, saveAdCopy, writeAdCopy } from "@/server/ads/service";
+import { bossQueue, getBoss } from "@/server/jobs/boss";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { createAnthropicClient } from "@/server/llm/anthropic";
@@ -67,4 +69,40 @@ export async function saveAdCopyAction(f: FormData) {
   }
   revalidatePath(`/app/ads/${id}`);
   redirect(`/app/ads/${id}?saved=1`);
+}
+
+/** "Ustvari slike" / "Nove slike": the creatives for every placement, in the background. */
+export async function requestAdImagesAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  let error: string | null = null;
+  try {
+    await requestAdImages(getDb(), bossQueue(await getBoss()), ctx, id, f.get("mode") === "text" ? "text" : "new");
+  } catch (e) {
+    error = e instanceof AdError ? (e.detail ?? e.code) : "FAILED";
+  }
+  revalidatePath(`/app/ads/${id}`);
+  redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);
+}
+
+/** Corrected words on the creatives (per variant and slot), redrawn on the same illustrations for free. */
+export async function saveAdSlidesAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  const slides: Record<string, string>[] = [];
+  for (const [k, v] of f.entries()) {
+    const m = k.match(/^s(\d)\.([a-z]+)$/);
+    if (m) (slides[Number(m[1])] ??= {})[m[2]] = String(v);
+  }
+  let error: string | null = null;
+  try {
+    await setAdSlides(getDb(), ctx, id, Array.from(slides, (s) => s ?? {}));
+    await requestAdImages(getDb(), bossQueue(await getBoss()), ctx, id, "text");
+  } catch (e) {
+    error = e instanceof AdError ? (e.detail ?? e.code) : "INVALID";
+  }
+  revalidatePath(`/app/ads/${id}`);
+  redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);
 }

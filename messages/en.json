@@ -1081,7 +1081,7 @@
   "Ads": {
     "title": "Ads",
     "newTitle": "New ad",
-    "newHint": "One ad concept for the chosen networks: Claude writes 3 copy variants for each network in its own fields and character limits, from the CGP and your offer. Creatives per placement come in the next step.",
+    "newHint": "One ad concept for the chosen networks: Claude writes 3 copy variants for each network in its own fields and character limits, from the CGP and your offer. Then the brand's visual identity makes the images for every placement.",
     "objective": "Objective",
     "objectives": {
       "awareness": "Awareness",
@@ -1122,7 +1122,6 @@
       "shorts": "Shorts"
     },
     "placementsTitle": "Placements",
-    "visualsLater": "Images for every placement (exact sizes, safe zones) come in the next step.",
     "variant": "Variant {n}",
     "perLine": "one per line, at most {max}",
     "visible": "visible {n}",
@@ -1162,6 +1161,22 @@
       "SPEND_CAP": "The monthly spend cap is reached.",
       "NO_MODEL": "No Claude model is configured.",
       "AI_FAILED": "Claude returned no usable copy. Try again."
+    },
+    "creativesTitle": "Creatives",
+    "creativeAlt": "{placement}, variant {n}",
+    "creativesEmpty": "No images yet. Postaja draws them from the brand's visual identity: {placements} placements × {variants} variants, text and logo inside the safe zones.",
+    "makeCreatives": "Create images",
+    "newCreatives": "New images",
+    "zip": "Download ZIP (images + copy.csv)",
+    "creativesEstimate": "~{illustrations} AI illustrations · at most {max}",
+    "creativeTextsHint": "Correct the words and save — every placement is redrawn on the same illustrations at no cost.",
+    "imageErrors": {
+      "FAILED": "The images could not be made. Try again.",
+      "NO_COPY": "The ad needs its copy first.",
+      "NO_DESIGN": "The brand has no visual identity yet.",
+      "BUSY": "Images are already being made.",
+      "NO_IMAGES": "The ad has no images yet.",
+      "NO_PLACEMENT": "The ad has no placements."
     }
   }
 }

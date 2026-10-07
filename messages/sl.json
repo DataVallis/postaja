@@ -1081,7 +1081,7 @@
   "Ads": {
     "title": "Oglasi",
     "newTitle": "Nov oglas",
-    "newHint": "En koncept oglasa za izbrana omrežja: Claude napiše 3 različice besedila za vsako omrežje v njegovih poljih in omejitvah znakov iz CGP-ja in tvoje ponudbe. Kreative za vsako umestitev pridejo v naslednjem koraku.",
+    "newHint": "En koncept oglasa za izbrana omrežja: Claude napiše 3 različice besedila za vsako omrežje v njegovih poljih in omejitvah znakov iz CGP-ja in tvoje ponudbe. Nato iz vizualne podobe branda nastanejo slike za vsako umestitev.",
     "objective": "Cilj",
     "objectives": {
       "awareness": "Prepoznavnost",
@@ -1122,7 +1122,6 @@
       "shorts": "Shorts"
     },
     "placementsTitle": "Umestitve",
-    "visualsLater": "Slike za vsako umestitev (v točnih dimenzijah in varnih conah) dodam v naslednjem koraku.",
     "variant": "Različica {n}",
     "perLine": "vsako v svojo vrstico, največ {max}",
     "visible": "vidno {n}",
@@ -1162,6 +1161,22 @@
       "SPEND_CAP": "Mesečni limit porabe je dosežen.",
       "NO_MODEL": "Model Claude ni nastavljen.",
       "AI_FAILED": "Claude ni vrnil uporabnih besedil. Poskusi znova."
+    },
+    "creativesTitle": "Kreative",
+    "creativeAlt": "{placement}, različica {n}",
+    "creativesEmpty": "Še ni slik. Postaja jih nariše iz vizualne podobe branda: {placements} umestitev × {variants} različic, besedila in logotip znotraj varnih con.",
+    "makeCreatives": "Ustvari slike",
+    "newCreatives": "Nove slike",
+    "zip": "Prenesi ZIP (slike + copy.csv)",
+    "creativesEstimate": "~{illustrations} AI ilustracij · največ {max}",
+    "creativeTextsHint": "Popravi besede in shrani — slike vseh umestitev se na istih ilustracijah izrišejo znova, brez novih stroškov.",
+    "imageErrors": {
+      "FAILED": "Slik ni bilo mogoče narediti. Poskusi znova.",
+      "NO_COPY": "Najprej potrebuješ besedila oglasa.",
+      "NO_DESIGN": "Brand še nima vizualne podobe.",
+      "BUSY": "Slike že nastajajo.",
+      "NO_IMAGES": "Oglas še nima slik.",
+      "NO_PLACEMENT": "Oglas nima umestitev."
     }
   }
 }

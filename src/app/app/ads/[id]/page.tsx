@@ -12,16 +12,20 @@ import { getBrandDetail } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
 import type { AdCopyIssue } from "@/server/db/schema";
 import { rewriteAdCopyAction, saveAdCopyAction } from "../actions";
+import { CreativesSection } from "./creatives-section";
+import { adImageEstimate, listAdMedia } from "@/server/ads/creatives";
+import { currentDesign } from "@/server/design/service";
+import { templateSlots } from "@/server/design/spec";
 
 export const dynamic = "force-dynamic";
 
 const TONE = { draft: "neutral", ready: "ok", needs_review: "warn" } as const;
 
 /** One ad set (TASK-021): the copy variants per network, checked against the network's limits; edit, rewrite, export. */
-export default async function AdSetPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; saved?: string }> }) {
+export default async function AdSetPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; saved?: string; imageError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
-  const { error, saved } = await searchParams;
+  const { error, saved, imageError } = await searchParams;
   const db = getDb();
   const a = await getAdSet(db, org, id).catch((e) => {
     if (e instanceof AdError) notFound();
@@ -35,6 +39,8 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
   const issueText = (x: AdCopyIssue) => t(`issues.${x.code}`, { actual: String(x.actual), limit: String(x.limit) });
   const hard = a.issues.filter((x) => x.code !== "long_visible");
   const [errCode, ...errRest] = (a.error ?? "").split(":");
+  const [media, design, estimate] = await Promise.all([listAdMedia(db, org, a.id), currentDesign(db, org, a.brandId), a.copy.length ? adImageEstimate(db, org, a) : Promise.resolve(null)]);
+  const templates = design?.spec ? design.spec.templates.map((x) => ({ id: x.id, name: x.name, slots: templateSlots(x) })) : null;
   const placements = networks.flatMap((n) => n.placements.filter((p) => a.placements.includes(p.key)).map((p) => ({ ...p, network: n.label })));
 
   return (
@@ -56,13 +62,20 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
         {saved ? <p role="status" className="text-sm text-ok">{t("saved")}</p> : null}
         {a.copy.length && hard.length ? <p role="alert" className="text-sm text-warn" data-testid="ad-issues">{t("issuesSummary", { n: hard.length })}</p> : null}
 
+        {a.copy.length ? (
+          <CreativesSection
+            adSetId={a.id} status={a.mediaStatus} error={a.mediaError} requestError={imageError} media={media} visual={a.visual}
+            templates={templates} variants={a.copy.length} estimate={estimate} designHref={`/app/brands/${brand.id}?tab=design`}
+            placements={placements.map((p) => ({ key: p.key, label: `${p.network} · ${t(`placements.${p.placement}`)}`, width: p.width, height: p.height }))}
+          />
+        ) : null}
+
         <Card className="grid gap-2 p-4 text-sm">
           <p className="font-medium">{t("placementsTitle")}</p>
           <p className="text-muted" data-testid="ad-placements">{networks.map((n) => {
             const mine = placements.filter((p) => p.network === n.label);
             return mine.length ? `${n.label}: ${mine.map((p) => `${t(`placements.${p.placement}`)} ${p.width}×${p.height}`).join(", ")}` : null;
           }).filter(Boolean).join(" · ")}</p>
-          <p className="text-xs text-muted">{t("visualsLater")}</p>
         </Card>
 
         {a.copy.length ? (

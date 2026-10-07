@@ -6,7 +6,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { createBrand, saveProfile } from "../brands/service";
-import { orgSettings } from "../db/schema";
+import sharp from "sharp";
+import { cardDesign } from "../../../tests/fixtures/design";
+import { unzip } from "../files/zip";
+import { adMedia, brandDesigns, brands, orgSettings } from "../db/schema";
+import { designSpecSchema } from "../design/spec";
+import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
+import type { ImageClient, ImageRequest } from "../images/fal";
+import type { LlmClient, StructuredRequest } from "../llm/types";
+import { adImageEstimate, adMediaUrl, adZip, copyForImage, listAdMedia, renderAdImages, requestAdImages, runAdImageJob, setAdSlides, type AdImageJob } from "./creatives";
 import { createFakeLlm } from "../llm/fake";
 import { LlmError } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
@@ -25,7 +33,7 @@ let A: OrgContext, B: OrgContext, editorA: OrgContext, brandA: string;
 beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
   mailer.sent.length = 0;
-  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets cascade`;
+  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets, ad_media, brand_designs cascade`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
   const actor = { userId: s.user.id, role: "superadmin" as const };
   const d = { mailer, baseURL: "http://localhost:3000" };
@@ -42,6 +50,7 @@ beforeEach(async () => {
 });
 afterAll(async () => { await sql.end({ timeout: 5 }); });
 
+const storage = createS3Storage(s3ConfigFromEnv());
 const metaCopy = (headline: string, cta = "Sign Up") => ({ primary_text: "Zgradi svojo prvo aplikacijo v enem vikendu.", headline, description: "Brez programiranja", cta });
 const googleCopy = { headlines: ["Vibe Coding 101", "Aplikacija brez kode"], long_headline: "Zgradi aplikacijo z AI v enem vikendu", descriptions: ["Tečaj za ne-programerje."], business_name: "AI Builders" };
 const answer = (headlines: string[]) => ({ input: { variants: headlines.map((h) => ({ meta: metaCopy(h), google_display: googleCopy })) } });
@@ -132,14 +141,132 @@ describe("editing and export", () => {
     const { csv, filename } = await adCopyCsv(db, A, id);
     expect(filename).toMatch(/^aib-oglas-.{8}-copy\.csv$/);
     const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
-    expect(lines[0]).toBe("ad_set;network;placement;width;height;variant;primary_text;headline;description;headlines;long_headline;descriptions;business_name;cta;landing_url");
+    expect(lines[0]).toBe("ad_set;network;placement;width;height;variant;primary_text;headline;description;headlines;long_headline;descriptions;business_name;cta;landing_url;image_file");
     expect(lines).toHaveLength(1 + (2 + 1) * 3); // meta: feed 4:5 + story; google: square — × 3 variants
-    expect(lines[1]).toBe("20 % popusta do 31. 10.;meta;fb_feed_portrait;1080;1350;1;Zgradi svojo prvo aplikacijo v enem vikendu.;Prvi;Brez programiranja;;;;;Sign Up;https://aibuilders.si/tecaj");
+    expect(lines[1]).toBe("20 % popusta do 31. 10.;meta;fb_feed_portrait;1080;1350;1;Zgradi svojo prvo aplikacijo v enem vikendu.;Prvi;Brez programiranja;;;;;Sign Up;https://aibuilders.si/tecaj;"); // no image yet
     expect(lines.find((l) => l.includes("gdn_responsive_square;1200;1200;3"))).toContain("Ena | Dva");
 
     await expect(getAdSet(db, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(saveAdCopy(db, B, id, edited as never)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(adCopyCsv(db, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await listAdSets(db, B, brandA)).toEqual([]);
+  });
+});
+
+describe("creatives (TASK-021b)", () => {
+  async function giveDesign() {
+    const id = crypto.randomUUID();
+    await db.insert(brandDesigns).values({ id, orgId: A.orgId, brandId: brandA, version: 1, status: "ready", spec: designSpecSchema.parse(cardDesign), createdBy: A.userId });
+    await db.update(brands).set({ currentDesignId: id }).where(eq(brands.id, brandA));
+  }
+  function plans(visuals: unknown[]) {
+    const calls: StructuredRequest[] = [];
+    const client: LlmClient = { async structured(req) { calls.push(req); return { input: JSON.parse(JSON.stringify({ visuals })), usage: { inputTokens: 900, outputTokens: 300, cacheWriteTokens: 0, cacheReadTokens: 0 } }; } };
+    return { client, calls };
+  }
+  function fal() {
+    const calls: ImageRequest[] = [];
+    const client: ImageClient = {
+      async generate(req) {
+        calls.push(req);
+        return { bytes: new Uint8Array(await sharp({ create: { width: req.width, height: req.height, channels: 3, background: "#204060" } }).jpeg().toBuffer()), contentType: "image/jpeg", width: req.width, height: req.height };
+      },
+    };
+    return { client, calls };
+  }
+  const visuals = [
+    { templateId: "cover", slots: { headline: "Prvi *vikend*", label: "Webinar" }, illustration: "A laptop on a desk at dawn" },
+    { templateId: "points", slots: { headline: "Drugi naslov", number: "01" }, illustration: null },
+    { templateId: "cover", slots: { headline: "Tretji" }, illustration: "A calm workspace" },
+  ];
+  async function adSet() {
+    return createAdSet(db, { llm: createFakeLlm([answer(["Zgradi v vikendu", "Brez kode", "Začni danes"])]).client }, A, { ...base, brandId: brandA });
+  }
+  const queue = () => { const jobs: AdImageJob[] = []; return { jobs, q: { async send(_n: string, data: object) { jobs.push(data as AdImageJob); } } }; };
+
+  it("Claude picks a template and words per variant; one illustration per illustrated variant; every placement in its exact size", async () => {
+    const id = await adSet();
+    const { q, jobs } = queue();
+    await expect(requestAdImages(db, q, A, id, "new")).rejects.toMatchObject({ code: "BAD_STATE", detail: "NO_DESIGN" });
+    await giveDesign();
+    const est = await adImageEstimate(db, A, await getAdSet(db, A, id));
+    expect(est!.illustrations).toBe(3);
+    await requestAdImages(db, q, editorA, id, "new");
+    await expect(requestAdImages(db, q, A, id, "new")).rejects.toMatchObject({ detail: "BUSY" }); // one at a time
+    const claude = plans(visuals);
+    const images = fal();
+    expect(await runAdImageJob(db, { llm: claude.client, images: images.client, storage }, jobs[0])).toBe("done");
+    expect(claude.calls).toHaveLength(1);
+    expect(claude.calls[0].tool.name).toBe("plan_ad_visuals");
+    expect(claude.calls[0].user).toContain("<headline>Zgradi v vikendu</headline>");
+    expect(images.calls).toHaveLength(2); // the "points" variant has no illustration
+    expect(images.calls[0].width).toBe(images.calls[0].height); // square, ~1 MP, cropped into each placement's box
+    expect(images.calls[0].width * images.calls[0].height).toBeLessThanOrEqual(1_000_000);
+    expect(images.calls[0].prompt).toContain("A laptop on a desk at dawn");
+    const a = await getAdSet(db, A, id);
+    expect(a.mediaStatus).toBe("ready");
+    expect(a.visual!.variants.map((v) => v.templateId)).toEqual(["cover", "points", "cover"]);
+    const media = await listAdMedia(db, A, id);
+    expect(media).toHaveLength(3 * 3); // fb 4:5, IG story 9:16, Google 1:1 × 3 variants
+    const story = media.find((m) => m.placement === "ig_story_image")!;
+    expect([story.width, story.height]).toEqual([1080, 1920]);
+    const stored = await db.select().from(adMedia).where(eq(adMedia.id, story.id));
+    expect(await sharp(await storage.get(stored[0].storageKey)).metadata()).toMatchObject({ width: 1080, height: 1920, format: "png" });
+    const costs = await sql`select model, post_id, brand_id from usage_ledger where org_id = ${A.orgId} and model like 'fal-ai/%'`;
+    expect(costs).toHaveLength(2);
+    expect(costs.every((c) => c.post_id === null && c.brand_id === brandA)).toBe(true);
+
+    // copy.csv names each row's image; the ZIP holds it and a folder per placement.
+    const { csv } = await adCopyCsv(db, A, id);
+    expect(csv).toContain(";fb_feed_portrait/aib_20-popusta-do-31-10_fb_feed_portrait_v1.png");
+    const z = await adZip(db, storage, A, id);
+    expect(z.filename).toBe("aib_20-popusta-do-31-10.zip");
+    const names = unzip(new Uint8Array(await new Response(z.stream).arrayBuffer())).map((e) => e.name);
+    expect(names[0]).toBe("copy.csv");
+    expect(names).toContain("ig_story_image/aib_20-popusta-do-31-10_ig_story_image_v3.png");
+    expect(names).toHaveLength(1 + 9);
+  });
+
+  it("corrected words redraw every placement on the same illustrations, without Claude or fal", async () => {
+    await giveDesign();
+    const id = await adSet();
+    const { q, jobs } = queue();
+    await requestAdImages(db, q, A, id, "new");
+    await runAdImageJob(db, { llm: plans(visuals).client, images: fal().client, storage }, jobs[0]);
+    const before = await db.select().from(adMedia).where(eq(adMedia.adSetId, id));
+    await setAdSlides(db, editorA, id, [{ headline: "Nov *naslov*", label: "" }]);
+    expect((await getAdSet(db, A, id)).visual!.variants[0].slots).toEqual({ headline: "Nov *naslov*" });
+    jobs.length = 0;
+    await requestAdImages(db, q, A, id, "text");
+    const claude = plans(visuals);
+    const images = fal();
+    await runAdImageJob(db, { llm: claude.client, images: images.client, storage }, jobs[0]);
+    expect(claude.calls).toHaveLength(0);
+    expect(images.calls).toHaveLength(0);
+    const after = await db.select().from(adMedia).where(eq(adMedia.adSetId, id));
+    const ill = (rows: typeof after) => rows.filter((m) => m.kind === "illustration").map((m) => m.storageKey).sort();
+    expect(ill(after)).toEqual(ill(before));
+    const oldCreative = before.find((m) => m.kind === "creative")!;
+    expect(after.some((m) => m.storageKey === oldCreative.storageKey)).toBe(false);
+    expect(await storage.exists(oldCreative.storageKey)).toBe(false);
+  });
+
+  it("other organizations reach no creative, ZIP or job; an ad without images has no ZIP", async () => {
+    await giveDesign();
+    const id = await adSet();
+    await expect(adZip(db, storage, A, id)).rejects.toMatchObject({ detail: "NO_IMAGES" });
+    await renderAdImages(db, { llm: plans(visuals).client, images: fal().client, storage }, A, id, "new");
+    const m = (await listAdMedia(db, A, id))[0];
+    expect(await adMediaUrl(db, storage, A, m.id, true)).toMatch(/^http/);
+    await expect(adMediaUrl(db, storage, B, m.id, false)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(adZip(db, storage, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(requestAdImages(db, queue().q, B, id, "new")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(await listAdMedia(db, B, id)).toEqual([]);
+  });
+
+  it("copyForImage takes the first network that has a headline, text and CTA", () => {
+    expect(copyForImage({ google_display: { headlines: ["G1", "G2"], descriptions: ["Opis"] }, linkedin: { headline: "Li", intro_text: "Uvod", cta: "Register" } }))
+      .toEqual({ headline: "Li", text: "Uvod", cta: "Register" });
+    expect(copyForImage({ google_display: { headlines: ["G1"], descriptions: ["Opis"] } })).toEqual({ headline: "G1", text: "Opis", cta: "" });
   });
 });

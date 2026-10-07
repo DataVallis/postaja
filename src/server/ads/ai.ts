@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { languageName } from "@/lib/language";
 import type { AdCopyIssue, AdObjective } from "../db/schema";
+import { needsIllustration, nullableSlotTexts, templateSlots, type DesignSpec } from "../design/spec";
 import type { StructuredRequest } from "../llm/types";
 import type { NetworkSpec } from "./check";
 
@@ -98,5 +99,57 @@ e.g. pain, outcome, proof), each complete for every ad network asked, in that ne
     tool: { name: "submit_ad_copy", description: "Submit the ad copy variants.", inputSchema: toolSchema(i.networks, variants) },
     maxTokens: 6000,
     timeoutMs: 4 * 60_000,
+  };
+}
+
+// ---- creatives (TASK-021b) ----
+
+/** Per copy variant one visual: a brand template, its words and (if the template has one) the illustration subject. */
+export function adVisualSchema(spec: DesignSpec, count: number) {
+  const ids = spec.templates.map((t) => t.id) as [string, ...string[]];
+  return z.object({
+    visuals: z.array(z.object({ templateId: z.enum(ids), slots: nullableSlotTexts(300), illustration: z.string().max(1500).nullable() })).length(count),
+  });
+}
+
+export type AdVisualInputs = {
+  brandName: string;
+  language: string;
+  objective: AdObjective;
+  offer: string;
+  /** Per copy variant the words the image may carry: its headline, main text and CTA button. */
+  copies: { headline: string; text: string; cta: string }[];
+};
+
+export function adVisualRequest(spec: DesignSpec, i: AdVisualInputs, invalid?: { draft: unknown; errors: string }): Omit<StructuredRequest, "model"> {
+  const templates = spec.templates.map((t) => ({ id: t.id, name: t.name, use: t.use, slots: templateSlots(t), illustration: needsIllustration(t), sample: t.sample }));
+  const schema = z.toJSONSchema(adVisualSchema(spec, i.copies.length), { target: "draft-2020-12", io: "input" }) as Record<string, unknown>;
+  delete schema.$schema;
+  return {
+    system: [{
+      text: `You are the art director of Postaja. For one ad you choose, from the brand's own templates, one visual per copy variant:
+the template, the words on the image and what its illustration shows. Keep the brand's common thread: ${spec.summary}
+Rules:
+- An ad image carries few words: a short hook (≤ 7 words, from or matching the variant's headline), optionally a label
+  and the CTA as a button text if the template has a slot for it. Never the long body text. Mark the key words with *…*.
+- Every word is in the ad's language. Use only facts from the offer and the copy; no invented prices or dates.
+- The image is shown at several sizes (4:5, 1:1, 9:16 with UI covering top and bottom, 1.91:1), so prefer templates with a
+  strong single headline; avoid list or step templates.
+- Illustration: only for templates that show one, else null. A concrete subject and composition with calm space for the
+  text; the brand's illustration style is added automatically. Never text, letters, logos or watermarks in the picture.
+- Make the variants visibly different (another template, subject or emphasis), so they can be tested against each other.`,
+      cache: true,
+    }],
+    user: [
+      `<templates>\n${JSON.stringify(templates)}\n</templates>`,
+      `<ad brand="${i.brandName}" language="${languageName(i.language)}" objective="${i.objective}">`,
+      i.offer.trim() ? `<offer>${i.offer.trim()}</offer>` : "",
+      ...i.copies.map((c, n) => `<variant n="${n + 1}"><headline>${c.headline}</headline><text>${c.text.slice(0, 600)}</text>${c.cta ? `<cta>${c.cta}</cta>` : ""}</variant>`),
+      "</ad>",
+      invalid ? `Your previous answer did not validate. Fix:\n${invalid.errors}\n<previous>${JSON.stringify(invalid.draft).slice(0, 8000)}</previous>` : "",
+    ].filter(Boolean).join("\n"),
+    tool: { name: "plan_ad_visuals", description: "Choose template, words and illustration for each ad variant.", inputSchema: schema },
+    maxTokens: 3000,
+    timeoutMs: 3 * 60_000,
   };
 }
