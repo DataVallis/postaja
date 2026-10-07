@@ -10,6 +10,7 @@ import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
 import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
+import { requestAnimation } from "@/server/video/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
@@ -152,4 +153,19 @@ export async function saveSlidesAction(f: FormData): Promise<void> {
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
+}
+
+/** "Animiraj" (TASK-022): the chosen image's illustration moves as described; queued for the worker. */
+export async function requestAnimationAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await requestAnimation(getDb(), bossQueue(await getBoss()), ctx, id, { position: Number(f.get("position") ?? 0), motion: String(f.get("motion") ?? "") });
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "FAILED";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?videoError=${error}` : ""}#animation`);
 }

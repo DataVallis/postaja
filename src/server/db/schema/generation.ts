@@ -18,7 +18,7 @@ export const modelRegistry = pgTable(
     provider: text("provider").$type<"anthropic" | "fal">().notNull(),
     modelKey: text("model_key").notNull(),
     /** "image_style": an image model that takes the brand's example images as style reference (TASK-017). */
-    kind: text("kind").$type<"text" | "image" | "image_style">().notNull(),
+    kind: text("kind").$type<"text" | "image" | "image_style" | "video">().notNull(),
     label: text("label").notNull(),
     inputPerMtok: bigint("input_per_mtok", { mode: "bigint" }).notNull(),
     outputPerMtok: bigint("output_per_mtok", { mode: "bigint" }).notNull(),
@@ -27,6 +27,8 @@ export const modelRegistry = pgTable(
     perMegapixel: bigint("per_megapixel", { mode: "bigint" }).notNull().default(sql`0`),
     /** Image models priced per picture (micro-USD), added to the per-megapixel price. */
     perImage: bigint("per_image", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Video models priced per second of output (micro-USD), TASK-022. */
+    perSecond: bigint("per_second", { mode: "bigint" }).notNull().default(sql`0`),
     isDefault: boolean("is_default").notNull().default(false),
     enabled: boolean("enabled").notNull().default(true),
     source: text("source").notNull(),
@@ -36,7 +38,7 @@ export const modelRegistry = pgTable(
     uniqueIndex("model_registry_provider_key_uq").on(t.provider, t.modelKey),
     // At most one default per kind.
     uniqueIndex("model_registry_default_uq").on(t.kind).where(sql`${t.isDefault}`),
-    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0 and ${t.perMegapixel} >= 0 and ${t.perImage} >= 0`),
+    check("model_registry_prices_ck", sql`${t.inputPerMtok} >= 0 and ${t.outputPerMtok} >= 0 and ${t.cacheWritePerMtok} >= 0 and ${t.cacheReadPerMtok} >= 0 and ${t.perMegapixel} >= 0 and ${t.perImage} >= 0 and ${t.perSecond} >= 0`),
   ],
 );
 
@@ -91,6 +93,12 @@ export const posts = pgTable(
     mediaError: text("media_error"),
     /** Who asked for the images last; the worker acts as this member (ADR-043). */
     mediaRequestedBy: text("media_requested_by").references(() => user.id, { onDelete: "set null" }),
+    /** Animation (TASK-022): one video per post, of slide `videoPosition`, made from `videoMotion`. */
+    videoStatus: text("video_status").$type<MediaStatus>().notNull().default("none"),
+    videoError: text("video_error"),
+    videoRequestedBy: text("video_requested_by").references(() => user.id, { onDelete: "set null" }),
+    videoMotion: text("video_motion"),
+    videoPosition: integer("video_position"),
     createdBy: text("created_by").notNull().references(() => user.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -104,6 +112,7 @@ export const posts = pgTable(
     index("posts_org_scheduled_idx").on(t.orgId, t.scheduledOn),
     check("posts_type_ck", sql`${t.type} in ('text')`),
     check("posts_media_status_ck", sql`${t.mediaStatus} in ('none','queued','rendering','ready','failed')`),
+    check("posts_video_status_ck", sql`${t.videoStatus} in ('none','queued','rendering','ready','failed')`),
   ],
 );
 

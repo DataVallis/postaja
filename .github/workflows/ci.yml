@@ -49,6 +49,8 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      - name: ffmpeg (animations, TASK-022)
+        run: command -v ffmpeg || (sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg)
       - name: Unit tests
         run: pnpm test
       - name: Start S3 stand-in
@@ -81,6 +83,7 @@ jobs:
           echo "$body" | grep -q "\"sha\":\"${{ github.sha }}\"" || { docker logs app; exit 1; }
           echo "$body" | grep -q '"db":"ok"' || { docker logs app; exit 1; }
           test "$(docker exec app id -u)" = "1001"
+          docker exec app ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264
 
   kamal-config:
     name: Kamal config

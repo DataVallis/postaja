@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
@@ -154,6 +155,25 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await revise.getByRole("button", { name: "Popravi slike" }).click();
   await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 1);
   await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+
+  // Animation (TASK-022): the cover's clean illustration moves; the words are burned back on by Postaja.
+  const anim = p.getByTestId("animation");
+  await expect(anim.getByLabel("Gibanje")).toHaveValue(/^Slow, smooth camera push-in/);
+  await anim.getByLabel("Gibanje").fill("Slow push-in, the red light pulses gently.");
+  expect(await serious(p)).toEqual([]);
+  await anim.getByRole("button", { name: /^Animiraj · ≈ 0\.27 €$/ }).click();
+  await expect(p.getByTestId("animation-status")).toHaveText("Pripravljene", { timeout: 60_000 });
+  // The test Chromium has no H.264 decoder (Chrome and Safari do), so the file itself is checked with ffprobe.
+  await expect(p.getByTestId("animation-video")).toHaveAttribute("src", /^\/api\/post-media\//);
+  const vlog = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).at(-1);
+  expect(vlog).toEqual({ model: "fal-ai/minimax/hailuo-02/standard/image-to-video", video: true, duration: "6", image: "data:image/jpeg;base64," });
+  const [mp4] = await Promise.all([p.waitForEvent("download"), anim.getByTestId("animation-download").click()]);
+  expect(mp4.suggestedFilename()).toMatch(/^cherr-.*-video-1\.mp4$/);
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height", "-of", "json", (await mp4.path())!]).toString());
+  expect(probe.streams).toEqual(expect.arrayContaining([
+    expect.objectContaining({ codec_type: "video", codec_name: "h264", width: 1080, height: 1350 }), expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
+  ]));
+  await p.screenshot({ path: info.outputPath("animation.png"), fullPage: true });
 
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
   await p.goto(`/app/plan?view=day&d=${today}`);

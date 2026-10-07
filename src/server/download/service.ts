@@ -76,6 +76,11 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
         .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "slide"), inArray(postMedia.postId, rows.map((r) => r.id))))
         .orderBy(asc(postMedia.postId), asc(postMedia.position))
     : [];
+  // The post's animation (TASK-022), if it has one.
+  const videos = rows.length
+    ? await db.select({ postId: postMedia.postId, key: postMedia.storageKey }).from(postMedia)
+        .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "video"), inArray(postMedia.postId, rows.map((r) => r.id))))
+    : [];
   const out: ZipSource[] = [];
   rows.forEach((p, i) => {
     const dir = dirs[i];
@@ -86,6 +91,7 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
     for (const m of own) {
       out.push({ name: `${dir}/${m.position + 1}.${m.type === "image/png" ? "png" : "jpg"}`, bytes: () => storage.get(m.key) });
     }
+    for (const v of videos.filter((x) => x.postId === p.id)) out.push({ name: `${dir}/video.mp4`, bytes: () => storage.get(v.key) });
     if (wantsPdf(p.platform, own.length)) out.push({ name: `${dir}/karusel.pdf`, bytes: () => carouselPdf(storage, own.map((m) => m.key), p.plan?.topic || p.brandName) });
   });
   return out;

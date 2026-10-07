@@ -8,6 +8,7 @@ import { createFalClient } from "../images/fal";
 import { POST_IMAGE_QUEUE, runImageJob, type PostImageJob } from "../images/service";
 import { DESIGN_QUEUE, runDesignJob, type DesignJob } from "../design/service";
 import { AD_IMAGE_QUEUE, runAdImageJob, type AdImageJob } from "../ads/creatives";
+import { POST_VIDEO_QUEUE, runVideoJob, type PostVideoJob } from "../video/service";
 import { getBoss } from "./boss";
 
 export async function startWorkers() {
@@ -26,6 +27,9 @@ export async function startWorkers() {
   });
   await boss.work<AdImageJob>(AD_IMAGE_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
     await runAdImageJob(getDb(), deps, job.data);
+  });
+  await boss.work<PostVideoJob>(POST_VIDEO_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
+    await runVideoJob(getDb(), deps, job.data);
   });
   console.log("[jobs] workers started");
 }
