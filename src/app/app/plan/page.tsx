@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge, buttonClass, Card, DataTable, EmptyState, PageHeader, selectClass, STATUS_TONE, td, Tabs } from "@/components/ui";
@@ -155,6 +155,13 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
                 {dayTodo.length && dayImageTodo.length ? <button type="submit" name="steps" value="text,image" className={buttonClass("secondary")}>{tb("bothButton")}</button> : null}
               </form>
             </Card>
+          ) : null}
+          {view === "day" && items.length ? (
+            <div className="flex justify-end">
+              <a href={`/api/plan/download?date=${anchor}${f.brandId ? `&brand=${f.brandId}` : ""}`} className={buttonClass("secondary", "sm")} data-testid="day-zip">
+                <Download aria-hidden className="size-4" />{t("downloadDay", { n: items.length })}
+              </a>
+            </div>
           ) : null}
           {view === "day" ? (
             <DataTable testId="plan-day" head={[t("time"), tp("post"), tp("brand"), tp("channel"), t("format"), t("status")]} empty={items.length ? undefined : t("emptyDay")}>

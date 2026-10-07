@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { expect, test, type Page } from "@playwright/test";
 import { todayIn } from "../../src/lib/dates";
 import { makeXlsx } from "../fixtures/files";
+import { unzip } from "../../src/server/files/zip";
 
 // Brand visual identity and post images (TASK-017): Claude designs the brand's templates from the description and past
 // posts, the owner revises them in words and can go back a version; images for a planned post (template + words by
@@ -148,5 +149,16 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.goto(`/app/plan?view=day&d=${today}`);
   await p.getByTestId("plan-day").getByRole("link", { name: /Koraki|Prvi korak/ }).first().click();
   await expect(p.getByTestId("images").getByTestId("image-list").getByRole("img")).toHaveCount(4); // cover + 3 slides
+
+  // One click: this post as a ZIP (images in order), then the whole day with its overview (TASK-016).
+  const [postZip] = await Promise.all([p.waitForEvent("download"), p.getByTestId("post-zip").click()]);
+  expect(postZip.suggestedFilename()).toMatch(/^cherr-.*\.zip$/);
+  expect(unzip(new Uint8Array(fs.readFileSync((await postZip.path())!))).map((e) => e.name)).toEqual(["1.png", "2.png", "3.png", "4.png"]);
+  await p.goto(`/app/plan?view=day&d=${today}`);
+  const [dayZip] = await Promise.all([p.waitForEvent("download"), p.getByTestId("day-zip").click()]);
+  expect(dayZip.suggestedFilename()).toBe(`postaja-${today}.zip`);
+  const names = unzip(new Uint8Array(fs.readFileSync((await dayZip.path())!))).map((e) => e.name);
+  expect(names[0]).toBe("pregled.csv");
+  expect(names.filter((n) => n.endsWith(".png"))).toHaveLength(5); // 1 image post + 4 carousel images
   await ctx.close();
 });

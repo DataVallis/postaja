@@ -502,7 +502,8 @@
     "slotTime": "Time",
     "slotSave": "Save slot",
     "slotInvalid": "The slot is not valid.",
-    "writeWithAi": "Write text with AI"
+    "writeWithAi": "Write text with AI",
+    "downloadZip": "Download ZIP"
   },
   "Connect": {
     "title": "Claude",
@@ -592,7 +593,8 @@
     "today": "Today",
     "todayHint": "{n, plural, =0 {Nothing planned for today.} one {# post planned for today.} other {# posts planned for today.}}",
     "openPlan": "Open plan →",
-    "time": "Time"
+    "time": "Time",
+    "downloadToday": "Download today (ZIP)"
   },
   "PostsList": {
     "title": "Posts",
@@ -805,7 +807,8 @@
     "publishedOn": "Published",
     "noHistory": "Nothing published yet.",
     "pagination": "Pages",
-    "pageOf": "Page {page} of {pages}"
+    "pageOf": "Page {page} of {pages}",
+    "downloadDay": "Download day (ZIP, {n, plural, one {# post} other {# posts}})"
   },
   "Bulk": {
     "scope": "Scope",

@@ -502,7 +502,8 @@
     "slotTime": "Ura",
     "slotSave": "Shrani termin",
     "slotInvalid": "Termin ni veljaven.",
-    "writeWithAi": "Napiši besedilo z AI"
+    "writeWithAi": "Napiši besedilo z AI",
+    "downloadZip": "Prenesi ZIP"
   },
   "Connect": {
     "title": "Claude",
@@ -592,7 +593,8 @@
     "today": "Danes",
     "todayHint": "{n, plural, =0 {Za danes ni nič v planu.} one {# objava v planu za danes.} two {# objavi v planu za danes.} few {# objave v planu za danes.} other {# objav v planu za danes.}}",
     "openPlan": "Odpri plan →",
-    "time": "Ura"
+    "time": "Ura",
+    "downloadToday": "Prenesi današnje (ZIP)"
   },
   "PostsList": {
     "title": "Objave",
@@ -805,7 +807,8 @@
     "publishedOn": "Objavljeno",
     "noHistory": "Še ni objavljenih objav.",
     "pagination": "Strani",
-    "pageOf": "Stran {page} od {pages}"
+    "pageOf": "Stran {page} od {pages}",
+    "downloadDay": "Prenesi dan (ZIP, {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}})"
   },
   "Bulk": {
     "scope": "Obseg",
