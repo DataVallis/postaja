@@ -2,10 +2,12 @@
 // with PKCE, our magic-link login continuation, consent, token, refresh, and the MCP tools — plus the refusals.
 import { createHash, randomBytes } from "node:crypto";
 import postgres from "postgres";
+import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { BASE_URL, makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { createBrand } from "../brands/service";
+import { fetchPublicFile, type FetchFile } from "../files/fetch-public";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createOrganization, inviteMember } from "../orgs/service";
 import { createMcpHttpHandler } from "./http";
@@ -18,13 +20,21 @@ const SECRET = "test-secret-test-secret-test-secret-123";
 const sql = postgres(url, { max: 1, onnotice: () => {} });
 const { db, mailer, auth, signIn, session } = makeTestAuth(url, { superadmins: "boss@datavallis.com" });
 const storage = createS3Storage(s3ConfigFromEnv());
-const mcpHandler = createMcpHttpHandler(auth, { db, storage, appUrl: BASE_URL });
+// A stand-in for the brand's public website; any other URL goes through the real guard (and is refused here).
+const fetchFile: FetchFile = async (url, o) =>
+  url === "https://www.inzenirji.si/assets/logo-dark"
+    ? { bytes: new Uint8Array(await sharp({ create: { width: 400, height: 120, channels: 4, background: "#000" } }).png().toBuffer()), filename: "logo-dark.png", contentType: "image/png" }
+    : fetchPublicFile(url, o);
+const mcpHandler = createMcpHttpHandler(auth, { db, storage, appUrl: BASE_URL, fetchFile });
 const CLAUDE_CB = "https://claude.ai/api/mcp/auth_callback";
 const RESOURCE = `${BASE_URL}/api/mcp`;
 
+// Each test comes from its own client IP: the per-IP limits (100 requests a minute) would otherwise add up across the file.
+let testIp = 0;
 const call = (path: string, init: RequestInit & { cookie?: string } = {}) => {
   const headers = new Headers(init.headers);
   headers.set("origin", BASE_URL);
+  if (!headers.has("x-forwarded-for")) headers.set("x-forwarded-for", `10.9.${testIp >> 8}.${testIp & 255}`);
   if (init.cookie) headers.set("cookie", init.cookie);
   return auth.handler(new Request(`${BASE_URL}${path}`, { ...init, headers, redirect: "manual" }));
 };
@@ -104,6 +114,7 @@ async function mcp(accessToken: string | null, method: string, params: Record<st
 }
 const tool = async (t: string, name: string, args: Record<string, unknown> = {}) => {
   const r = await mcp(t, "tools/call", { name, arguments: args });
+  if (!r.json.result) throw new Error(`${name}: ${r.status} ${JSON.stringify(r.json).slice(0, 500)}`);
   const result = r.json.result as { isError?: boolean; content: { text: string }[]; structuredContent?: unknown };
   return { isError: !!result.isError, text: result.content[0].text, data: result.structuredContent as Record<string, unknown> };
 };
@@ -111,6 +122,7 @@ const tool = async (t: string, name: string, args: Record<string, unknown> = {})
 let brandA: string;
 beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
+  testIp++;
   mailer.sent.length = 0;
   await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, brand_sources, brand_assets, oauth_client, oauth_access_token, oauth_refresh_token, oauth_consent, cgp_drafts, mcp_tool_calls cascade`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
@@ -185,10 +197,10 @@ describe("connecting Claude", () => {
     const init = await mcp(t.access_token!, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "claude", version: "1" } });
     expect(init.status).toBe(200);
     expect(init.json.result.serverInfo.name).toBe("postaja");
-    expect(init.json.result.instructions).toMatch(/knowledge base.*Do not write posts here/s); // ADR-039
+    expect(init.json.result.instructions).toMatch(/add_file.*Do not write posts here/s); // ADR-039, TASK-010b
 
     const list = await mcp(t.access_token!, "tools/list");
-    expect((list.json.result.tools as { name: string }[]).map((x) => x.name).sort()).toEqual(["add_material", "get_brand", "list_brands", "propose_cgp"]);
+    expect((list.json.result.tools as { name: string }[]).map((x) => x.name).sort()).toEqual(["add_file", "add_material", "create_brand", "get_brand", "list_brands", "propose_cgp", "upload_link"]);
 
     const brands = await tool(t.access_token!, "list_brands");
     expect(brands.isError).toBe(false);
@@ -224,10 +236,15 @@ describe("connecting Claude", () => {
     for (const ref of ["inzenirji", brandA]) {
       const g = await tool(t.access_token!, "get_brand", { brand: ref });
       expect(g.isError).toBe(true);
-      const p = await tool(t.access_token!, "propose_cgp", { brand: ref, cgp: "x" });
+      const p = await tool(t.access_token!, "propose_cgp", { brand: ref, cgp: "x", create_if_missing: false });
       expect(p.isError).toBe(true);
     }
-    expect((await sql`select count(*)::int n from cgp_drafts`)[0].n).toBe(0);
+    // Org A's id is never turned into a new brand of org B; a name creates org B's own brand, org A untouched.
+    expect((await tool(t.access_token!, "add_material", { brand: brandA, filename: "x", text: "x" })).isError).toBe(true);
+    const own = await tool(t.access_token!, "propose_cgp", { brand: "inzenirji", cgp: "# B" });
+    expect(own.data.brandCreated).toBe(true);
+    expect(await sql`select b.org_id = o.id as own from cgp_drafts d join brands b on b.id = d.brand_id join organization o on o.slug = 'org-b'`).toEqual([{ own: true }]);
+    expect(await sql`select count(*)::int n from cgp_drafts where brand_id = ${brandA}`).toEqual([{ n: 0 }]);
   });
 
   it("an editor can read but not propose a CGP or add materials", async () => {
@@ -238,6 +255,65 @@ describe("connecting Claude", () => {
     expect(p.text).toMatch(/owner/i);
     expect((await tool(t.access_token!, "add_material", { brand: "inzenirji", filename: "cenik", text: "x" })).isError).toBe(true);
     expect((await sql`select count(*)::int n from brand_sources`)[0].n).toBe(0);
+  });
+});
+
+describe("files and new brands from Claude (TASK-010b)", () => {
+  const b64 = (b: Uint8Array | Buffer) => Buffer.from(b).toString("base64");
+  const png = (w: number, h: number) => sharp({ create: { width: w, height: h, channels: 4, background: "#ff0000" } }).png().toBuffer();
+
+  it("create_brand makes a new brand once; the same name again returns it", async () => {
+    const t = await connect("boss@datavallis.com");
+    const r = await tool(t.access_token!, "create_brand", { name: "AI Builders", website: "www.aibuilders.si", languages: ["en"] });
+    expect(r.isError).toBe(false);
+    expect(r.data).toMatchObject({ name: "AI Builders", slug: "ai-builders", created: true });
+    expect(await sql`select name, slug, website, languages, current_profile_version_id is not null as profile from brands where slug = 'ai-builders'`)
+      .toEqual([{ name: "AI Builders", slug: "ai-builders", website: "https://www.aibuilders.si", languages: ["en"], profile: true }]);
+    for (const name of ["AI Builders", "ai builders", "ai-builders"]) expect((await tool(t.access_token!, "create_brand", { name })).data).toMatchObject({ id: r.data.id, created: false });
+    expect((await tool(t.access_token!, "create_brand", { name: "Inženirji" })).data).toMatchObject({ id: brandA, created: false });
+    const ed = await connect("ed@a.si");
+    const e = await tool(ed.access_token!, "create_brand", { name: "Nov" });
+    expect(e.isError).toBe(true);
+    expect(e.text).toMatch(/owner/i);
+  });
+
+  it("add_file sorts logo, past posts and documents like an upload; a new project's brand is created on the way", async () => {
+    const t = await connect("boss@datavallis.com");
+    const logo = await tool(t.access_token!, "add_file", { brand: "Inženirji", filename: "logo.png", content_base64: b64(await png(600, 200)), kind: "logo" });
+    expect(logo.isError).toBe(false);
+    expect(logo.data).toMatchObject({ brand: "Inženirji", brandCreated: false, files: [{ ok: true, savedAs: "logo" }] });
+    const ex = await tool(t.access_token!, "add_file", { brand: "inzenirji", filename: "objava-1.png", content_base64: `data:image/png;base64,${b64(await png(1080, 1350))}`, kind: "post_example" });
+    expect(ex.data).toMatchObject({ files: [{ ok: true, savedAs: "image" }] });
+    const doc = await tool(t.access_token!, "add_file", { brand: "Novi projekt", filename: "cenik.txt", content_base64: b64(Buffer.from("Cenik: 10 €")) });
+    expect(doc.data).toMatchObject({ brand: "Novi projekt", brandCreated: true, files: [{ ok: true, savedAs: "text" }] });
+    expect(String(doc.data.filesUrl)).toMatch(/\/app\/brands\/.+\?tab=files$/);
+    expect(await sql`select kind from brand_assets where brand_id = ${brandA}`).toEqual([{ kind: "logo" }]);
+    expect(await sql`select kind, filename from brand_sources where brand_id = ${brandA}`).toEqual([{ kind: "image", filename: "objava-1.png" }]);
+    // Refusals: not base64, too large, a type Postaja does not take, an editor.
+    expect((await tool(t.access_token!, "add_file", { brand: "inzenirji", filename: "x.png", content_base64: "%%%" })).text).toMatch(/base64/);
+    const big = await tool(t.access_token!, "add_file", { brand: "inzenirji", filename: "big.png", content_base64: "A".repeat(21 * 1024 * 1024) });
+    expect(big.text).toMatch(/upload_link/);
+    const exe = await tool(t.access_token!, "add_file", { brand: "inzenirji", filename: "x.exe", content_base64: b64(Buffer.from("MZ\x90\x00binary")) });
+    expect(exe.data.files).toMatchObject([{ ok: false }]);
+    const ed = await connect("ed@a.si");
+    expect((await tool(ed.access_token!, "add_file", { brand: "inzenirji", filename: "l.png", content_base64: b64(await png(10, 10)) })).isError).toBe(true);
+    // By URL: Postaja downloads it (the usual way for a logo or images on the brand's website); private addresses refused.
+    const byUrl = await tool(t.access_token!, "add_file", { brand: "inzenirji", url: "https://www.inzenirji.si/assets/logo-dark", kind: "logo" });
+    expect(byUrl.data).toMatchObject({ files: [{ name: "logo-dark.png", ok: true, savedAs: "logo" }] });
+    expect(await sql`select count(*)::int as n from brand_assets where brand_id = ${brandA} and kind = 'logo'`).toEqual([{ n: 2 }]);
+    const ssrf = await tool(t.access_token!, "add_file", { brand: "inzenirji", url: "http://169.254.169.254/latest/meta-data" });
+    expect(ssrf).toMatchObject({ isError: true });
+    expect(ssrf.text).toMatch(/not public/);
+    expect((await tool(t.access_token!, "add_file", { brand: "inzenirji", filename: "a.png", url: "https://x.si/a.png", content_base64: b64(await png(10, 10)) })).text).toMatch(/exactly one/);
+    expect((await tool(t.access_token!, "add_file", { brand: "inzenirji", content_base64: b64(await png(10, 10)) })).text).toMatch(/filename is required/);
+    const link = await tool(t.access_token!, "upload_link", { brand: "inzenirji" });
+    expect(link.data.url).toBe(`${BASE_URL}/app/brands/${brandA}?tab=files`);
+  });
+
+  it("a request body over the cap is refused before anything is read", async () => {
+    const t = await connect("boss@datavallis.com");
+    const res = await mcpHandler(new Request(RESOURCE, { method: "POST", headers: { "content-type": "application/json", "content-length": String(30 * 1024 * 1024), authorization: `Bearer ${t.access_token}` }, body: "{}" }));
+    expect(res.status).toBe(413);
   });
 });
 

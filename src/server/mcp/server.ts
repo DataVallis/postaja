@@ -7,10 +7,12 @@ import { BrandError } from "../brands/service";
 import { CgpImportError, FileError } from "../brands/files";
 import type { Db } from "../db/client";
 import type { Storage } from "../files/storage";
+import type { FetchFile } from "../files/fetch-public";
 import type { OrgContext } from "../tenancy/context";
-import { addMaterialInput, addTextMaterial, logToolCall, McpError, mcpGetBrand, mcpListBrands, proposeCgp, proposeCgpInput } from "./service";
+import { addFile, addFileInput, addMaterialInput, addTextMaterial, createBrandInput, ensureBrand, FILE_MAX_BYTES, logToolCall, McpError, mcpGetBrand, mcpListBrands, proposeCgp, proposeCgpInput, uploadLink } from "./service";
 
-export type McpDeps = { db: Db; storage: Storage; appUrl: string; ctx: OrgContext; clientId: string };
+/** fetchFile: how add_file downloads a URL (default: public addresses only); replaceable in tests. */
+export type McpDeps = { db: Db; storage: Storage; appUrl: string; ctx: OrgContext; clientId: string; fetchFile?: FetchFile };
 
 const FILE_MESSAGES: Partial<Record<FileError["code"], string>> = {
   DUPLICATE: "This exact material is already uploaded for the brand.",
@@ -18,6 +20,9 @@ const FILE_MESSAGES: Partial<Record<FileError["code"], string>> = {
   TOO_LARGE: "The material is too large (max 50 MB).",
   ARCHIVED: "The brand is archived.",
   FORBIDDEN: "Only the organization owner can add materials.",
+  UNSUPPORTED_TYPE: "Postaja does not accept this file type (images, PDF, Word, Excel, PowerPoint, text, fonts and ZIP are accepted).",
+  INVALID_FILE: "The file could not be read (damaged or not what its name says).",
+  MISSING_GLYPHS: "The font lacks Slovenian letters (č š ž) required by the brand.",
 };
 
 function message(e: unknown): string | null {
@@ -34,7 +39,7 @@ export function buildMcpServer(d: McpDeps): McpServer {
     {
       // ADR-039: posts are written in Postaja; Claude fills the brand's knowledge base.
       instructions:
-        "Postaja writes and schedules the social posts itself. Use these tools only to fill a brand's knowledge base: send the owner's CGP for review (propose_cgp) and add facts as materials (add_material: price lists, products, dates, FAQs, past posts). Do not write posts here; tell the owner to create them in Postaja.",
+        "Postaja writes and schedules the social posts itself. Use these tools to set up and fill a brand: create it if it does not exist yet (create_brand; propose_cgp, add_material and add_file also create it when the name matches no brand), send the owner's CGP for review (propose_cgp), add facts as text materials (add_material: price lists, products, dates, FAQs, past posts) and add files (add_file: the logo, images of past posts — Postaja derives the brand's visual identity from them — PDF/Word/Excel material, fonts). Prefer add_file with a public url (e.g. the logo or images on the brand's website); send content_base64 only for small files you actually have as bytes. Images the owner pasted into the chat cannot be sent: give the owner upload_link for those and for large files or folders. Call list_brands first and use an existing brand's exact name or slug. Do not write posts here; tell the owner to create them in Postaja.",
     },
   );
 
@@ -74,6 +79,21 @@ export function buildMcpServer(d: McpDeps): McpServer {
   );
 
   server.registerTool(
+    "create_brand",
+    {
+      title: "Create a brand (if it does not exist)",
+      description: "Creates a brand (project) in Postaja for a new project — or returns the existing one if a brand with this name already exists. Postaja makes the short name from the name. Owner only.",
+      inputSchema: createBrandInput.extend({
+        name: z.string().describe("The brand's name, e.g. \"aibuilders.si\" or \"Inženirji\""),
+        website: z.string().optional().describe("The brand's website, e.g. \"https://www.aibuilders.si\""),
+        languages: createBrandInput.shape.languages.describe("Languages the brand posts in (sl, en, de, hr, it); default sl"),
+      }),
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
+    async (args) => run("create_brand", () => ensureBrand(d.db, d.ctx, args, d.appUrl)),
+  );
+
+  server.registerTool(
     "propose_cgp",
     {
       title: "Send a CGP to Postaja for review",
@@ -83,6 +103,8 @@ export function buildMcpServer(d: McpDeps): McpServer {
         brand: z.string().describe("Brand id or slug"),
         cgp: z.string().describe("The full CGP in Markdown (max 50,000 characters)"),
         note: z.string().optional().describe("Short note for the owner, e.g. where it came from"),
+        create_if_missing: z.boolean().optional().describe("Create the brand when no brand matches (default true)"),
+        languages: proposeCgpInput.shape.languages.describe("Languages if the brand is created (sl, en, de, hr, it)"),
       }),
       annotations: { destructiveHint: false, idempotentHint: false },
     },
@@ -99,10 +121,41 @@ export function buildMcpServer(d: McpDeps): McpServer {
         brand: z.string().describe("Brand id or slug"),
         filename: z.string().describe("Name shown in Postaja, e.g. \"cenik-2026.md\""),
         text: z.string().describe("The material's full text"),
+        create_if_missing: z.boolean().optional().describe("Create the brand when no brand matches (default true)"),
       }),
       annotations: { destructiveHint: false },
     },
-    async (args) => run("add_material", () => addTextMaterial(d.db, d.storage, d.ctx, args)),
+    async (args) => run("add_material", () => addTextMaterial(d.db, d.storage, d.ctx, args, d.appUrl)),
+  );
+
+  server.registerTool(
+    "add_file",
+    {
+      title: "Add a file to a brand",
+      description:
+        `Adds a file from this conversation to a brand in Postaja: the logo, images of past posts (Postaja's visual identity and image style are derived from them), PDF/Word/Excel/PowerPoint material (its text becomes knowledge), a font (TTF/OTF/WOFF), or a ZIP of such files. Give either url (a public http(s) link; Postaja downloads it — best for the logo or images on the brand's website) or content_base64 (the bytes, only for small files you have as bytes; images pasted into the chat are not available as bytes — use upload_link). Max ${FILE_MAX_BYTES / 1024 / 1024} MB. kind: "logo", "post_example", "material", "font", or "auto" (sorted by type and name). Owner only.`,
+      inputSchema: addFileInput.extend({
+        brand: z.string().describe("Brand id, slug or name"),
+        filename: addFileInput.shape.filename.describe("File name with extension, e.g. \"logo.png\" (required with content_base64; taken from the URL otherwise)"),
+        content_base64: addFileInput.shape.content_base64.describe("The file's bytes, base64-encoded (small files only)"),
+        url: addFileInput.shape.url.describe("Public http(s) URL of the file; Postaja downloads it"),
+        kind: addFileInput.shape.kind.describe("logo | post_example | material | font | auto (default)"),
+        create_if_missing: z.boolean().optional().describe("Create the brand when no brand matches (default true)"),
+      }),
+      annotations: { destructiveHint: false },
+    },
+    async (args) => run("add_file", () => addFile(d.db, d.storage, d.ctx, args, d.appUrl, d.fetchFile)),
+  );
+
+  server.registerTool(
+    "upload_link",
+    {
+      title: "Link for uploading large files",
+      description: "Returns the brand's Files page in Postaja, where the owner (signed in) drops files too large to send with add_file, or whole folders as a ZIP.",
+      inputSchema: z.object({ brand: z.string().describe("Brand id, slug or name") }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ brand }) => run("upload_link", () => uploadLink(d.db, d.ctx, brand, d.appUrl)),
   );
 
   return server;

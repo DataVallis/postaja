@@ -12,9 +12,11 @@ magic link, consent page, `.well-known` discovery, `/api/mcp` (stateless Streama
 `get_brand`, `propose_cgp` (pending draft only), `add_material`; `cgp_drafts`, `mcp_tool_calls`; brand-page banner
 (insert / discard); `/app/connect` (URL, Claude Code command, connected apps + disconnect, activity).
 
-## 010b scope (next)
-`create_post` (brief + channel → the normal generation with spend cap), `list_posts`, `set_post_status` (same
-transitions as the app).
+## 010b scope (done, ADR-046)
+~~`create_post`, `list_posts`, `set_post_status`~~ (dropped, ADR-039). Instead: `create_brand` (idempotent), `add_file`
+(URL that Postaja downloads behind an SSRF guard, or base64 for small files; same checks as an app upload; kinds logo /
+post_example / material / font / auto), `upload_link`; `propose_cgp`, `add_material`, `add_file` create a missing brand
+by name (`create_if_missing`, default true). MCP body cap 22 MB.
 
 ## Tests
 Integration: full OAuth → MCP flow and every refusal (see docs/technical/mcp.md). E2E: browser consent with stubbed

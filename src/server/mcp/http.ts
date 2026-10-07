@@ -7,11 +7,12 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { MCP_SCOPE, mcpResource, type Auth } from "../auth/auth";
 import type { Db } from "../db/client";
 import type { Storage } from "../files/storage";
+import type { FetchFile } from "../files/fetch-public";
 import { hasConnection } from "./connections";
 import { buildMcpServer } from "./server";
 import { McpError, mcpContext } from "./service";
 
-export type McpHttpDeps = { db: Db; storage: Storage; appUrl: string };
+export type McpHttpDeps = { db: Db; storage: Storage; appUrl: string; fetchFile?: FetchFile };
 
 /** Where Claude finds the protected-resource metadata (RFC 9728 §3.1: well-known prefix + resource path). */
 export const resourceMetadataUrl = (appUrl: string) => `${appUrl.replace(/\/$/, "")}/.well-known/oauth-protected-resource/api/mcp`;
@@ -65,9 +66,13 @@ export function challenge(e: McpAuthError, appUrl: string): Response {
   return rpcError(401, e.message, { "WWW-Authenticate": www });
 }
 
+export const MCP_MAX_BODY = 22 * 1024 * 1024;
+
 export function createMcpHttpHandler(auth: Auth, deps: McpHttpDeps) {
   const jwksKey = {};
   return async (req: Request): Promise<Response> => {
+    // Files travel as base64 inside the request (add_file): cap the body before reading it (15 MB file ≈ 20 MB).
+    if (Number(req.headers.get("content-length") ?? 0) > MCP_MAX_BODY) return rpcError(413, "The request is too large. Send files up to 15 MB, or use upload_link.");
     let claims: McpClaims;
     try {
       claims = await verifyMcpToken(auth, req, deps.appUrl, jwksKey);
@@ -83,7 +88,7 @@ export function createMcpHttpHandler(auth: Auth, deps: McpHttpDeps) {
     } catch (e) {
       return rpcError(403, e instanceof McpError ? e.message : "No organization.");
     }
-    const handler = createMcpHandler(() => buildMcpServer({ db: deps.db, storage: deps.storage, appUrl: deps.appUrl, ctx, clientId: claims.clientId }));
+    const handler = createMcpHandler(() => buildMcpServer({ db: deps.db, storage: deps.storage, appUrl: deps.appUrl, ctx, clientId: claims.clientId, fetchFile: deps.fetchFile }), { maxRequestBodySize: MCP_MAX_BODY });
     return handler.fetch(req);
   };
 }
