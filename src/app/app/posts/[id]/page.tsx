@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge, buttonClass, Card, inputClass, PageHeader, STATUS_TONE } from "@/components/ui";
@@ -62,6 +63,11 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         eyebrow={<Link href={`/app/brands/${post.brandId}`} className="hover:text-fg hover:underline">← {ctx?.brand.name ?? t("brand")}</Link>}
         title={<span className="flex flex-wrap items-center gap-3">{ctx ? `${ctx.channel.platform} · ${ctx.channel.handle}` : t("post")}<span data-testid="status" className="text-base font-normal"><Badge tone={STATUS_TONE[post.status]} dot>{t(`status.${post.status}`)}</Badge></span></span>}
         description={<>{t("briefWas")}: {post.brief}</>}
+        actions={post.content || media.length ? (
+          <a href={`/api/posts/${post.id}/download`} className={buttonClass("secondary", "sm")} data-testid="post-zip">
+            <Download aria-hidden className="size-4" />{t("downloadZip")}
+          </a>
+        ) : null}
       />
       {post.status === "failed" ? (
         <div role="alert" className="grid justify-items-start gap-3 rounded-xl border border-signal p-4">

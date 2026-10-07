@@ -65,7 +65,12 @@ export default async function Dashboard() {
           </div>
 
           <Section id="today-h" title={t("today")} description={t("todayHint", { n: todays.length })}
-            actions={<Link href={`/app/plan?view=day`} className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline">{t("openPlan")}</Link>}>
+            actions={
+              <span className="flex flex-wrap items-center gap-3">
+                {todays.length ? <a href={`/api/plan/download?date=${today}`} className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline" data-testid="today-zip">{t("downloadToday")}</a> : null}
+                <Link href={`/app/plan?view=day`} className="text-sm text-muted underline-offset-4 hover:text-fg hover:underline">{t("openPlan")}</Link>
+              </span>
+            }>
             {todays.length ? (
               <DataTable testId="today-posts" head={[t("time"), tp("post"), tp("brand"), tp("channel"), t("status")]}>
                 {todays.map((p) => (
