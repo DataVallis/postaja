@@ -959,7 +959,9 @@
     "reviseHint": "Opiši z besedami. Claude spremeni le to, kar napišeš; ilustracije, ki ostanejo enake, se ne plačajo znova.",
     "revisePlaceholder": "npr. ilustracija naj bo svetlejša in brez ljudi; na drugi sliki krajši naslov",
     "revise": "Popravi slike",
-    "lastRevision": "Zadnji popravek: {text}"
+    "lastRevision": "Zadnji popravek: {text}",
+    "pdf": "Prenesi PDF karusel",
+    "pdfHint": "LinkedIn karusel objaviš kot dokument (PDF); tudi ZIP ga vsebuje."
   },
   "Design": {
     "title": "Vizualna podoba",

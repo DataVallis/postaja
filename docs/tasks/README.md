@@ -26,6 +26,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-015 | **Images**: AI background from the image prompt (fal.ai, `FAL_KEY` from owner) + brand templates for text/logo overlays (Satori) matching the owner's examples; carousels slide by slide | TASK-013 | Done (PR #27) |
 | TASK-017 | **Brand visual identity by Claude**: per-brand design spec from CGP + description + past posts, revise in words, versions; per-post template/words/illustration by Claude; fal illustrations with style references (ADR-044) | TASK-015 | Done (PR #28) |
 | TASK-016 | **One-click download**: a post (images + caption with hashtags) or a whole day as ZIP | TASK-015 | Done (PR #37) |
+| TASK-018 | **LinkedIn carousel as PDF**: images of a LinkedIn post as one PDF document (download + in the ZIP) | TASK-016 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

@@ -11,7 +11,10 @@ import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { handleDayZip, handlePostZip } from "./http";
-import { dayArchive, postArchive } from "./service";
+import { getDocumentProxy } from "unpdf";
+import sharp from "sharp";
+import { handlePostPdf } from "./http";
+import { dayArchive, postArchive, postPdf } from "./service";
 import { zipBytes } from "../files/zip-writer";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -80,6 +83,49 @@ describe("post ZIP", () => {
     expect(dec.decode((await read(await postArchive(db, storage, A, id)))["besedilo.txt"])).toBe("Prvi del\n\n---\n\nDrugi del\n");
     const empty = await post(A, aib, igA, { status: "planned" });
     await expect(postArchive(db, storage, A, empty)).rejects.toMatchObject({ code: "EMPTY" });
+  });
+});
+
+describe("LinkedIn carousel as PDF (TASK-018)", () => {
+  async function realImage(ctx: OrgContext, postId: string, position: number, bg: string) {
+    const key = `org/${ctx.orgId}/posts/${postId}/${crypto.randomUUID()}.png`;
+    const png = new Uint8Array(await sharp({ create: { width: 1080, height: 1350, channels: 4, background: bg } }).png().toBuffer());
+    await storage.put(key, png, "image/png");
+    await forOrg(db, ctx).insert(postMedia, { id: crypto.randomUUID(), postId, kind: "slide", position, storageKey: key, contentType: "image/png", width: 1080, height: 1350, sizeBytes: png.length });
+  }
+
+  it("a LinkedIn post with several images gets karusel.pdf in its ZIP; one page per image, in order", async () => {
+    const id = await post(A, dt, liA, { format: "carousel", content: { caption: "Karusel", hashtags: [] }, plan: { topic: "Pet korakov" } });
+    await realImage(A, id, 1, "#00ff00");
+    await realImage(A, id, 0, "#ff000080"); // transparency → white behind it
+    const files = await read(await postArchive(db, storage, A, id));
+    expect(Object.keys(files)).toEqual(["besedilo.txt", "1.png", "2.png", "karusel.pdf"]);
+    const doc = await getDocumentProxy(files["karusel.pdf"]);
+    expect(doc.numPages).toBe(2);
+    expect((await doc.getMetadata()).info).toMatchObject({ Title: "Pet korakov" });
+    const v = (await doc.getPage(1)).getViewport({ scale: 1 });
+    expect([v.width, v.height]).toEqual([1080, 1350]);
+    // The same PDF on its own, for this org only.
+    const pdf = await postPdf(db, storage, A, id);
+    expect(pdf.filename).toBe("davidtacer-com-2026-10-07-linkedin-brez-ure-pet-korakov.pdf");
+    await expect(postPdf(db, storage, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const res = await handlePostPdf(id, { db, storage, getCtx: async () => A });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+    expect((await handlePostPdf(id, { db, storage, getCtx: async () => B })).status).toBe(404);
+    expect((await handlePostPdf(id, { db, storage, getCtx: async () => null })).status).toBe(401);
+  });
+
+  it("Instagram carousels and single LinkedIn images get no PDF in the ZIP; a post without images has no PDF", async () => {
+    const ig = await post(A, aib, igA, { content: { caption: "IG", hashtags: [] } });
+    await image(A, ig, 0, 1);
+    await image(A, ig, 1, 2);
+    expect(Object.keys(await read(await postArchive(db, storage, A, ig)))).not.toContain("karusel.pdf");
+    const one = await post(A, dt, liA, { content: { caption: "Ena", hashtags: [] } });
+    await realImage(A, one, 0, "#000000");
+    expect(Object.keys(await read(await postArchive(db, storage, A, one)))).not.toContain("karusel.pdf");
+    const none = await post(A, dt, liA, { content: { caption: "Brez", hashtags: [] } });
+    await expect(postPdf(db, storage, A, none)).rejects.toMatchObject({ code: "EMPTY" });
   });
 });
 

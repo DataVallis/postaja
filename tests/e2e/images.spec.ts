@@ -167,6 +167,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.goto(`/app/plan?view=day&d=${today}`);
   await p.getByTestId("plan-day").getByRole("link", { name: /Koraki|Prvi korak/ }).first().click();
   await expect(p.getByTestId("images").getByTestId("image-list").getByRole("img")).toHaveCount(4); // cover + 3 slides
+  await expect(p.getByTestId("carousel-pdf")).toHaveCount(0); // an Instagram carousel is images, not a PDF document
 
   // One click: this post as a ZIP (images in order), then the whole day with its overview (TASK-016).
   const [postZip] = await Promise.all([p.waitForEvent("download"), p.getByTestId("post-zip").click()]);
