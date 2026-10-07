@@ -55,7 +55,7 @@
     "members": "Members",
     "pending": "Invites",
     "cap": "Cap / month",
-    "capUsd": "Monthly spend cap (USD)",
+    "capUsd": "Monthly spend cap (€)",
     "ownerEmail": "Owner email",
     "create": "Create",
     "save": "Save",
@@ -433,7 +433,7 @@
     "tags": "{n} / {max} hashtags",
     "retry": "Try again",
     "failuresTitle": "The post breaks rules — fix the text or approve it anyway:",
-    "cost": "cost ${usd}",
+    "cost": "cost €{usd}",
     "fixed": "auto-fixed once",
     "ok": {
       "saved": "Saved, all rules pass.",
@@ -587,7 +587,7 @@
       "published": "Published",
       "thisMonth": "this month",
       "spend": "AI spend",
-      "ofCap": "of {cap} $ this month",
+      "ofCap": "of €{cap} this month",
       "planned": "Planned"
     },
     "today": "Today",
@@ -826,7 +826,9 @@
     "noHistory": "Nothing published yet.",
     "pagination": "Pages",
     "pageOf": "Page {page} of {pages}",
-    "downloadDay": "Download day (ZIP, {n, plural, one {# post} other {# posts}})"
+    "downloadDay": "Download day (ZIP, {n, plural, one {# post} other {# posts}})",
+    "show": "Show:",
+    "showDefault": "Default (no published)"
   },
   "Bulk": {
     "scope": "Scope",

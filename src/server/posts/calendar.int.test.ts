@@ -8,7 +8,7 @@ import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createFakeLlm } from "../llm/fake";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
-import { calendarPosts, historyPosts, reschedulePost, unscheduledPosts } from "./calendar";
+import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, reschedulePost, unscheduledPosts } from "./calendar";
 import { generatePost, setPostStatus } from "./generate";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -64,6 +64,18 @@ describe("calendarPosts", () => {
     expect(await calendarPosts(db, A, "2026-10-01", "2026-10-31", { brandId: brandB })).toEqual([]);
     await expect(calendarPosts(db, A, "2026-10-31", "2026-10-01")).rejects.toMatchObject({ code: "BAD_STATE" });
     await expect(calendarPosts(db, A, "2026-02-30", "2026-03-01")).rejects.toMatchObject({ code: "BAD_STATE" });
+  });
+
+  it("shows only the chosen statuses: by default no published posts (owner), or exactly what is ticked", async () => {
+    const todo = await make(A, brandA, igA, "Za narediti", "2026-10-06");
+    const done = await make(A, brandA, igA, "Objavljena", "2026-10-07");
+    await setPostStatus(db, A, done, "approved");
+    await setPostStatus(db, A, done, "published");
+    const range = ["2026-10-01", "2026-10-31"] as const;
+    expect((await calendarPosts(db, A, ...range, { statuses: CALENDAR_DEFAULT_STATUSES })).map((p) => p.id)).toEqual([todo]);
+    expect((await calendarPosts(db, A, ...range, { statuses: ["published"] })).map((p) => p.id)).toEqual([done]);
+    expect((await calendarPosts(db, A, ...range, { statuses: [] }))).toEqual([]);
+    expect((await calendarPosts(db, A, ...range)).map((p) => p.id)).toEqual([todo, done]); // the dashboard's "Danes" keeps all
   });
 });
 

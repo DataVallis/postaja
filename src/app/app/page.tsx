@@ -61,7 +61,7 @@ export default async function Dashboard() {
             <Stat label={t("stats.needsReview")} value={o.needsReview} href="/app/posts?status=needs_review" />
             <Stat label={t("stats.approved")} value={o.approved} href="/app/posts?status=approved" />
             <Stat label={t("stats.published")} value={o.publishedThisMonth} hint={t("stats.thisMonth")} />
-            <Stat label={t("stats.spend")} value={`${usd(o.spentMicroUsd)} $`} hint={t("stats.ofCap", { cap: usd(o.capMicroUsd) })} />
+            <Stat label={t("stats.spend")} value={`${usd(o.spentMicroUsd)} €`} hint={t("stats.ofCap", { cap: usd(o.capMicroUsd) })} />
           </div>
 
           <Section id="today-h" title={t("today")} description={t("todayHint", { n: todays.length })}

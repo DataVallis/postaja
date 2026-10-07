@@ -6,8 +6,8 @@ import { isIsoDate, startOfMonth, stepAnchor, todayIn, viewRange } from "@/lib/d
 import { requireOrgPage } from "@/server/auth/require";
 import { listBrands } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
-import { PLATFORMS } from "@/server/db/schema";
-import { calendarPosts, historyPosts, unscheduledPosts, type PlanPost } from "@/server/posts/calendar";
+import { PLATFORMS, POST_STATUSES, type PostStatus } from "@/server/db/schema";
+import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, unscheduledPosts, type PlanPost } from "@/server/posts/calendar";
 import { bulkCandidates, listBulkRuns } from "@/server/bulk/service";
 import { startBulkAction } from "./actions";
 import { BulkRuns } from "./bulk-runs";
@@ -36,12 +36,18 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const bulkError = one("bulkError");
   const f = { brandId: one("brand") || undefined, platform: one("platform") || undefined };
   const page = Math.max(1, Number(one("page")) || 1);
+  // Which statuses the calendar shows (owner: published out of the way by default, his own choice otherwise).
+  // "generating" is not offered on its own: it goes with "planned" (a planned post being written right now).
+  const picked = [...new Set(([] as string[]).concat(sp.s ?? []))].filter((x): x is PostStatus => (POST_STATUSES as readonly string[]).includes(x) && x !== "generating");
+  if (picked.includes("planned")) picked.push("generating");
+  const shown = picked.length ? picked : CALENDAR_DEFAULT_STATUSES;
+  const customShown = picked.length > 0 && (picked.length !== CALENDAR_DEFAULT_STATUSES.length || !CALENDAR_DEFAULT_STATUSES.every((x) => picked.includes(x)));
 
   const db = getDb();
   const range = viewRange(view, anchor);
   const [brandList, items, unscheduled, history, runs, dayTodo, dayImageTodo] = await Promise.all([
     listBrands(db, org),
-    tab === "calendar" ? calendarPosts(db, org, range.from, range.to, f) : Promise.resolve([] as PlanPost[]),
+    tab === "calendar" ? calendarPosts(db, org, range.from, range.to, { ...f, statuses: shown }) : Promise.resolve([] as PlanPost[]),
     unscheduledPosts(db, org, f, tab === "unscheduled" ? 200 : 0),
     historyPosts(db, org, { ...f, page: tab === "history" ? page : 1 }),
     listBulkRuns(db, org),
@@ -55,10 +61,11 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const tf = await getTranslations("PostFormats");
   const fmt = await getFormatter();
 
-  const qs = (over: Record<string, string | undefined>) => {
+  const qs = (over: Record<string, string | undefined>, keepShown = true) => {
     const p = new URLSearchParams();
     const all = { view, d: anchor, tab, brand: f.brandId, platform: f.platform, ...over };
     for (const [k, v] of Object.entries(all)) if (v && !(k === "view" && v === "month") && !(k === "tab" && v === "calendar") && !(k === "d" && v === today)) p.set(k, v);
+    if (customShown && keepShown) for (const x of shown) if (x !== "generating") p.append("s", x);
     const s = p.toString();
     return `/app/plan${s ? `?${s}` : ""}`;
   };
@@ -93,7 +100,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
     <>
       <PageHeader title={t("title")} description={t("description")} />
 
-      <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
+      <form method="get" key={`${f.brandId ?? ""}|${f.platform ?? ""}|${shown.join(",")}`} className="mb-4 flex flex-wrap items-center gap-2">
         {view !== "month" ? <input type="hidden" name="view" value={view} /> : null}
         {anchor !== today ? <input type="hidden" name="d" value={anchor} /> : null}
         {tab !== "calendar" ? <input type="hidden" name="tab" value={tab} /> : null}
@@ -107,7 +114,19 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           <option value="">{t("allPlatforms")}</option>
           {PLATFORMS.filter((p) => p !== "google_display").map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
+        {tab === "calendar" ? (
+          <fieldset className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line px-3 py-1.5" data-testid="plan-show">
+            <legend className="sr-only">{t("show")}</legend>
+            <span aria-hidden className="text-sm text-muted">{t("show")}</span>
+            {POST_STATUSES.filter((x) => x !== "generating").map((x) => (
+              <label key={x} className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" name="s" value={x} defaultChecked={shown.includes(x)} /> {tp(`status.${x}`)}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
         <button type="submit" className={buttonClass("secondary")}>{t("apply")}</button>
+        {customShown && tab === "calendar" ? <Link href={qs({}, false)} className="text-sm text-muted underline underline-offset-4">{t("showDefault")}</Link> : null}
       </form>
 
       <Tabs

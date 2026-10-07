@@ -4,7 +4,7 @@ import { buttonClass, Card, selectClass } from "@/components/ui";
 import { setBrandModelAction } from "../actions";
 
 type Model = { id: string; label: string; isDefault: boolean; inputPerMtok: bigint; outputPerMtok: bigint };
-const usd = (micro: bigint) => `$${(Number(micro) / 1_000_000).toFixed(2)}`;
+const usd = (micro: bigint) => `${(Number(micro) / 1_000_000).toFixed(2)} €`;
 
 /** Which Claude model writes this brand's texts, designs and image plans (owner; empty = platform default). */
 export async function ModelSection({ brandId, models, current, isOwner, saved }: { brandId: string; models: Model[]; current: string | null; isOwner: boolean; saved: boolean }) {

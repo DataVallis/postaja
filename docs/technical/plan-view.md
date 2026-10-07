@@ -6,7 +6,9 @@ Status: **Built** (TASK-013). Builds on ADR-041 (posts have `scheduled_on` / `sc
   **Brez termina** (not published or skipped, no day), **Zgodovina** (published, newest publication first, 50 per page).
   Filters brand + platform; everything in the URL (`view`, `d`, `tab`, `brand`, `platform`, `page`). Month cells show
   up to 4 chips (time · platform · first line, left bar in the status colour) and "+N več" → day view; the day number
-  opens the day. Phones get an agenda list instead of the grid. Skipped posts are hidden unless filtered.
+  opens the day. Phones get an agenda list instead of the grid. **"Prikaži"** (calendar tab): checkboxes per status,
+  `s=` in the URL (repeated); default `CALENDAR_DEFAULT_STATUSES` = everything still to do — published and skipped hidden
+  (owner, 2026-10-07); "generating" goes with "planned"; "Privzeto" link resets. Dashboard "Danes" shows all.
 - Post page: "Iz plana" has a slot form (day + time; empty day = off the plan). Published posts keep their slot.
 - Dashboard: "Danes" lists today's posts of every brand.
 - Dates: `src/lib/dates` — local days in `Europe/Ljubljana` (`todayIn` uses the zone, not the server), week starts

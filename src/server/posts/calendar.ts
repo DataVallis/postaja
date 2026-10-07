@@ -1,6 +1,6 @@
 // The plan (TASK-013): posts by calendar day across all brands of the org, the unscheduled pile, the published
 // history, and moving a post to another slot. Every query is bounded by ctx.orgId.
-import { and, asc, count, desc, eq, gte, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { isIsoDate } from "@/lib/dates";
 import type { Db } from "../db/client";
@@ -9,7 +9,10 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { PostError } from "./generate";
 
-export type PlanFilters = { brandId?: string; platform?: string; status?: string };
+export type PlanFilters = { brandId?: string; platform?: string; status?: string; statuses?: PostStatus[] };
+
+/** What the calendar shows unless the owner picks otherwise: work still to do (owner: published posts out of the way). */
+export const CALENDAR_DEFAULT_STATUSES: PostStatus[] = ["planned", "generating", "ready", "needs_review", "failed", "approved"];
 
 function filters(ctx: OrgContext, f: PlanFilters): SQL[] {
   const w: SQL[] = [eq(posts.orgId, ctx.orgId)];
@@ -33,11 +36,12 @@ const base = (db: Db, ctx: OrgContext) =>
 
 export type PlanPost = Awaited<ReturnType<typeof calendarPosts>>[number];
 
-/** Posts with a slot between `from` and `to` (inclusive), in day/time order. Skipped posts are left out. */
+/** Posts with a slot between `from` and `to` (inclusive), in day/time order: of `statuses` when given, else all but skipped. */
 export async function calendarPosts(db: Db, ctx: OrgContext, from: string, to: string, f: PlanFilters = {}) {
   if (!isIsoDate(from) || !isIsoDate(to) || from > to) throw new PostError("BAD_STATE");
   const w = [...filters(ctx, f), gte(posts.scheduledOn, from), lte(posts.scheduledOn, to)];
-  if (!f.status) w.push(sql`${posts.status} <> 'skipped'`);
+  if (f.statuses) w.push(f.statuses.length ? inArray(posts.status, f.statuses) : sql`false`);
+  else if (!f.status) w.push(sql`${posts.status} <> 'skipped'`);
   return base(db, ctx).where(and(...w)).orderBy(asc(posts.scheduledOn), sql`${posts.scheduledTime} asc nulls last`, asc(posts.createdAt)).limit(2000);
 }
 
