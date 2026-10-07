@@ -144,6 +144,10 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
   await p.goto(`/app/plan?view=day&d=${today}`);
   await p.getByTestId("day-bulk").getByRole("button", { name: "Ustvari slike (1)" }).click();
+  // The preview prices the carousel: 3 slides (+ a possible cover) with the style-reference model (past posts exist).
+  await expect(p.getByTestId("estimate-image-count")).toContainText("1 objava · ~3 slik");
+  await expect(p.getByTestId("bulk-estimate")).toContainText("Ideogram");
+  await p.getByRole("button", { name: /^Začni \(1\)/ }).click();
   await expect(p).toHaveURL(/tab=runs/);
   await expect(p.getByTestId("bulk-runs").getByTestId("run-counts").first()).toHaveText("1 / 1 končanih", { timeout: 30_000 });
   await p.goto(`/app/plan?view=day&d=${today}`);

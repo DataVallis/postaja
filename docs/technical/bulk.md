@@ -6,6 +6,13 @@ Status: **Built** (TASK-014). Decisions: ADR-007 (pg-boss), ADR-042 (worker in t
 - **Plan → Dan**: "Ustvari besedila (N)" writes every post of that day without text — all brands, or the brand in the
   filter. **Brand → Objave**: "Ustvari besedila" for the next 7 / 30 days / all planned. **A planned post**: "Napiši
   besedilo z AI" (now, in the request). A failed post without text is retried in place ("Poskusi znova").
+- **Uvoz planov → a finished import**: "Ustvari ves plan" — texts and images for every post of that plan (scope
+  `import`, any day, any brand of the plan).
+- **Every bulk button first opens `/app/bulk/new` — "Pregled pred zagonom"** (owner, 2026-10-07): how many texts,
+  posts / images / AI illustrations, the models, **expected cost and at most**, this month's spend vs the cap and a
+  warning when the upper bound does not fit what is left; switch Besedila / Besedila in slike / Slike or the range and
+  it re-estimates; "Začni (N) · ≈ X €" starts exactly that scope. Posts of brands without a visual identity are counted
+  apart ("ne bodo dobile slik").
 - **Plan → Ustvarjanje**: runs with a progress bar (written / total, failed, skipped), status, "Ustavi". The page
   refreshes itself every 3 s while a run works; the run continues if the page is closed.
 
@@ -24,7 +31,14 @@ Status: **Built** (TASK-014). Decisions: ADR-007 (pg-boss), ADR-042 (worker in t
   (1 retry after an unexpected error, 5 min expiry). `src/server/jobs/worker.ts`: 2 posts at a time per process.
   Workers start from `instrumentation-node.ts` when `RUN_WORKER=1` (dev: in the web container; E2E server too).
   Moving them to a separate Kamal role later = `RUN_WORKER=1` on that role, unset on web.
-- Tables `bulk_runs`, `bulk_items` (migration 0014).
+- Tables `bulk_runs`, `bulk_items` (migration 0014). Scopes: `day`, `brand` (from–to), `import` (one imported plan).
+- **Estimate** (`src/server/bulk/estimate.ts`, ADR-047): from the same candidates as the run. Text per post: brand's
+  Claude model prices × (fixed prompt ≈ 6,000 chars + CGP + materials' extracted chars ≤ 60,000) / 3 chars per token +
+  a typical 900-token answer; at most = 2 × the cap's worst case (`MAX_OUTPUT_TOKENS`, one fix round). Images per post:
+  `imagesFor` (1, or one per slide; at most + a cover, ≤ 20), a planning call (templates JSON + 5,000 chars; at most
+  2 × worst case with 4,000 tokens), illustrations = images × the share of the brand's templates that have one (at most
+  one per image), each at the default image model's price — the style-reference model when the brand has past-post
+  images. Budget = cap − month to date. Amounts are the registry's prices shown with € (owner: sign only).
 
 ## Tests
 `src/server/bulk/bulk.int.test.ts`: candidates (day across brands, slot order, failed included, text/other org/
@@ -32,4 +46,6 @@ other day/no channel/archived excluded), range scope, nothing to do, too many, o
 written from the plan, duplicate job and second run do not rewrite, **two runs racing write each post once**
 (deliberate break: without the claim it fails), spend cap, cancel, creator removed → `NO_ACCESS`, other org cannot
 cancel or list, `planBrief`, and the real pg-boss path end to end. E2E `tests/e2e/bulk.spec.ts`: day run across two
-brands with live progress, brand run, single post.
+brands with live progress, brand run, single post; the preview before each run (counts, prices, budget, no-design
+note). Estimate tests: per-brand models and design share, materials raise the text estimate, style model with past
+posts, no-design brands apart, budget and over-budget, other org excluded, import scope; `imagesFor`.

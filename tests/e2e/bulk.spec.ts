@@ -77,6 +77,20 @@ test("bulk: a day across brands, a brand's plan, a single planned post", async (
   await expect(p.getByTestId("day-bulk")).toContainText("2 objavi ta dan nimata besedila");
   expect(await serious(p)).toEqual([]);
   await p.getByRole("button", { name: "Ustvari besedila (2)" }).click();
+  // First the cost (owner, 2026-10-07): what will be made, expected and at most, against the month's cap.
+  await expect(p).toHaveURL(/\/app\/bulk\/new\?/);
+  const preview = p.getByTestId("bulk-preview");
+  await expect(preview.getByTestId("estimate-text-count")).toHaveText("2 objavi");
+  await expect(preview.getByTestId("estimate-expected")).toHaveText(/^≈ \d+\.\d\d €$/);
+  await expect(preview.getByTestId("estimate-max")).toHaveText(/^\d+\.\d\d €$/);
+  await expect(preview.getByTestId("bulk-budget")).toContainText("Ta mesec porabljeno");
+  // Switching to texts and images shows that these brands get no images yet (no visual identity).
+  await preview.getByRole("navigation", { name: "Kaj naj ustvarim" }).getByRole("link", { name: "Besedila in slike" }).click();
+  await expect(p.getByTestId("no-design")).toContainText("2 objavi ne bosta dobili slik");
+  await p.getByRole("navigation", { name: "Kaj naj ustvarim" }).getByRole("link", { name: "Besedila", exact: true }).click();
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("bulk-preview.png"), fullPage: true });
+  await p.getByRole("button", { name: /^Začni \(2\)/ }).click();
   await expect(p).toHaveURL(/tab=runs/);
   const run = p.getByTestId("bulk-runs").getByRole("row").nth(1);
   await expect(run).toContainText("vsi brandi");
@@ -95,6 +109,8 @@ test("bulk: a day across brands, a brand's plan, a single planned post", async (
   await p.getByRole("link", { name: "Inženirji" }).click();
   await expect(p.getByTestId("brand-bulk")).toContainText("1 planirana objava brez besedila");
   await p.getByRole("button", { name: "Ustvari besedila" }).click();
+  await expect(p.getByTestId("estimate-text-count")).toHaveText("1 objava");
+  await p.getByRole("button", { name: /^Začni \(1\)/ }).click();
   await expect(p.getByTestId("bulk-runs").getByRole("row").nth(1)).toContainText("končano", { timeout: 30_000 });
 
   // A single planned post from its own page.

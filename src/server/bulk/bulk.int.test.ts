@@ -14,6 +14,10 @@ import { planBrief } from "../posts/generate";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { bossQueue, getBoss, stopBoss } from "../jobs/boss";
+import { cardDesign } from "../../../tests/fixtures/design";
+import { brandDesigns, brands as brandsTable, brandSources, modelRegistry, usageLedger } from "../db/schema";
+import { designSpecSchema, needsIllustration } from "../design/spec";
+import { estimateBulk, imagesFor } from "./estimate";
 import { BULK_MAX, bulkCandidates, cancelBulk, listBulkRuns, POST_TEXT_QUEUE, runBulkItem, startBulk, type JobQueue, type PostTextJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -46,7 +50,7 @@ let A: OrgContext, B: OrgContext, editorA: OrgContext, brandA: string, brandA2: 
 beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
   mailer.sent.length = 0;
-  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, brand_sources, brand_assets, posts, usage_ledger, plan_imports, bulk_runs, bulk_items cascade`;
+  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, brand_sources, brand_assets, brand_designs, posts, usage_ledger, plan_imports, bulk_runs, bulk_items cascade`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
   const actor = { userId: s.user.id, role: "superadmin" as const };
   const d = { mailer, baseURL: "http://localhost:3000" };
@@ -210,4 +214,84 @@ describe("pg-boss end to end", () => {
     for (const id of ids) expect((await caption(id)).status).toBe("ready");
     expect(llm.calls).toHaveLength(2);
   }, 30_000);
+});
+
+describe("cost before a run (owner, 2026-10-07)", () => {
+  async function giveDesign(ctx: OrgContext, brandId: string) {
+    const id = crypto.randomUUID();
+    await db.insert(brandDesigns).values({ id, orgId: ctx.orgId, brandId, version: 1, status: "ready", spec: designSpecSchema.parse(cardDesign), createdBy: ctx.userId });
+    await db.update(brandsTable).set({ currentDesignId: id }).where(eq(brandsTable.id, brandId));
+  }
+  const price = async (kind: "text" | "image" | "image_style") => (await db.select().from(modelRegistry).where(eq(modelRegistry.kind, kind)).then((r) => r.find((m) => m.isDefault)))!;
+
+  it("counts texts and images per brand, prices them with the brand's models, an upper bound above the expected cost", async () => {
+    await giveDesign(A, brandA);
+    for (const d of ["2026-11-02", "2026-11-03"]) await planned(A, brandA, igA, `Tema ${d}`, d); // carousels with 2 slides
+    await planned(A, brandA2, liA, "Brez podobe", "2026-11-02", { plan: { topic: "x" }, format: "text" }); // brand without design
+    const scope = { kind: "brand" as const, brandId: brandA, from: "2026-11-01", to: null };
+    const textOnly = await estimateBulk(db, A, scope, ["text"]);
+    expect(textOnly.text).toMatchObject({ posts: 2 });
+    expect(textOnly.text.model).toBe((await price("text")).label);
+    expect(textOnly.image).toMatchObject({ posts: 0, expected: 0n });
+    expect(textOnly.text.expected).toBeGreaterThan(0n);
+    expect(textOnly.text.max).toBeGreaterThan(textOnly.text.expected);
+
+    const both = await estimateBulk(db, A, scope, ["text", "image"]);
+    const share = cardDesign.templates.filter((t) => needsIllustration(designSpecSchema.parse(cardDesign).templates.find((x) => x.id === t.id)!)).length / cardDesign.templates.length;
+    expect(both.image).toMatchObject({ posts: 2, images: 4, illustrations: Math.round(2 * share) * 2, illustrationsMax: 6, noDesign: 0 });
+    const flux = await price("image"); // no past-post images → the plain image model
+    expect(both.image.model).toBe(flux.label);
+    expect(both.image.max).toBeGreaterThanOrEqual(6n * (flux.perImage + flux.perMegapixel));
+    expect(both.expected).toBe(both.text.expected + both.image.expected);
+    expect(both.max).toBe(both.text.max + both.image.max);
+
+    // Materials make the text prompt longer: the text estimate grows with them.
+    await db.insert(brandSources).values({ id: crypto.randomUUID(), orgId: A.orgId, brandId: brandA, kind: "text", filename: "cenik.md", storageKey: "m", sizeBytes: 1, sha256: "b".repeat(64), contentType: "text/markdown", createdBy: A.userId, extract: { chars: 30_000 } });
+    expect((await estimateBulk(db, A, scope, ["text"])).text.expected).toBeGreaterThan(textOnly.text.expected);
+    // Past posts uploaded → illustrations use the style-reference model (dearer per image).
+    await db.insert(brandSources).values({ id: crypto.randomUUID(), orgId: A.orgId, brandId: brandA, kind: "image", filename: "p.png", storageKey: "k", sizeBytes: 1, sha256: "a".repeat(64), contentType: "image/png", createdBy: A.userId });
+    expect((await estimateBulk(db, A, scope, ["text", "image"])).image.model).toBe((await price("image_style")).label);
+
+    // A day across brands: the brand without a design is counted apart, not priced for images.
+    const day = await estimateBulk(db, A, { kind: "day", date: "2026-11-02" }, ["text", "image"]);
+    expect(day.text.posts).toBe(2);
+    expect(day.image).toMatchObject({ posts: 1, noDesign: 1 });
+  });
+
+  it("compares the upper bound with what is left of this month's cap; other orgs' posts never count", async () => {
+    await planned(A, brandA, igA, "Ena", "2026-11-02");
+    await planned(B, brandB, igB, "Tuja", "2026-11-02");
+    await db.update(orgSettings).set({ spendCapMicroUsd: 1_000_000n }).where(eq(orgSettings.orgId, A.orgId));
+    await db.insert(usageLedger).values({ id: crypto.randomUUID(), orgId: A.orgId, provider: "anthropic", model: "m", state: "settled", costMicroUsd: 999_990n });
+    const e = await estimateBulk(db, A, { kind: "day", date: "2026-11-02" }, ["text"]);
+    expect(e.text.posts).toBe(1);
+    expect(e.budget).toEqual({ cap: 1_000_000n, spent: 999_990n, left: 10n });
+    expect(e.overBudget).toBe(true);
+    await db.update(orgSettings).set({ spendCapMicroUsd: 500_000_000n }).where(eq(orgSettings.orgId, A.orgId));
+    expect((await estimateBulk(db, A, { kind: "day", date: "2026-11-02" }, ["text"])).overBudget).toBe(false);
+  });
+
+  it("a whole imported plan is one scope: its posts on any day, this org only", async () => {
+    const importId = crypto.randomUUID();
+    await sql`insert into plan_imports (id, org_id, filename, storage_key, sha256, kind, status, reader, created_by) values (${importId}, ${A.orgId}, 'plan.xlsx', 'k', 'x', 'table', 'imported', '{"by":"headers"}', ${A.userId})`;
+    const p1 = await planned(A, brandA, igA, "Prvi", "2026-11-02", { importId });
+    const p2 = await planned(A, brandA2, liA, "Brez dneva", null, { importId });
+    await planned(A, brandA, igA, "Ni iz plana", "2026-11-02");
+    expect(new Set(await bulkCandidates(db, A, { kind: "import", importId }))).toEqual(new Set([p1, p2]));
+    expect(await bulkCandidates(db, A, { kind: "import", importId, brandId: brandA })).toEqual([p1]);
+    expect(await bulkCandidates(db, B, { kind: "import", importId })).toEqual([]);
+    const { q, jobs } = memoryQueue();
+    await startBulk(db, q, A, { kind: "import", importId }, ["text"]);
+    expect(jobs).toHaveLength(2);
+  });
+});
+
+describe("imagesFor", () => {
+  it("one image, or one per slide of a carousel with room for a cover", () => {
+    expect(imagesFor(null, "text")).toEqual({ expected: 1, max: 1 });
+    expect(imagesFor({ slides: ["a", "b", "c"] }, "carousel")).toEqual({ expected: 3, max: 4 });
+    expect(imagesFor({ slideCount: 5 }, "image")).toEqual({ expected: 5, max: 6 });
+    expect(imagesFor({}, "carousel")).toEqual({ expected: 2, max: 3 });
+    expect(imagesFor({ slideCount: 40 }, "carousel")).toEqual({ expected: 20, max: 20 });
+  });
 });

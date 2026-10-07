@@ -9,7 +9,9 @@ import { organization } from "./org";
 
 export type BulkScope =
   | { kind: "day"; date: string; brandId?: string | null }
-  | { kind: "brand"; brandId: string; from: string; to: string | null };
+  | { kind: "brand"; brandId: string; from: string; to: string | null }
+  /** Every post of one imported plan (owner: "ustvari cel plan"), any date. */
+  | { kind: "import"; importId: string; brandId?: string | null };
 export type BulkStep = "text" | "image";
 export type BulkRunStatus = "queued" | "running" | "done" | "cancelled";
 export type BulkItemStatus = "queued" | "running" | "done" | "skipped" | "failed";

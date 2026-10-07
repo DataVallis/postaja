@@ -1,31 +1,23 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { addDays, todayIn } from "@/lib/dates";
 import { orgContextForAction } from "@/server/auth/require";
 import { BulkError, cancelBulk, startBulk } from "@/server/bulk/service";
 import { getDb } from "@/server/db/client";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
+import { scopeFrom, stepsFrom } from "./scope";
 
-/** Starts a bulk run (TASK-014/015): a day (all brands or one) or a brand's next N days; texts, images or both. */
+/** Starts a bulk run (TASK-014/015) after the cost preview: a day, a brand's next N days or a whole imported plan; texts, images or both. */
 export async function startBulkAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");
-  const kind = String(f.get("kind") ?? "");
-  const brandId = String(f.get("brandId") ?? "") || null;
+  const field = (k: string) => String(f.get(k) ?? "") || undefined;
   const back = String(f.get("back") ?? "/app/plan");
   let runId: string;
   try {
-    const scope =
-      kind === "brand"
-        ? (() => {
-            const days = String(f.get("days") ?? "7");
-            const from = todayIn();
-            return { kind: "brand" as const, brandId: brandId ?? "", from, to: days === "all" ? null : addDays(from, Math.min(Math.max(Number(days) || 7, 1), 366) - 1) };
-          })()
-        : { kind: "day" as const, date: String(f.get("date") ?? ""), brandId };
-    const steps = String(f.get("steps") ?? "text").split(",").filter((x): x is "text" | "image" => x === "text" || x === "image");
-    runId = await startBulk(getDb(), bossQueue(await getBoss()), ctx, scope, steps.length ? steps : ["text"]);
+    const scope = scopeFrom({ kind: field("kind"), date: field("date"), brandId: field("brandId"), days: field("days"), importId: field("importId") });
+    const steps = stepsFrom(field("steps"));
+    runId = await startBulk(getDb(), bossQueue(await getBoss()), ctx, scope, steps);
   } catch (e) {
     const code = e instanceof BulkError ? e.code : "FAILED";
     redirect(`${back}${back.includes("?") ? "&" : "?"}bulkError=${code}`);

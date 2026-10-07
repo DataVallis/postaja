@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge, buttonClass, Card, DataTable, selectClass, STATUS_TONE, td } from "@/components/ui";
-import { startBulkAction } from "../../plan/actions";
 import type { listPosts } from "@/server/posts/generate";
 import { NewPostForm } from "../../posts/editor";
 
@@ -21,7 +20,7 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
             <p className="font-semibold">{tb("brandTitle", { n: plannedTodo })}</p>
             <p className="text-sm text-muted">{tb("brandHint")}</p>
           </div>
-          <form action={startBulkAction} className="flex flex-wrap items-center gap-2">
+          <form action="/app/bulk/new" method="get" className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="kind" value="brand" />
             <input type="hidden" name="brandId" value={brandId} />
             <input type="hidden" name="back" value={`/app/brands/${brandId}`} />

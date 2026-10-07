@@ -9,7 +9,6 @@ import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_STATUSES, type PostStatus } from "@/server/db/schema";
 import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, unscheduledPosts, type PlanPost } from "@/server/posts/calendar";
 import { bulkCandidates, listBulkRuns } from "@/server/bulk/service";
-import { startBulkAction } from "./actions";
 import { BulkRuns } from "./bulk-runs";
 
 export const dynamic = "force-dynamic";
@@ -164,7 +163,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
                 <p className="font-semibold">{dayTodo.length ? tb("dayTitle", { n: dayTodo.length }) : tb("dayImagesTitle", { n: dayImageTodo.length })}</p>
                 <p className="text-sm text-muted">{f.brandId ? tb("dayHintBrand") : tb("dayHint")}</p>
               </div>
-              <form action={startBulkAction} className="flex flex-wrap gap-2">
+              <form action="/app/bulk/new" method="get" className="flex flex-wrap gap-2">
                 <input type="hidden" name="kind" value="day" />
                 <input type="hidden" name="date" value={anchor} />
                 {f.brandId ? <input type="hidden" name="brandId" value={f.brandId} /> : null}
