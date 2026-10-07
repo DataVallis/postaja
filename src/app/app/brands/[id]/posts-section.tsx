@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Badge, buttonClass, Card, DataTable, selectClass, STATUS_TONE, td } from "@/components/ui";
+import { Lightbulb } from "lucide-react";
+import { Badge, buttonClass, Card, DataTable, inputClass, selectClass, STATUS_TONE, td, textareaClass } from "@/components/ui";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { todayIn } from "@/lib/dates";
+import { suggestIdeasAction } from "../../ideas/actions";
 import type { listPosts } from "@/server/posts/generate";
 import { NewPostForm } from "../../posts/editor";
 
 type Post = Awaited<ReturnType<typeof listPosts>>[number];
 
 /** Creating content is the point of the brand page: the request form first, recent posts below (TASK-007). */
-export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0 }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number }) {
+export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0, ideaError }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number; ideaError?: string }) {
   const t = await getTranslations("Posts");
+  const ti = await getTranslations("Ideas");
   const tb = await getTranslations("Bulk");
   const f = await getFormatter();
   const label = new Map(channels.map((c) => [c.id, c.label]));
@@ -32,6 +37,35 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
             </select>
             <button type="submit" name="steps" value="text" className={buttonClass("primary")}>{tb("brandButton")}</button>
             <button type="submit" name="steps" value="text,image" className={buttonClass("secondary")}>{tb("bothButton")}</button>
+          </form>
+        </Card>
+      ) : null}
+      {!archived && channels.length ? (
+        <Card className="grid gap-4 p-5" id="ideas" data-testid="ideas-form">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold"><Lightbulb aria-hidden className="size-4" />{ti("title")}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted">{ti("intro")}</p>
+          </div>
+          {ideaError ? <p role="alert" className="text-sm text-danger">{ti.has(`errors.${ideaError}`) ? ti(`errors.${ideaError}`) : ti("errors.FAILED")}</p> : null}
+          <form action={suggestIdeasAction} className="grid gap-3 sm:grid-cols-4">
+            <input type="hidden" name="brandId" value={brandId} />
+            <div className="grid gap-1">
+              <label htmlFor="idea-channel" className="text-sm font-medium">{ti("channel")}</label>
+              <select id="idea-channel" name="channelId" className={selectClass}>{channels.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select>
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="idea-count" className="text-sm font-medium">{ti("count")}</label>
+              <input id="idea-count" name="count" type="number" min={1} max={30} defaultValue={10} className={inputClass} />
+            </div>
+            <div className="grid gap-1">
+              <label htmlFor="idea-from" className="text-sm font-medium">{ti("from")}</label>
+              <input id="idea-from" name="from" type="date" defaultValue={todayIn()} className={inputClass} />
+            </div>
+            <div className="grid gap-1 sm:col-span-4">
+              <label htmlFor="idea-hint" className="text-sm font-medium">{ti("hint")}</label>
+              <textarea id="idea-hint" name="hint" rows={2} maxLength={1000} placeholder={ti("hintPlaceholder")} className={textareaClass} />
+            </div>
+            <div className="sm:col-span-4"><SubmitButton pending={ti("working")}>{ti("submit")}</SubmitButton></div>
           </form>
         </Card>
       ) : null}

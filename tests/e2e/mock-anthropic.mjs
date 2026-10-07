@@ -131,6 +131,17 @@ http
         const slides = [cover, ...(plan.slides ?? []).map((x, i) => ({ templateId: "points", slots: { number: `0${i + 1}`, headline: x }, illustration: null }))];
         return reply(tool, { slides });
       }
+      // Post ideas (TASK-019): N numbered ideas in the first allowed format, named after the owner's wish when given.
+      if (tool === "suggest_post_ideas") {
+        const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);
+        const format = user.match(/formats="([^",]+)/)[1];
+        const wish = user.match(/<owner_wish>\n([\s\S]*?)\n<\/owner_wish>/)?.[1] ?? "Tema";
+        const taken = (user.match(/^- .*$/gm) ?? []).length; // rejected + kept ideas listed for replacements
+        // Distinct topics (the no-repeat check rejects ideas that share most words).
+        const topics = ["kava z ovsenim mlekom", "čajni rituali za deževne dni", "domači piškoti iz pekarne", "glasbeni večer ob petkih", "zajtrk za študente", "poletna terasa na vrtu"];
+        const ideas = Array.from({ length: n }, (_, i) => ({ title: `${wish} ${taken + i + 1}: ${topics[(taken + i) % topics.length]}`, angle: `Zgodba o ${topics[(taken + i) % topics.length]}.`, pillar: null, format }));
+        return reply(tool, { ideas });
+      }
       // Plan import (TASK-012): name the columns like the header heuristic does.
       if (tool === "map_plan_columns") {
         const req = JSON.parse(user);
