@@ -161,12 +161,12 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect(anim.getByLabel("Gibanje")).toHaveValue(/^Slow, smooth camera push-in/);
   await anim.getByLabel("Gibanje").fill("Slow push-in, the red light pulses gently.");
   expect(await serious(p)).toEqual([]);
-  await anim.getByRole("button", { name: /^Animiraj · ≈ 0\.27 €$/ }).click();
+  await anim.getByRole("button", { name: /^Animiraj · ≈ 0\.42 €$/ }).click();
   await expect(p.getByTestId("animation-status")).toHaveText("Pripravljene", { timeout: 60_000 });
   // The test Chromium has no H.264 decoder (Chrome and Safari do), so the file itself is checked with ffprobe.
   await expect(p.getByTestId("animation-video")).toHaveAttribute("src", /^\/api\/post-media\//);
   const vlog = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).at(-1);
-  expect(vlog).toEqual({ model: "fal-ai/minimax/hailuo-02/standard/image-to-video", video: true, duration: "6", image: "data:image/jpeg;base64," });
+  expect(vlog).toEqual({ model: "fal-ai/kling-video/v3/standard/image-to-video", video: true, duration: "5", image: "data:image/jpeg;base64," });
   const [mp4] = await Promise.all([p.waitForEvent("download"), anim.getByTestId("animation-download").click()]);
   expect(mp4.suggestedFilename()).toMatch(/^cherr-.*-video-1\.mp4$/);
   const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height", "-of", "json", (await mp4.path())!]).toString());

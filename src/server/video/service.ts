@@ -18,8 +18,8 @@ import { composeVideo, probeVideo, VideoError } from "./ffmpeg";
 
 export const POST_VIDEO_QUEUE = "post-video";
 export type PostVideoJob = { postId: string };
-/** Clip length asked from the model (Hailuo: 6 or 10 s); the post's video is this long. */
-export const VIDEO_SECONDS = 6;
+/** Clip length asked from the model (spec §5.6 default; Kling 3.0 takes 3–15 s); the post's video is this long. */
+export const VIDEO_SECONDS = 5;
 export const MOTION_MAX = 600;
 const STALE_MS = 15 * 60 * 1000;
 
