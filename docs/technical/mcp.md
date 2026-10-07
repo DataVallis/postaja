@@ -1,6 +1,6 @@
 # Claude → Postaja (MCP server)
 
-Status: **Live on dev** (TASK-010a, PR #20). Decisions: ADR-038, ADR-039 (Claude fills the knowledge base; posts are made in Postaja).
+Status: **Live on dev** (TASK-010a, PR #20; files and new brands TASK-010b). Decisions: ADR-038, ADR-039 (Claude fills the knowledge base; posts are made in Postaja), ADR-046 (files from Claude, brands created on the way).
 
 The owner keeps projects, history and CGPs in Claude. Claude has no API that lets Postaja read them, so it works the
 other way round: **Postaja is a remote MCP server**, the owner adds it to Claude as a custom connector, and Claude
@@ -52,6 +52,26 @@ Signing out of the web app does **not** disconnect Claude: `oauth_*_token.sessio
 | `get_brand` | member | CGP (active version), rules, pillars, channels, material names, logo count, fonts — by slug or id |
 | `propose_cgp` | owner | stores the text as a **pending draft** (`cgp_drafts`, ≤ 50,000 chars; earlier pending drafts of the brand discarded). The active CGP never changes here (ADR-035). Returns the review URL. |
 | `add_material` | owner | text from the conversation → a brand source (`.md` unless named `.txt`/`.csv`), through the normal upload checks |
+| `create_brand` | owner | returns the brand with this name (id, slug, name, case-insensitive or same slug) or creates it: slug from the name (`slugify`, made unique), `https://` added to a bare website, languages default `sl`. Idempotent. |
+| `add_file` | owner | one file (or a ZIP) into the brand **through the same path as a drop in "Datoteke branda"** (`uploadAuto`: sniffed type, re-encoded images, font glyph check, ZIP unpacked, text read). Bytes either `url` (Postaja downloads it, see below) or `content_base64` (+ `filename`; `data:` prefix and whitespace tolerated). `kind`: `logo`, `post_example` / `material` (→ sources; images become the brand's examples for the visual identity), `font`, `auto` (sorted by type and name). ≤ 15 MB. Returns per file `savedAs` or the refusal. |
+| `upload_link` | member | the brand's Files page (`/app/brands/<id>?tab=files`) for files Claude cannot send (pasted images, large files, folders) |
+
+**Brands created on the way:** `propose_cgp`, `add_material` and `add_file` take `create_if_missing` (default **true**):
+a name that matches no brand creates it (owner only; `brandCreated: true` in the result). A UUID-like reference never
+creates a brand (a wrong id stays "not found"), and an editor is refused before anything is created.
+
+**Files by URL** (`src/server/files/fetch-public.ts`): http(s) only, ports 80/443, no credentials in the URL, names like
+`localhost`/`*.local`/`*.internal` refused; the socket's DNS lookup refuses any name resolving to a non-public address
+(loopback, private, link-local incl. 169.254.169.254, CGNAT, ULA, mapped, reserved — so DNS rebinding cannot get in);
+redirects followed by hand, each hop re-checked, ≤ 3; size counted on the wire (≤ 15 MB); 20 s overall; no cookies.
+A name without an extension gets one from `Content-Type` (the sorter reads names).
+
+**Why not only base64:** Claude writes tool arguments token by token, so inline base64 is practical only for small files
+it really has as bytes (e.g. made with its code tool); images pasted into a Claude chat are not available to it as
+bytes. Hence `url` first, `upload_link` for the rest; the server instructions tell Claude this.
+
+**Body cap:** `/api/mcp` refuses a declared body over 22 MB with 413 before the token is checked; the SDK transport's
+own cap (default 4 MB) is raised to the same value (`maxRequestBodySize`), which also covers bodies without a length.
 
 The server's `instructions` tell Claude to use the tools only for the knowledge base and not to write posts (ADR-039).
 `get_brand` lists materials with `textChars` (how much text Postaja could read).
@@ -72,7 +92,9 @@ so migrations must run before the app serves (they do: `RUN_MIGRATIONS`).
 ## Tests
 `src/server/mcp/mcp.int.test.ts` (full flow: discovery, DCR, login continuation, consent, PKCE, token, refresh
 rotation, tools; refusals: foreign redirect, switched redirect, wrong verifier, tampered query, other audience, missing
-scope, no org, other org, editor; disconnect; sign-out keeps the connection). `tests/e2e/claude-connect.spec.ts`
+scope, no org, other org, editor; disconnect; sign-out keeps the connection; create_brand, add_file by base64 and URL,
+brand auto-created, refusals: bad base64, too large, .exe, editor, private URL, both/neither source; 413 cap).
+`src/server/files/fetch-public.test.ts` (address classes, lookup guard, redirects, size cap, schemes, ports). `tests/e2e/claude-connect.spec.ts`
 (browser consent with a stubbed claude.ai, propose → insert → save → disconnect, axe).
 
 ## Owner: connecting

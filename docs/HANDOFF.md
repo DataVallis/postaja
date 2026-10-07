@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-06
+# Handoff — state as of 2026-10-07
 
 ## Working mode
 **Mode B (autonomous) — partially.** Owner granted push access to `DataVallis/postaja` on 2026-10-05
@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-07: TASK-010b files from Claude — MCP `create_brand`, `add_file` (public URL downloaded by Postaja behind an SSRF guard, or base64 for small files; logo / past-post example / material / font / ZIP through the normal upload checks), `upload_link`; CGP, materials and files create the brand when it does not exist (ADR-046). Owner: refresh the Postaja connector in Claude to see the new tools.
 - 2026-10-07: TASK-016 one-click download — post ZIP (text as posted, first comment, images) and day ZIP (all brands or one, folders per post, pregled.csv for Excel), streamed — PR #37. Owner: TASK-010b stays open (files from Claude next to CGP).
 - 2026-10-07: New brand/org forms fill the short name (slug) from the name as you type (č→c, đ→d …; a hand-typed slug is kept); import groups without an account read "brez računa v planu" — PR #36.
 - 2026-10-06: Fix: LinkedIn plan rows ended up on the Instagram channel (the import let any channel be chosen for any platform). Import rows now only go to channels of their platform (select filtered, server refuses PLATFORM_MISMATCH, old cross-platform choices ignored); "Uvozi manjkajoče" moves misplaced posts of that import to the right channel (images reset) — PR #35.
@@ -97,7 +98,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 ## Next
 **Direction (ADR-035, owner 2026-10-06):** Postaja creates posts and ads from the owner's CGP + uploaded materials; it never writes the CGP. TASK-006 (AI CGP ingestion) is dropped.
 Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
-Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22, done) → TASK-012 plan import (PR #23, done) → TASK-013 plan view (PR #24, done) → TASK-014 bulk (PR #25) → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (`FAL_KEY` set by owner) → TASK-016 download. Owner (2026-10-06): no locked templates — each brand's look is designed by Claude from its own inputs (TASK-017, ADR-044); everything runs inside Postaja. TASK-010b (graphics from Claude) waits.
+Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22, done) → TASK-012 plan import (PR #23, done) → TASK-013 plan view (PR #24, done) → TASK-014 bulk (PR #25) → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (`FAL_KEY` set by owner) → TASK-016 download. Owner (2026-10-06): no locked templates — each brand's look is designed by Claude from its own inputs (TASK-017, ADR-044); everything runs inside Postaja. TASK-010b (files from Claude) done 2026-10-07. Next agreed: bulk creation of a whole brand plan (texts + images) with a cost estimate first.
 Latest numbers: TASK-017, ADR-045. Latest PR: #37.
 
 ## Servers
