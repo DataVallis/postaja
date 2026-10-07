@@ -30,6 +30,7 @@ const date = z.string().refine((s) => isIsoDate(s));
 export const scopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("day"), date, brandId: z.string().min(1).nullish() }),
   z.object({ kind: z.literal("brand"), brandId: z.string().min(1), from: date, to: date.nullable() }),
+  z.object({ kind: z.literal("import"), importId: z.string().min(1).max(100), brandId: z.string().min(1).nullish() }),
 ]);
 
 /**
@@ -47,6 +48,9 @@ export async function bulkCandidates(db: Db, ctx: OrgContext, scope: BulkScope, 
   ];
   if (s.kind === "day") {
     where.push(eq(posts.scheduledOn, s.date));
+    if (s.brandId) where.push(eq(posts.brandId, s.brandId));
+  } else if (s.kind === "import") {
+    where.push(eq(posts.importId, s.importId));
     if (s.brandId) where.push(eq(posts.brandId, s.brandId));
   } else {
     where.push(eq(posts.brandId, s.brandId), gte(posts.scheduledOn, s.from));

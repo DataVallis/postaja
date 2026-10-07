@@ -12,7 +12,9 @@ export async function BulkRuns({ runs, highlight }: { runs: BulkRunView[]; highl
   const f = await getFormatter();
   const active = runs.some((r) => r.status === "queued" || r.status === "running");
   const scope = (r: BulkRunView) =>
-    r.scope.kind === "day"
+    r.scope.kind === "import"
+      ? t("scopeImport")
+      : r.scope.kind === "day"
       ? t("scopeDay", { date: f.dateTime(new Date(`${r.scope.date}T12:00:00Z`), { timeZone: "UTC", weekday: "short", day: "numeric", month: "numeric" }) })
       : r.scope.to
         ? t("scopeRange", { from: f.dateTime(new Date(`${r.scope.from}T12:00:00Z`), { timeZone: "UTC", day: "numeric", month: "numeric" }), to: f.dateTime(new Date(`${r.scope.to}T12:00:00Z`), { timeZone: "UTC", day: "numeric", month: "numeric" }) })

@@ -172,5 +172,12 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   await p.getByRole("button", { name: "Uvozi 2 objav" }).click();
   await expect(p.getByTestId("posts-table").getByRole("row")).toHaveCount(3);
   await expect(p.getByTestId("posts-table")).toContainText("CHERR.IO");
+  // The whole plan in one go goes through the cost preview; here every post already has its text and the new brand
+  // has no visual identity yet, so there is nothing to start.
+  await p.goto("/app/import");
+  await p.getByRole("link", { name: "CHERR.IO X posts 001 (1).xlsx" }).click();
+  await p.getByTestId("import-bulk").click();
+  await expect(p.getByTestId("bulk-preview")).toContainText("V tem obsegu ni ničesar za ustvariti");
+  await expect(p.getByRole("button", { name: /^Začni/ })).toHaveCount(0);
   await ctx.close();
 });

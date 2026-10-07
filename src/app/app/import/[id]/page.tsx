@@ -24,6 +24,7 @@ export default async function ImportReview({ params, searchParams }: { params: P
   const t = await getTranslations("Import");
   const tp = await getTranslations("PostFormats");
   const tb = await getTranslations("Brands");
+  const tbu = await getTranslations("Bulk");
   const f = await getFormatter();
   const r = v.import;
   const draft = r.status === "draft";
@@ -54,8 +55,10 @@ export default async function ImportReview({ params, searchParams }: { params: P
               <input type="hidden" name="importId" value={r.id} />
               <button type="submit" className={buttonClass("secondary", "sm")}>{t("reopen")}</button>
             </form>
-            <Link href={`/app/posts?import=${r.id}`} className={buttonClass("primary", "sm")}>{t("seePosts")}</Link>
+            <Link href={`/app/posts?import=${r.id}`} className={buttonClass("secondary", "sm")}>{t("seePosts")}</Link>
+            <Link href={`/app/bulk/new?kind=import&importId=${r.id}&steps=text,image&back=${encodeURIComponent(`/app/import/${r.id}`)}`} className={buttonClass("primary", "sm")} data-testid="import-bulk">{tbu("previewButton")}</Link>
           </div>
+          <p className="w-full text-xs text-muted">{tbu("importHint")}</p>
           <p className="w-full text-xs text-muted">{t("reopenHint")}</p>
         </Card>
       ) : null}
