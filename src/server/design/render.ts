@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import satori from "satori";
+import { backgroundState, elementState, type MotionSpec } from "../video/motion";
 import sharp from "sharp";
 import { MAX_INPUT_PIXELS } from "../files/images";
 import { color, type DesignSpec, type Slot, type Template, type TextElement } from "./spec";
@@ -52,6 +53,10 @@ export type RenderInput = {
    * the illustration's overlay (fade) and every element are drawn. Only for templates with a full-bleed illustration.
    */
   overlayOnly?: boolean;
+  /** One frame of an animation (TASK-023): every element and the illustration as they are at `t` seconds. */
+  motion?: { spec: MotionSpec; t: number } | null;
+  /** Reused across the frames of one animation: fitted pictures as data URIs (sharp is the slow part). */
+  cache?: Map<string, string>;
 };
 
 type Node = { type: string; props: Record<string, unknown> };
@@ -97,7 +102,7 @@ export function fitText(lines: string[][], boxW: number, boxH: number, o: { max:
   return Math.floor(o.min);
 }
 
-function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number, ox = 0, oy = 0): Node | null {
+function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number, ox = 0, oy = 0, wordsShown = 1): Node | null {
   if (!value.trim()) return null;
   const family = e.font === "heading" ? spec.typography.heading : spec.typography.body;
   const pad = (e.padding / 100) * W;
@@ -109,9 +114,13 @@ function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H:
   });
   const gap = size * (0.27 + Math.max(0, e.letterSpacing));
   const justify = e.align === "center" ? "center" : e.align === "right" ? "flex-end" : "flex-start";
+  // "words" entrance: the first share of words shows; the rest keep their place, invisible (no reflow while it plays).
+  const total = lines.reduce((n, l) => n + l.length, 0);
+  const visible = wordsShown >= 1 ? total : Math.floor(wordsShown * total + 1e-9);
+  let k = 0;
   const rows = lines.map((words) =>
     el("div", { display: "flex", flexWrap: "wrap", justifyContent: justify, width: "100%" },
-      words.map((w) => el("span", { color: color(spec, w.em && e.emphasis ? e.emphasis : e.color), marginRight: gap }, w.word))),
+      words.map((w) => el("span", { color: color(spec, w.em && e.emphasis ? e.emphasis : e.color), marginRight: gap, ...(k++ >= visible ? { opacity: 0 } : {}) }, w.word))),
   );
   const inner = el("div", {
     display: "flex", flexDirection: "column", maxWidth: "100%",
@@ -132,7 +141,16 @@ async function standIn(spec: DesignSpec, w: number, h: number) {
   return new Uint8Array(await sharp(Buffer.from(svg)).jpeg({ quality: 82 }).toBuffer());
 }
 
-async function fitted(bytes: Uint8Array, w: number, h: number, fit: "cover" | "contain", png: boolean) {
+async function fitted(bytes: Uint8Array, w: number, h: number, fit: "cover" | "contain", png: boolean, cache?: Map<string, string>) {
+  const key = cache ? `${bytes.byteLength}:${bytes[0]}:${bytes[bytes.byteLength >> 1]}:${Math.round(w)}x${Math.round(h)}:${fit}:${png}` : "";
+  const hit = cache?.get(key);
+  if (hit) return hit;
+  const uri = await fittedUncached(bytes, w, h, fit, png);
+  cache?.set(key, uri);
+  return uri;
+}
+
+async function fittedUncached(bytes: Uint8Array, w: number, h: number, fit: "cover" | "contain", png: boolean) {
   const img = sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).rotate().resize(Math.max(1, Math.round(w)), Math.max(1, Math.round(h)), { fit, background: { r: 0, g: 0, b: 0, alpha: 0 } });
   return png ? dataUri(await img.png().toBuffer(), "image/png") : dataUri(await img.jpeg({ quality: 88 }).toBuffer(), "image/jpeg");
 }
@@ -155,7 +173,11 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
   if (b.type === "gradient" && !input.overlayOnly) base.backgroundImage = `linear-gradient(${b.angle}deg, ${color(s, b.color)}, ${color(s, b.to ?? "surface")})`;
   const picture = input.overlayOnly ? null : input.illustration ?? (t.background.type === "illustration" || t.elements.some((e) => e.type === "image" && e.source === "illustration") ? await standIn(s, W, H) : null);
   if (b.type === "illustration" && (picture || input.overlayOnly)) {
-    if (!input.overlayOnly && picture) children.push(el("img", { position: "absolute", left: 0, top: 0, width: W, height: H }, undefined, { src: await fitted(picture, W, H, "cover", false), width: W, height: H }));
+    if (!input.overlayOnly && picture) {
+      const bg = backgroundState(input.motion?.spec, input.motion?.t ?? 0, { width: W, height: H });
+      const move = bg.scale !== 1 || bg.dx || bg.dy ? { transform: `translate(${bg.dx}px, ${bg.dy}px) scale(${bg.scale})` } : {};
+      children.push(el("img", { position: "absolute", left: 0, top: 0, width: W, height: H, ...move }, undefined, { src: await fitted(picture, W, H, "cover", false, input.cache), width: W, height: H }));
+    }
     if (b.overlay) {
       const c = color(s, b.overlay.color), a = b.overlay.opacity;
       const grad = b.overlay.fade === "bottom" ? `linear-gradient(180deg, ${rgba(c, a * 0.15)} 0%, ${rgba(c, a)} 70%)`
@@ -167,22 +189,34 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
   // Elements live in the safe box (the whole canvas when no insets are given); sizes in % of the box.
   const ox = input.safe?.left ?? 0, oy = input.safe?.top ?? 0;
   const BW = W - ox - (input.safe?.right ?? 0), BH = H - oy - (input.safe?.bottom ?? 0);
-  for (const e of t.elements) {
+  for (const [index, e] of t.elements.entries()) {
     const x = ox + (e.x / 100) * BW, y = oy + (e.y / 100) * BH, w = (e.w / 100) * BW, h = (e.h / 100) * BH;
+    const st = input.motion ? elementState(input.motion.spec, index, input.motion.t, BW) : null;
+    let node: Node | null = null;
     if (e.type === "shape") {
-      children.push(el("div", {
+      node = el("div", {
         position: "absolute", left: x, top: y, width: w, height: h, backgroundColor: color(s, e.color), opacity: e.opacity,
         borderRadius: (e.radius / 100) * BW, ...(e.borderColor && e.borderWidth ? { border: `${(e.borderWidth * BW) / 1080}px solid ${color(s, e.borderColor)}` } : {}),
-      }));
+      });
     } else if (e.type === "image") {
       const src = e.source === "logo" ? input.logo : picture;
       if (!src) continue;
-      children.push(el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
-        { src: await fitted(src, w, h, e.source === "logo" ? "contain" : e.fit, e.source === "logo"), width: w, height: h }));
+      node = el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
+        { src: await fitted(src, w, h, e.source === "logo" ? "contain" : e.fit, e.source === "logo", input.cache), width: w, height: h });
     } else {
       const value = e.slot === "static" ? e.text ?? "" : input.slots[e.slot] ?? "";
-      children.push(textNode(s, e, value, BW, BH, ox, oy));
+      node = textNode(s, e, value, BW, BH, ox, oy, st?.words ?? 1);
     }
+    // Animation frame: the element's entrance/loop state on top of its own opacity (TASK-023).
+    if (node && st) {
+      const style = node.props.style as Record<string, unknown>;
+      style.opacity = (typeof style.opacity === "number" ? style.opacity : 1) * st.opacity;
+      if (st.dx || st.dy || st.sx !== 1 || st.sy !== 1) {
+        style.transform = `translate(${st.dx}px, ${st.dy}px) scale(${st.sx}, ${st.sy})`;
+        style.transformOrigin = st.origin === "left" ? "left center" : st.origin === "top" ? "center top" : "center center";
+      }
+    }
+    children.push(node);
   }
   const svg = await satori(el("div", base, children.filter(Boolean)) as unknown as Parameters<typeof satori>[0], { width: W, height: H, fonts });
   return new Uint8Array(await sharp(Buffer.from(svg), { limitInputPixels: MAX_INPUT_PIXELS }).png({ compressionLevel: 6 }).toBuffer());

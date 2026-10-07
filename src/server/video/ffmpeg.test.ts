@@ -5,7 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { testClip } from "../../../tests/fixtures/video";
-import { composeVideo, probeVideo, VideoError } from "./ffmpeg";
+import { composeVideo, encodeFrames, probeVideo, VideoError } from "./ffmpeg";
 
 /** The first frame of an MP4 as raw RGB. */
 async function firstFrame(mp4: Uint8Array) {
@@ -47,4 +47,19 @@ describe("video", () => {
     const [r2, g2, b2] = at(540, 900);
     expect(r2 > 200 && g2 < 40 && b2 < 40).toBe(false); // the clip shows through below
   }, 120_000);
+});
+
+describe("encodeFrames", () => {
+  it("streams PNG frames into an H.264 MP4 of the exact size and length, with a silent track", async () => {
+    const frame = (i: number) => sharp({ create: { width: 1080, height: 1350, channels: 3, background: { r: (i * 10) % 255, g: 40, b: 80 } } }).png().toBuffer().then((b) => new Uint8Array(b));
+    const { probe, bytes } = await encodeFrames(50, frame, { width: 1080, height: 1350, fps: 25 });
+    expect(probe).toMatchObject({ width: 1080, height: 1350, codec: "h264" });
+    expect(probe.durationS).toBeGreaterThan(1.9);
+    expect(probe.durationS).toBeLessThan(2.2);
+    const kinds = execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", "-"], { input: Buffer.from(bytes) }).toString();
+    expect(kinds.split("\n").filter(Boolean).sort()).toEqual(["audio", "video"]);
+  }, 120_000);
+  it("a frame that fails stops the encoder and the error comes through", async () => {
+    await expect(encodeFrames(10, async (i) => { if (i === 3) throw new Error("render failed"); return new Uint8Array(await sharp({ create: { width: 64, height: 64, channels: 3, background: "#000" } }).png().toBuffer()); }, { width: 64, height: 64, fps: 25 })).rejects.toThrow("render failed");
+  }, 60_000);
 });

@@ -1,42 +1,42 @@
 # Animation (animate a post image)
 
-Status: **Built** (TASK-022). Decisions: ADR-051, ADR-021 (text burned in by Postaja), ADR-009. Spec §5.6.
+Status: **Built** (TASK-023, replaces TASK-022's image-to-video for posts). Decisions: ADR-052 (supersedes ADR-051 for
+posts), ADR-009/021 (Postaja draws every letter). Spec §5.6.
+
+Owner (2026-10-07): post animations are made by Claude; **Kling 3.0 is only for AI-influencer videos**, which need a
+persona (DNA + passport images, created or imported) so the same person can be generated again in new videos (phase 2).
 
 ## What the owner does
-Post page → **Animacija** (shown when an image's template has a full-bleed illustration): pick the image (carousels),
-edit the motion prompt (prefilled from the illustration subject), **Animiraj · ≈ 0.42 €** → in a few minutes a 5 s MP4
-at the image's exact size with the words, logo and shapes exactly as on the image; play, download (`…-video-1.mp4`);
-the post ZIP and day ZIP include `video.mp4`. New images for the post remove the video (it would be stale).
+Post page → **Animacija** (every post with images): pick the image (carousels: every slide, text-only ones too),
+optional instructions ("naslov besedo za besedo, logotip na koncu, 5 sekund"), **Animiraj · največ X €** → within a
+minute an MP4 at the image's exact size: the elements of the brand template enter one after another, the illustration
+drifts, everything ends on the finished still. Play, download (`…-video-1.mp4`); post and day ZIPs include
+`video.mp4`. New images for the post remove the video (stale).
 
 ## How
-- `model_registry` kind `video`, `per_second` (migrations 0024–0026): default **Kling 3.0 Standard** (owner's choice;
-  `fal-ai/kling-video/v3/standard/image-to-video`, $0.084/s without native audio, 3–15 s; 5 s ⇒ $0.42). Hailuo 02
-  Standard ($0.045/s) stays enabled as an alternative, not the default.
-- `src/server/images/fal.ts`: shared queue runner; `video()` sends the clean illustration as a data URI (≤ 1280 px
-  JPEG, Kling: `start_image_url`), the motion prompt + "No text, letters, logos or watermarks", duration 5,
-  `generate_audio: false`, a negative prompt against text; downloads
-  `video.url` from fal hosts only, ≤ 100 MB, 10 min queue timeout.
-- `src/server/video/ffmpeg.ts`: `probeVideo` (ffprobe, file protocol only: exactly one video stream, mp4/mov/webm/mkv,
-  ≤ 16 s, ≤ 4096 px) and `composeVideo` (scale to cover + crop to the slide size — never stretched — 25 fps, the
-  transparent overlay PNG on top, H.264 yuv420p CRF 20 + silent stereo AAC, faststart, ≤ 5 s); temp dir per call,
-  timeouts, killed on overrun. `FFMPEG_PATH` / `FFPROBE_PATH` optional.
-- `renderTemplate(..., { overlayOnly: true })`: transparent canvas without picture and background colour; the
-  illustration's fade overlay and every element drawn (only for full-bleed illustration templates).
-- `src/server/video/service.ts`: `animatablePositions` (current design, full-bleed template, stored illustration),
-  `requestAnimation` (any member; one video at a time per post, claim on `posts.video_status`, stale after 15 min;
-  motion 3–600 chars), queue `post-video` (no automatic retry: a retry would pay again), `runVideoJob` (acts as the
-  requester, re-verified), `animatePost`: reserve the clip price → fal → **settle once delivered** (the provider
-  charged even if our checks then refuse the clip) / release on provider error → probe → overlay → compose → S3
-  `post_media` kind `video` (position = slide) replacing the old one.
-- Docker runner image installs `ffmpeg` (Debian); CI installs it when missing and checks `libx264` in the container.
+- `src/server/video/motion.ts` — the motion spec (zod, data not code): `durationS` 3–10, background motion (`zoom_in`,
+  `zoom_out`, `pan_*`, amount ≤ 0.25), per element index an entrance (`fade`, `rise`, `drop`, `slide_*`, `pop`,
+  `grow_x`/`grow_y` for rules, `words` word by word) with `at`/`duration`/`ease`, and an optional loop (`pulse`,
+  `float`, `breathe`) after it. `elementState` / `backgroundState` give each element's opacity, offset, scale and shown
+  words at time t; `specIssues` checks indexes and that everything is in place 0.5 s before the end.
+- `src/server/video/ai.ts` — Claude (tool `submit_motion`) gets the brand's common thread, the template's elements
+  (kind, slot, words, box) and the owner's wish; reveal order like a reader, subtle loops, never changes words, colours,
+  positions or sizes. One retry with the validation problems; `INVALID_OUTPUT` after that.
+- `renderTemplate(..., { motion: { spec, t }, cache })` — the still's own renderer with per-element opacity/transform
+  (Satori), hidden-but-placed words for `words`, the illustration scaled/translated; fitted pictures cached across frames.
+- `encodeFrames` (`src/server/video/ffmpeg.ts`) — frames rendered one at a time and piped as PNG into ffmpeg
+  (image2pipe, 25 fps) → H.264 yuv420p CRF 20 + silent AAC, faststart; never all frames in memory; 5 min timeout.
+  ~0.2 s per 1080×1350 frame ⇒ ~30 s for a 6 s animation.
+- `src/server/video/service.ts` — `requestAnimation` (any member, one per post at a time, instructions ≤ 600 chars),
+  queue `post-video` (1 retry), worker acts as the requester; the design version that made the images is used; the
+  spec is stored with the video (`post_media.prompt`, model `postaja-motion`). Cost = one Claude call under the spend
+  cap (shown as "največ" on the button). No fal call.
+- Kept for phase 2 persona video: fal `video()` (Kling 3.0 Standard default, Hailuo 02 alternative, `model_registry`
+  kind `video`), `probeVideo`, `composeVideo` (clip + burned-in overlay), `renderTemplate(overlayOnly)`.
 
 ## Tests
-`src/server/video/ffmpeg.test.ts` (probe refusals incl. too long; exact size crop, overlay pixels, audio + video
-streams, duration cap), `design/design.int.test.ts` "animation" (clean illustration + prompt to fal, 1080×1350 MP4,
-cost settled 0.42 $, ZIP has video.mp4, new images remove it, NOT_ANIMATABLE, invalid motion, other org, provider
-failure releases the cost, invalid clip keeps the cost and fails `VIDEO_INVALID`), E2E `images.spec.ts` (animate the
-cover, ffprobe of the downloaded MP4: H.264 1080×1350 + AAC). The test Chromium has no H.264 decoder, so playback is
-not asserted in the browser.
-
-## Not yet
-Ads and carousel inner slides with boxed illustrations; loop mode; persona references; motion prompt by Claude.
+`video/motion.test.ts` (entrances, words, rules, loops, background drift, spec issues), `video/ffmpeg.test.ts` (probe,
+compose, frame encoder size/length/audio, a failing frame stops it), `design/design.int.test.ts` "animation by Claude"
+(prompt inputs and wish, MP4 at the image size and length, spec stored, no video model paid, ZIP, stale removal, every
+carousel slide animatable, retry on a bad spec, failure after two, other org), E2E `images.spec.ts` (animate the cover
+with instructions, no fal call, ffprobe of the downloaded MP4; carousel offers all 4 images).

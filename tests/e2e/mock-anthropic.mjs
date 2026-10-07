@@ -175,6 +175,12 @@ http
         const visuals = heads.map((h, i) => ({ templateId: t.id, slots: { headline: h, ...(t.slots.includes("label") ? { label: "Webinar" } : {}) }, illustration: t.illustration ? `Ad illustration ${i + 1}` : null }));
         return reply(tool, { visuals });
       }
+      // Animation (TASK-023): every element of the image enters one after another with a fade; the headline word by word.
+      if (tool === "submit_motion") {
+        const els = JSON.parse(user.match(/<elements>\n(.*)\n<\/elements>/)[1]);
+        const elements = els.map((e, i) => ({ index: e.index, enter: { effect: e.slot === "headline" ? "words" : "fade", at: 0.2 + i * 0.3, duration: 0.6, ease: "out" }, loop: "none" }));
+        return reply(tool, { durationS: Math.max(4, Math.ceil(0.2 + els.length * 0.3 + 2.5)), background: { motion: "zoom_in", amount: 0.06 }, elements });
+      }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);
         const format = user.match(/formats="([^",]+)/)[1];

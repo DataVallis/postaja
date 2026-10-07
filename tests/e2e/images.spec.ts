@@ -156,23 +156,23 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 1);
   await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
 
-  // Animation (TASK-022): the cover's clean illustration moves; the words are burned back on by Postaja.
+  // Animation (TASK-023): Claude designs the motion, Postaja draws every frame — no video model, nothing from fal.
   const anim = p.getByTestId("animation");
-  await expect(anim.getByLabel("Gibanje")).toHaveValue(/^Slow, smooth camera push-in/);
-  await anim.getByLabel("Gibanje").fill("Slow push-in, the red light pulses gently.");
+  const falBeforeAnim = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length;
+  await anim.getByLabel("Navodila za animacijo (neobvezno)").fill("Naslov besedo za besedo, logotip na koncu.");
   expect(await serious(p)).toEqual([]);
-  await anim.getByRole("button", { name: /^Animiraj · ≈ 0\.42 €$/ }).click();
-  await expect(p.getByTestId("animation-status")).toHaveText("Pripravljene", { timeout: 60_000 });
+  await anim.getByRole("button", { name: /^Animiraj · največ \d+\.\d\d €$/ }).click();
+  await expect(p.getByTestId("animation-status")).toHaveText("Pripravljene", { timeout: 90_000 });
   // The test Chromium has no H.264 decoder (Chrome and Safari do), so the file itself is checked with ffprobe.
   await expect(p.getByTestId("animation-video")).toHaveAttribute("src", /^\/api\/post-media\//);
-  const vlog = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).at(-1);
-  expect(vlog).toEqual({ model: "fal-ai/kling-video/v3/standard/image-to-video", video: true, duration: "5", image: "data:image/jpeg;base64," });
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falBeforeAnim);
   const [mp4] = await Promise.all([p.waitForEvent("download"), anim.getByTestId("animation-download").click()]);
   expect(mp4.suggestedFilename()).toMatch(/^cherr-.*-video-1\.mp4$/);
-  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height", "-of", "json", (await mp4.path())!]).toString());
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height:format=duration", "-of", "json", (await mp4.path())!]).toString());
   expect(probe.streams).toEqual(expect.arrayContaining([
     expect.objectContaining({ codec_type: "video", codec_name: "h264", width: 1080, height: 1350 }), expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
   ]));
+  expect(Number(probe.format.duration)).toBeGreaterThanOrEqual(3.9);
   await p.screenshot({ path: info.outputPath("animation.png"), fullPage: true });
 
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
@@ -187,6 +187,8 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.goto(`/app/plan?view=day&d=${today}`);
   await p.getByTestId("plan-day").getByRole("link", { name: /Koraki|Prvi korak/ }).first().click();
   await expect(p.getByTestId("images").getByTestId("image-list").getByRole("img")).toHaveCount(4); // cover + 3 slides
+  // Every image of the carousel can be animated, the text-only slides too.
+  await expect(p.getByTestId("animation").getByLabel("Katera slika").locator("option")).toHaveCount(4);
   await expect(p.getByTestId("carousel-pdf")).toHaveCount(0); // an Instagram carousel is images, not a PDF document
 
   // One click: this post as a ZIP (images in order), then the whole day with its overview (TASK-016).
