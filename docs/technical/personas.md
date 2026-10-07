@@ -26,3 +26,12 @@ Every picture and video of the persona starts from these, so the same person app
   of persona videos (TASK-025).
 
 Owner only for every change; members see the persona. Uploads: PNG/JPG/WebP ≤ 15 MB, ≥ 256 px, re-encoded.
+
+## Persona video (TASK-025, ADR-055)
+On a post of a brand whose persona has pictures (`src/server/video/persona.ts`, section `#persona-video`):
+1. Claude writes the shot (`submit_persona_scene`, `src/server/personas/scene.ts`): first frame + motion, from the
+   post, the DNA and the owner's wish; no speech, no text, one action, one camera move.
+2. First frame: default `image_ref` (Nano Banana Pro edit), up to 4 passport pictures (primary first), 9:16.
+3. Kling 3.0 Standard image-to-video, 5 or 10 s, no audio (reserved at full length, settled on delivery).
+4. ffprobe, then fitted to 1080×1920 H.264 + silent AAC. Stored as `post_media` `video` (shot JSON in `prompt`) and
+   `keyframe` (poster). Runs on the `post-video` queue with `posts.video_mode = 'persona'`.

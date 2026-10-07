@@ -30,7 +30,7 @@ export const REVISION_MAX = 1000;
 export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL") {
+  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL" | "NO_PERSONA") {
     super(code);
   }
 }
@@ -105,7 +105,7 @@ export async function postMediaUrl(db: Db, storage: Storage, ctx: OrgContext, me
     .where(and(eq(postMedia.id, mediaId), eq(postMedia.orgId, ctx.orgId)));
   if (!m) throw new ImageJobError("NOT_FOUND");
   const ext = m.type === "image/png" ? "png" : m.type === "video/mp4" ? "mp4" : "jpg";
-  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : m.kind === "video" ? `video-${m.position + 1}` : `ilustracija-${m.position + 1}`}.${ext}`;
+  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : m.kind === "video" ? `video-${m.position + 1}` : m.kind === "keyframe" ? "persona-kader" : `ilustracija-${m.position + 1}`}.${ext}`;
   return storage.presignGet(m.key, { filename, contentType: m.type, inline: !download });
 }
 
@@ -241,7 +241,8 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   }
 
   // Swap in one transaction; the replaced objects are deleted afterwards (best effort — the rows decide access).
-  const replaced = old.filter((m) => !keptIllustrations.has(m.id));
+  // A persona video (TASK-025) does not depend on the images and stays; an animation of them goes with them.
+  const replaced = old.filter((m) => !keptIllustrations.has(m.id) && m.kind !== "keyframe" && !(m.kind === "video" && p.videoMode === "persona"));
   await db.transaction(async (tx) => {
     const t = forOrg(tx as unknown as Db, ctx);
     if (replaced.length) await t.delete(postMedia, inArray(postMedia.id, replaced.map((m) => m.id)));

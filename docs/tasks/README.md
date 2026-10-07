@@ -33,7 +33,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-022 | **Animation** (phase 1b): animate a post image — clean illustration → fal image-to-video → template burned on with ffmpeg; MP4 in downloads (ADR-051) | TASK-017 | Done; for posts replaced by TASK-023 |
 | TASK-023 | **Animation by Claude**: motion spec per image (entrances, word-by-word, rules, illustration drift), drawn frame by frame by Postaja, MP4 (ADR-052); Kling 3.0 kept for persona video | TASK-022 | Done |
 | TASK-024 | **Persona** (phase 2): brand tab — DNA framework by hand or filled by Claude from a description/imported DNA; passport pictures (first from the whole DNA, other angles with a reference model; uploads; primary) (ADR-053) | TASK-015 | Done |
-| TASK-025 | **Persona video**: Claude writes the scene, keyframe 9:16 from the passport (reference model), Kling 3.0 image-to-video, cost preview | TASK-024 | Next |
+| TASK-025 | **Persona video**: Claude writes the shot, first frame 9:16 from the passport (Nano Banana Pro edit), Kling 3.0 image-to-video 5/10 s, 1080×1920 MP4, cost preview (ADR-055) | TASK-024 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

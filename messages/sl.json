@@ -1288,5 +1288,40 @@
       "UNAUTHORIZED": "Prijava je potekla."
     },
     "generateAgain": "Nova passport slika"
+  },
+  "PersonaVideo": {
+    "title": "Video s persono ({name})",
+    "hint": "Claude napiše prizor iz te objave; prvi kader nastane iz potnih slik persone (ista oseba, Nano Banana Pro), Kling 3.0 ga oživi v navpičen video 9:16 brez zvoka. Nov video zamenja obstoječi video objave.",
+    "working": "Video se dela (nekaj minut) – stran se osveži sama.",
+    "videoLabel": "Video s persono {name}",
+    "download": "Prenesi video",
+    "sceneFrame": "Prvi kader",
+    "sceneMotion": "Gibanje",
+    "duration": "Dolžina",
+    "seconds": "{n} s",
+    "atMost": "največ {cost}",
+    "wish": "Navodila za prizor (neobvezno)",
+    "wishPlaceholder": "npr. pije kavo na terasi in se nasmehne v kamero",
+    "wishHint": "Kje je, kaj počne, kako se premika kamera. Brez govora – video nima zvoka.",
+    "create": "Ustvari video s persono",
+    "again": "Nov video",
+    "errors": {
+      "FAILED": "Videa ni bilo mogoče narediti. Poskusi znova.",
+      "NO_PERSONA": "Brand nima persone s potnimi slikami.",
+      "NO_VIDEO_MODEL": "Video ali referenčni model ni nastavljen.",
+      "BAD_STATE": "Video se že dela ali je objava preskočena.",
+      "INVALID": "Izberi 5 ali 10 s; navodila naj imajo največ 600 znakov.",
+      "INVALID_OUTPUT": "Claude ni vrnil veljavnega prizora. Poskusi znova.",
+      "VIDEO_INVALID": "Ponudnik je vrnil neveljaven video. Poskusi znova.",
+      "VIDEO_TOOL": "Videa ni bilo mogoče obdelati. Poskusi znova.",
+      "VIDEO_TIMEOUT": "Obdelava videa je trajala predolgo. Poskusi znova."
+    },
+    "status": {
+      "none": "Ni videa",
+      "queued": "V vrsti",
+      "rendering": "Se dela",
+      "ready": "Pripravljen",
+      "failed": "Napaka"
+    }
   }
 }

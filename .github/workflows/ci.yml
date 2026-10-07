@@ -49,8 +49,14 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      - name: ffmpeg (animations, TASK-022)
-        run: command -v ffmpeg || (sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg)
+      # ffmpeg (animations, persona video) from apt, time-boxed with retries so a hanging mirror fails fast instead of
+      # eating the job's timeout (it hung for 20+ minutes once). The static-build action was tried and dropped: with it
+      # the E2E video tests did not finish.
+      - name: ffmpeg
+        timeout-minutes: 10
+        run: command -v ffmpeg || (sudo apt-get update -q -o Acquire::Retries=3 && sudo apt-get install -y -q --no-install-recommends -o Acquire::Retries=3 ffmpeg)
+      - name: ffmpeg has libx264
+        run: ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264
       - name: Unit tests
         run: pnpm test
       - name: Start S3 stand-in

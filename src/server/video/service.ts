@@ -20,6 +20,7 @@ import { forOrg } from "../tenancy/scoped";
 import { motionRequest } from "./ai";
 import { encodeFrames, VideoError } from "./ffmpeg";
 import { FPS, MAX_S, motionSpecSchema, specIssues, type MotionSpec } from "./motion";
+import { makePersonaVideo } from "./persona";
 
 export const POST_VIDEO_QUEUE = "post-video";
 export type PostVideoJob = { postId: string };
@@ -56,7 +57,7 @@ export async function requestAnimation(db: Db, queue: { send(name: string, data:
   if (!(await animatablePositions(db, ctx, p)).includes(position)) throw new ImageJobError("NOT_ANIMATABLE");
   const claimed = await forOrg(db, ctx).update(
     posts,
-    { videoStatus: "queued", videoError: null, videoRequestedBy: ctx.userId, videoMotion: motion, videoPosition: position, updatedAt: new Date() },
+    { videoStatus: "queued", videoError: null, videoRequestedBy: ctx.userId, videoMode: "motion", videoMotion: motion, videoPosition: position, videoDurationS: null, updatedAt: new Date() },
     and(eq(posts.id, postId), or(inArray(posts.videoStatus, ["none", "ready", "failed"]), and(inArray(posts.videoStatus, ["queued", "rendering"]), lt(posts.updatedAt, new Date(Date.now() - STALE_MS))))!)!,
   );
   if (!claimed.length) throw new ImageJobError("BAD_STATE");
@@ -109,7 +110,7 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
 
   const k = key(ctx.orgId, postId);
   await deps.storage.put(k, bytes, "video/mp4");
-  const old = media.filter((m) => m.kind === "video");
+  const old = media.filter((m) => m.kind === "video" || m.kind === "keyframe");
   await db.transaction(async (tx) => {
     const s = forOrg(tx as unknown as Db, ctx);
     if (old.length) await s.delete(postMedia, inArray(postMedia.id, old.map((m) => m.id)));
@@ -122,8 +123,8 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
 }
 
 /** Worker side: acts as the member who asked (re-verified); expected failures are recorded on the post. */
-export async function runVideoJob(db: Db, deps: Omit<ImageDeps, "images">, job: PostVideoJob): Promise<"done" | "skipped" | "failed"> {
-  const [p] = await db.select({ id: posts.id, orgId: posts.orgId, by: posts.videoRequestedBy }).from(posts).where(eq(posts.id, job.postId));
+export async function runVideoJob(db: Db, deps: Omit<ImageDeps, "images"> & { images?: ImageDeps["images"] }, job: PostVideoJob): Promise<"done" | "skipped" | "failed"> {
+  const [p] = await db.select({ id: posts.id, orgId: posts.orgId, by: posts.videoRequestedBy, mode: posts.videoMode }).from(posts).where(eq(posts.id, job.postId));
   if (!p) return "skipped";
   const claimed = await db.update(posts).set({ videoStatus: "rendering", updatedAt: new Date() }).where(and(eq(posts.id, p.id), eq(posts.videoStatus, "queued"))).returning({ id: posts.id });
   if (!claimed.length) return "skipped";
@@ -140,7 +141,9 @@ export async function runVideoJob(db: Db, deps: Omit<ImageDeps, "images">, job: 
     throw e;
   }
   try {
-    await animatePost(db, deps, ctx, p.id);
+    // TASK-025: the same queue and status make either an animation or a persona video.
+    if (p.mode === "persona") await makePersonaVideo(db, { ...deps, images: deps.images ?? null }, ctx, p.id);
+    else await animatePost(db, deps, ctx, p.id);
     return "done";
   } catch (e) {
     if (e instanceof VideoError) return fail(e.code);

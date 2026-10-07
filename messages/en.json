@@ -1288,5 +1288,40 @@
       "UNAUTHORIZED": "Your session has expired."
     },
     "generateAgain": "New passport picture"
+  },
+  "PersonaVideo": {
+    "title": "Video with the persona ({name})",
+    "hint": "Claude writes a shot from this post; the first frame is made from the persona's passport pictures (same person, Nano Banana Pro), Kling 3.0 animates it into a vertical 9:16 video without sound. A new video replaces the post's current video.",
+    "working": "The video is being made (a few minutes) – the page refreshes itself.",
+    "videoLabel": "Video with the persona {name}",
+    "download": "Download video",
+    "sceneFrame": "First frame",
+    "sceneMotion": "Motion",
+    "duration": "Length",
+    "seconds": "{n} s",
+    "atMost": "at most {cost}",
+    "wish": "Scene instructions (optional)",
+    "wishPlaceholder": "e.g. drinks coffee on a terrace and smiles at the camera",
+    "wishHint": "Where, what they do, how the camera moves. No speech – the video has no sound.",
+    "create": "Create video with the persona",
+    "again": "New video",
+    "errors": {
+      "FAILED": "The video could not be made. Try again.",
+      "NO_PERSONA": "The brand has no persona with passport pictures.",
+      "NO_VIDEO_MODEL": "No video or reference model is set up.",
+      "BAD_STATE": "A video is already being made or the post is skipped.",
+      "INVALID": "Pick 5 or 10 s; instructions at most 600 characters.",
+      "INVALID_OUTPUT": "Claude did not return a valid shot. Try again.",
+      "VIDEO_INVALID": "The provider returned an invalid video. Try again.",
+      "VIDEO_TOOL": "The video could not be processed. Try again.",
+      "VIDEO_TIMEOUT": "Processing the video took too long. Try again."
+    },
+    "status": {
+      "none": "No video",
+      "queued": "Queued",
+      "rendering": "Working",
+      "ready": "Ready",
+      "failed": "Failed"
+    }
   }
 }
