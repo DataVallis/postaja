@@ -10,6 +10,7 @@ import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
 import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
+import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 
@@ -168,4 +169,19 @@ export async function requestAnimationAction(f: FormData): Promise<void> {
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?videoError=${error}` : ""}#animation`);
+}
+
+/** "Ustvari video s persono" (TASK-025): queued; the post page refreshes until the video is there. */
+export async function requestPersonaVideoAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await requestPersonaVideo(getDb(), bossQueue(await getBoss()), ctx, id, { durationS: Number(f.get("durationS") ?? 5) as 5, wish: String(f.get("wish") ?? "") });
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "FAILED";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?personaVideoError=${error}` : ""}#persona-video`);
 }

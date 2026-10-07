@@ -211,6 +211,13 @@
       "when": 1791400395065,
       "tag": "0029_nano_banana_pro",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791404663554,
+      "tag": "0030_persona_video",
+      "breakpoints": true
     }
   ]
 }

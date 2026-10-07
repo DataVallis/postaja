@@ -194,6 +194,11 @@ http
           lighting: "Overcast daylight", style: "Photorealistic digital photography", extra: `Owner: ${text.slice(0, 200)}`,
         } });
       }
+      // Persona video (TASK-025): a fixed shot that names the owner's wish, so the E2E can find it.
+      if (tool === "submit_persona_scene") {
+        const wish = user.match(/<owner_wish>\n([\s\S]*?)\n<\/owner_wish>/)?.[1] ?? "";
+        return reply(tool, { keyframe: `Standing in Ljubljana old town at dusk, yellow rain jacket. ${wish}`.trim(), motion: "Turns to the camera and smiles; slow push-in." });
+      }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);
         const format = user.match(/formats="([^",]+)/)[1];

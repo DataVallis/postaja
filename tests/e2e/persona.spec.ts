@@ -28,7 +28,7 @@ const serious = async (page: Page) =>
 type FalCall = { model: string; references: number; prompt?: string };
 const falLog = async (): Promise<FalCall[]> => (await fetch("http://127.0.0.1:3199/fal-log")).json();
 
-test("persona: AI fills in the DNA, the passport is generated from it, the owner edits and uploads", async ({ page, browser }, info) => {
+test("persona: AI fills in the DNA, the passport is generated from it, the owner edits and uploads; a post gets a persona video", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one full flow is enough");
   test.setTimeout(150_000);
   const stamp = Date.now();
@@ -48,7 +48,8 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await p.getByLabel("Ime", { exact: true }).fill("Mila AI");
   await p.getByRole("button", { name: "Ustvari" }).click();
   await expect(p.getByRole("heading", { name: "Mila AI", level: 1 })).toBeVisible();
-  await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: "Persona" }).click();
+  const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
+  await tab("Persona");
   await expect(p.getByTestId("persona-manual")).toBeVisible();
   expect(await serious(p)).toEqual([]);
 
@@ -91,5 +92,35 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await images.last().getByRole("button", { name: "Nastavi kot glavno" }).click();
   await expect(images.first()).toContainText("Drugo · glavna");
   await expect(images.first()).not.toContainText("Spredaj");
+
+  // A post of the persona brand gets a video with the persona: Claude's shot → first frame from the passport → Kling 3.0.
+  await tab("Kanali");
+  await p.getByLabel("Platforma").selectOption("instagram");
+  await p.getByLabel("Profil (@ime)").fill("@mila");
+  await p.getByRole("button", { name: "Dodaj kanal" }).click();
+  await tab("Objave");
+  await p.getByLabel("Kaj objavimo?").fill("Deževen dan v Ljubljani");
+  await p.getByRole("button", { name: "Ustvari objavo" }).click();
+  await expect(p).toHaveURL(/\/app\/posts\//);
+  const pv = p.getByTestId("persona-video");
+  await expect(pv.getByRole("heading")).toContainText("Video s persono (Mila)");
+  await expect(pv.getByLabel("Dolžina").locator("option")).toHaveText([/^5 s · največ [\d.]+ €$/, /^10 s · največ [\d.]+ €$/]);
+  await pv.getByLabel("Navodila za prizor (neobvezno)").fill("z dežnikom");
+  const falBefore = (await falLog()).length;
+  await pv.getByRole("button", { name: "Ustvari video s persono" }).click();
+  await expect(p.getByTestId("persona-video-status")).toHaveText("Pripravljen", { timeout: 90_000 });
+  const vcalls = (await falLog()).slice(falBefore) as (FalCall & { video?: boolean; duration?: string })[];
+  expect(vcalls.map((c) => c.model)).toEqual(["fal-ai/nano-banana-pro/edit", "fal-ai/kling-video/v3/standard/image-to-video"]);
+  expect(vcalls[0].references).toBe(2);
+  expect(vcalls[0].prompt).toContain("SAME person as in the reference images");
+  expect(vcalls[0].prompt).toContain("z dežnikom");
+  expect(vcalls[1].duration).toBe("5");
+  await expect(p.getByTestId("persona-video-scene")).toContainText("Turns to the camera and smiles");
+  const player = p.getByTestId("persona-video-player");
+  await expect(player).toHaveAttribute("poster", /\/api\/post-media\//);
+  const [download] = await Promise.all([p.waitForEvent("download"), p.getByTestId("persona-video-download").click()]);
+  expect(download.suggestedFilename()).toMatch(/\.mp4$/);
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("persona-video.png"), fullPage: true });
   await ctx.close();
 });

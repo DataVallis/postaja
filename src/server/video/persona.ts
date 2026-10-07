@@ -1,0 +1,150 @@
+// Persona video (TASK-025, spec §5.4, ADR-055): a short vertical clip of the brand's AI influencer for one post.
+// Claude writes the shot (first frame + motion) from the post and the persona's DNA; the reference model (Nano Banana
+// Pro edit) makes the first frame from the passport pictures, so it is the same person; Kling 3.0 animates it; ffmpeg
+// fits it to 1080×1920 with a silent track. Every paid step is reserved first and settled or released.
+import { and, eq, inArray, lt, or } from "drizzle-orm";
+import sharp from "sharp";
+import { z } from "zod";
+import { getBrandDetail } from "../brands/service";
+import type { Db } from "../db/client";
+import { modelRegistry, postMedia, posts, usageLedger } from "../db/schema";
+import { issues as zodIssues } from "../design/ai";
+import { ImageError } from "../images/fal";
+import { ImageJobError, type ImageDeps } from "../images/service";
+import { cappedCall, textModelFor } from "../llm/call";
+import { worstCaseMicroUsd } from "../llm/cost";
+import { release, reserve } from "../llm/spend";
+import { getBrandPersona, passportReferences, personaPicture } from "../personas/service";
+import { keyframePrompt, motionPrompt, sceneRequest, sceneSchema, type Scene } from "../personas/scene";
+import type { OrgContext } from "../tenancy/context";
+import { forOrg } from "../tenancy/scoped";
+import { composeVideo, probeVideo } from "./ffmpeg";
+import { POST_VIDEO_QUEUE } from "./service";
+
+export const PERSONA_DURATIONS = [5, 10] as const;
+export const WISH_MAX = 600;
+export const VIDEO_SIZE = { width: 1080, height: 1920 } as const;
+const STALE_MS = 20 * 60 * 1000;
+
+type PostRow = typeof posts.$inferSelect;
+type Queue = { send(name: string, data: object, key: string): Promise<void> };
+
+async function defaultModel(db: Db, kind: "image_ref" | "video") {
+  return (await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true))))[0];
+}
+
+/** At most what one persona video costs: the scene call (with a retry), the first frame and the clip. */
+export async function personaVideoEstimate(db: Db, brandId: string, durationS: number): Promise<bigint | null> {
+  const [text, ref, video] = await Promise.all([textModelFor(db, brandId).catch(() => null), defaultModel(db, "image_ref"), defaultModel(db, "video")]);
+  if (!text || !ref || !video) return null;
+  return 2n * worstCaseMicroUsd(12_000, 1_500, text) + ref.perImage + ref.perMegapixel + video.perSecond * BigInt(durationS);
+}
+
+const requestInput = z.object({ durationS: z.union([z.literal(5), z.literal(10)]), wish: z.string().trim().max(WISH_MAX).default("") });
+
+/** Any member. Claims the post's video for the persona (one video per post) and queues the job. */
+export async function requestPersonaVideo(db: Db, queue: Queue, ctx: OrgContext, postId: string, input: z.input<typeof requestInput>) {
+  const parsed = requestInput.safeParse(input);
+  if (!parsed.success) throw new ImageJobError("INVALID");
+  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as PostRow[];
+  if (!p) throw new ImageJobError("NOT_FOUND");
+  if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
+  const persona = await getBrandPersona(db, ctx, p.brandId);
+  if (!persona?.images.length) throw new ImageJobError("NO_PERSONA");
+  if (!(await defaultModel(db, "video")) || !(await defaultModel(db, "image_ref"))) throw new ImageJobError("NO_VIDEO_MODEL");
+  const claimed = await forOrg(db, ctx).update(
+    posts,
+    { videoStatus: "queued", videoError: null, videoRequestedBy: ctx.userId, videoMode: "persona", videoMotion: parsed.data.wish, videoDurationS: parsed.data.durationS, videoPosition: 0, updatedAt: new Date() },
+    and(eq(posts.id, postId), or(inArray(posts.videoStatus, ["none", "ready", "failed"]), and(inArray(posts.videoStatus, ["queued", "rendering"]), lt(posts.updatedAt, new Date(Date.now() - STALE_MS))))!)!,
+  );
+  if (!claimed.length) throw new ImageJobError("BAD_STATE");
+  await queue.send(POST_VIDEO_QUEUE, { postId }, `post:${postId}:video`);
+}
+
+const key = (orgId: string, postId: string, ext: string) => `org/${orgId}/posts/${postId}/${crypto.randomUUID()}.${ext}`;
+
+/** Claude's shot for the post (one retry with the validation errors). */
+async function writeScene(db: Db, deps: Pick<ImageDeps, "llm" | "now">, ctx: OrgContext, p: PostRow, persona: NonNullable<Awaited<ReturnType<typeof getBrandPersona>>>["persona"], durationS: number): Promise<Scene> {
+  const { brand, channels } = await getBrandDetail(db, ctx, p.brandId);
+  const platform = channels.find((c) => c.id === p.channelId)?.platform ?? null;
+  let invalid: { draft: unknown; errors: string } | undefined;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now }, sceneRequest({
+      personaName: persona.name, dna: persona.dna, brandName: brand.name, platform, durationS,
+      post: { caption: p.content?.caption ?? null, brief: p.brief, topic: p.plan?.topic ?? null }, wish: p.videoMotion ?? "",
+    }, invalid));
+    const parsed = sceneSchema.safeParse(out.input);
+    if (parsed.success) return parsed.data;
+    invalid = { draft: out.input, errors: zodIssues(parsed.error) };
+  }
+  throw new ImageJobError("INVALID_OUTPUT");
+}
+
+/** A transparent overlay of the video's size (nothing is burned in yet; subtitles come later). */
+const emptyOverlay = () => sharp({ create: { ...VIDEO_SIZE, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer().then((b) => new Uint8Array(b));
+
+/** Makes the post's persona video as `ctx`. Throws ImageError / SpendCapError / LlmError / ImageJobError / VideoError. */
+export async function makePersonaVideo(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string): Promise<Scene> {
+  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as PostRow[];
+  if (!p) throw new ImageJobError("NOT_FOUND");
+  const data = await getBrandPersona(db, ctx, p.brandId);
+  if (!data?.images.length) throw new ImageJobError("NO_PERSONA");
+  if (!deps.images?.video) throw new ImageError("NO_IMAGE_KEY");
+  const videoModel = await defaultModel(db, "video");
+  if (!videoModel) throw new ImageJobError("NO_VIDEO_MODEL");
+  const durationS = p.videoDurationS === 10 ? 10 : 5;
+
+  // 1. The shot. 2. The first frame: the same person from the passport pictures (primary first).
+  const scene = await writeScene(db, deps, ctx, p, data.persona, durationS);
+  const refs = await passportReferences(db, deps.storage, ctx, data.persona.id, 4);
+  const frame = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: p.id }, keyframePrompt(data.persona.dna, scene), VIDEO_SIZE, refs);
+  const keyframe = new Uint8Array(await sharp(frame.bytes).resize({ ...VIDEO_SIZE, fit: "cover" }).jpeg({ quality: 90 }).toBuffer());
+
+  // 3. The clip: reserved at the full length, released if the provider fails, settled once delivered.
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: videoModel.provider, model: videoModel.modelKey, estimate: videoModel.perSecond * BigInt(durationS), now: deps.now });
+  let clip: Uint8Array;
+  try {
+    clip = (await deps.images.video({ model: videoModel.modelKey, prompt: motionPrompt(scene), image: `data:image/jpeg;base64,${Buffer.from(keyframe).toString("base64")}`, durationS })).bytes;
+  } catch (e) {
+    await release(db, ledgerId);
+    throw e;
+  }
+  await db.update(usageLedger).set({ state: "settled", costMicroUsd: videoModel.perSecond * BigInt(durationS) }).where(eq(usageLedger.id, ledgerId));
+
+  // 4. The clip is untrusted: probed, then fitted to 1080×1920 (cover, never stretched) with a silent track.
+  await probeVideo(clip);
+  const { bytes, probe } = await composeVideo(clip, await emptyOverlay(), { ...VIDEO_SIZE, maxS: durationS });
+
+  const kv = key(ctx.orgId, postId, "mp4");
+  const kk = key(ctx.orgId, postId, "jpg");
+  await deps.storage.put(kv, bytes, "video/mp4");
+  await deps.storage.put(kk, keyframe, "image/jpeg");
+  const media = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
+  const old = media.filter((m) => m.kind === "video" || m.kind === "keyframe");
+  await db.transaction(async (tx) => {
+    const s = forOrg(tx as unknown as Db, ctx);
+    if (old.length) await s.delete(postMedia, inArray(postMedia.id, old.map((m) => m.id)));
+    await s.insert(postMedia, { id: crypto.randomUUID(), postId, kind: "keyframe", position: 0, storageKey: kk, contentType: "image/jpeg", width: VIDEO_SIZE.width, height: VIDEO_SIZE.height, sizeBytes: keyframe.byteLength, model: frame.model, prompt: scene.keyframe });
+    await s.insert(postMedia, { id: crypto.randomUUID(), postId, kind: "video", position: 0, storageKey: kv, contentType: "video/mp4", width: probe.width, height: probe.height, sizeBytes: bytes.byteLength, model: videoModel.modelKey, prompt: JSON.stringify(scene) });
+    await s.update(posts, { videoStatus: "ready", videoError: null, updatedAt: new Date() }, eq(posts.id, postId));
+  });
+  await Promise.all(old.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
+  return scene;
+}
+
+/** The persona video's first frame (poster), or null. */
+export async function postKeyframe(db: Db, ctx: OrgContext, postId: string) {
+  const [m] = await db.select({ id: postMedia.id }).from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "keyframe")));
+  return m ?? null;
+}
+
+/** The persona video's shot as stored with it (for the post page), or null. */
+export async function personaVideoScene(db: Db, ctx: OrgContext, postId: string): Promise<Scene | null> {
+  const [m] = await db.select({ prompt: postMedia.prompt }).from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "video")));
+  try {
+    const s = sceneSchema.safeParse(JSON.parse(m?.prompt ?? "null"));
+    return s.success ? s.data : null;
+  } catch {
+    return null;
+  }
+}
