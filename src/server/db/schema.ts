@@ -14,3 +14,4 @@ export * from "./schema/media";
 export * from "./schema/design";
 export * from "./schema/ideas";
 export * from "./schema/ads";
+export * from "./schema/personas";

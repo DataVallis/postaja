@@ -6,6 +6,7 @@ import { POST_IMAGE_QUEUE } from "../images/service";
 import { DESIGN_QUEUE } from "../design/service";
 import { AD_IMAGE_QUEUE } from "../ads/creatives";
 import { POST_VIDEO_QUEUE } from "../video/service";
+import { PERSONA_PASSPORT_QUEUE } from "../personas/service";
 
 let started: Promise<PgBoss> | undefined;
 
@@ -22,10 +23,12 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
     await boss.createQueue(POST_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 600 }).catch(() => undefined);
     // Brand designs (TASK-017): one Claude call with pictures, a few renders; no automatic retry (the owner sees why).
     await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 1800 }).catch(() => undefined);
-    // Ad creatives (TASK-021b): a plan, up to 3 illustrations and a render per placement × variant; one retry.
     // Animations (TASK-023): one Claude call and a frame-by-frame render; one retry after an unexpected error.
     await boss.createQueue(POST_VIDEO_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
+    // Ad creatives (TASK-021b): a plan, up to 3 illustrations and a render per placement × variant; one retry.
     await boss.createQueue(AD_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
+    // Persona passports (TASK-024): up to 5 pictures one after another, each kept as soon as it is made; one retry.
+    await boss.createQueue(PERSONA_PASSPORT_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 1200 }).catch(() => undefined);
     return boss;
   })();
   return started;

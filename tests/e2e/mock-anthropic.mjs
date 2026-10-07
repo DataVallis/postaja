@@ -69,11 +69,12 @@ function fal(req, res) {
     return send(200, { images: [{ url: `${base}/fal-files/${result[1]}.jpg?w=${width}&h=${height}`, width, height, content_type: "image/jpeg" }], has_nsfw_concepts: [String(prompt).includes("ZAVRNI")] });
   }
   if (/^\/fal-files\/[\w-]+\.mp4$/.test(req.url)) return send(200, testClip(), "video/mp4");
-  const file = req.url.match(/^\/fal-files\/[\w-]+\.jpg\?w=(\d+)&h=(\d+)$/);
+  const file = req.url.match(/^\/fal-files\/req-(\d+)\.jpg\?w=(\d+)&h=(\d+)$/);
   if (file) {
-    // A teal-to-amber picture, so a test can tell the background is there.
-    const [w, h] = [Number(file[1]), Number(file[2])];
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#1fb5a8"/><stop offset="1" stop-color="#f2a33a"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/></svg>`;
+    // A teal-to-amber picture, so a test can tell the background is there; a corner mark makes every request's picture
+    // different (as a real model's), e.g. so persona passports have no duplicates.
+    const [w, h] = [Number(file[2]), Number(file[3])];
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#1fb5a8"/><stop offset="1" stop-color="#f2a33a"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><rect width="8" height="8" fill="rgb(${(Number(file[1]) * 37) % 255},0,0)"/></svg>`;
     sharp(Buffer.from(svg)).jpeg().toBuffer().then((b) => send(200, b, "image/jpeg"));
     return;
   }
@@ -96,8 +97,11 @@ function fal(req, res) {
         falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, image: String(r.start_image_url ?? r.image_url).slice(0, 23) });
         return send(200, { request_id: id, status_url: `${base}/fal-ai/${submit[1]}/requests/${id}/status`, response_url: `${base}/fal-ai/${submit[1]}/requests/${id}` });
       }
-      falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height, references: r.image_urls?.length ?? 0 });
-      falLog.push({ model: req.url.slice(1), references: r.image_urls?.length ?? 0 });
+      // Reference models (TASK-024) take an aspect ratio instead of a size.
+      const [aw, ah] = r.aspect_ratio ? r.aspect_ratio.split(":").map(Number) : [0, 0];
+      const size = r.image_size ?? (aw >= ah ? { width: 1024, height: Math.round((1024 * ah) / aw) } : { width: Math.round((1024 * aw) / ah), height: 1024 });
+      falPrompts.set(id, { prompt: r.prompt, width: size.width, height: size.height, references: r.image_urls?.length ?? 0 });
+      falLog.push({ model: req.url.slice(1), references: r.image_urls?.length ?? 0, prompt: String(r.prompt).slice(0, 2000) });
       const app = `fal-ai/${submit[1]}`;
       send(200, { request_id: id, status_url: `${base}/${app}/requests/${id}/status`, response_url: `${base}/${app}/requests/${id}` });
     });
@@ -180,6 +184,15 @@ http
         const els = JSON.parse(user.match(/<elements>\n(.*)\n<\/elements>/)[1]);
         const elements = els.map((e, i) => ({ index: e.index, enter: { effect: e.slot === "headline" ? "words" : "fade", at: 0.2 + i * 0.3, duration: 0.6, ease: "out" }, loop: "none" }));
         return reply(tool, { durationS: Math.max(4, Math.ceil(0.2 + els.length * 0.3 + 2.5)), background: { motion: "zoom_in", amount: 0.06 }, elements });
+      }
+      // Persona DNA (TASK-024): every field of the framework, the owner's words kept in Extra Notes.
+      if (tool === "submit_persona_dna") {
+        const text = user.match(/<owner_text>\n([\s\S]*?)\n<\/owner_text>/)[1];
+        return reply(tool, { name: "Mila", dna: {
+          gender: "Female", age: "26 years old", ethnicity: "Slovenian, fair skin", hairStyle: "Short pixie cut", hairColour: "Jet black",
+          clothing: "Yellow rain jacket", mood: "Cheerful", environment: "Ljubljana old town", camera: "Mid-shot, eye-level", pose: "Walking, looking back",
+          lighting: "Overcast daylight", style: "Photorealistic digital photography", extra: `Owner: ${text.slice(0, 200)}`,
+        } });
       }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);

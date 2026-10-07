@@ -190,6 +190,20 @@
       "when": 1791389022579,
       "tag": "0026_video_model_kling_3",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791396449776,
+      "tag": "0027_personas",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791396459247,
+      "tag": "0028_seed_image_ref_models",
+      "breakpoints": true
     }
   ]
 }
