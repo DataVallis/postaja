@@ -6,7 +6,8 @@ import { and, desc, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
 import type { Db } from "../db/client";
-import { AD_NETWORKS, AD_OBJECTIVES, adNetworks, adSets, formatPresets, posts, type AdCopyVariant, type AdNetwork } from "../db/schema";
+import { slugify } from "@/lib/slug";
+import { AD_NETWORKS, AD_OBJECTIVES, adMedia, adNetworks, adSets, formatPresets, posts, type AdCopyVariant, type AdNetwork } from "../db/schema";
 import { cappedCall } from "../llm/call";
 import { SpendCapError } from "../llm/spend";
 import { LlmError, type LlmClient } from "../llm/types";
@@ -179,6 +180,11 @@ export async function saveAdCopy(db: Db, ctx: OrgContext, id: string, copy: z.in
   await forOrg(db, ctx).update(adSets, { copy: normalized, issues, status: issues.some(isHard) ? "needs_review" : "ready", updatedAt: new Date() }, eq(adSets.id, id));
 }
 
+export const adSlug = (a: { id: string; name: string }) => (slugify(a.name) || a.id.slice(0, 8)).slice(0, 40);
+/** `<brand>_<adset>_<placement>_v<n>.png` (spec §5.8). */
+export const creativeName = (brandSlug: string, a: { id: string; name: string }, placement: string, variant: number) =>
+  `${brandSlug}_${adSlug(a)}_${placement}_v${variant + 1}.png`;
+
 const csvCell = (v: string) => (/[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
 /** copy.csv: one row per network × placement × variant, every field as a column (lists joined with " | "). */
@@ -186,17 +192,20 @@ export async function adCopyCsv(db: Db, ctx: OrgContext, id: string): Promise<{ 
   const a = await getAdSet(db, ctx, id);
   const info = await adNetworkInfo(db, a.networks);
   const fieldKeys = [...new Set(info.flatMap((n) => n.fields.map((f) => f.key)))];
-  const head = ["ad_set", "network", "placement", "width", "height", "variant", ...fieldKeys, "cta", "landing_url"];
+  const { brand } = await getBrandDetail(db, ctx, a.brandId);
+  // The image file of each row, once creatives exist (as named in the ZIP: <placement>/<file>).
+  const made = new Set((await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"))!) as (typeof adMedia.$inferSelect)[]).map((m) => `${m.placement}|${m.variant}`));
+  const head = ["ad_set", "network", "placement", "width", "height", "variant", ...fieldKeys, "cta", "landing_url", "image_file"];
   const rows: string[][] = [];
   for (const n of info) {
     for (const p of n.placements.filter((x) => a.placements.includes(x.key))) {
       a.copy.forEach((v, i) => {
         const c = v[n.key] ?? {};
-        rows.push([a.name, n.key, p.key, String(p.width), String(p.height), String(i + 1), ...fieldKeys.map((k) => textsOf(c[k]).join(" | ")), typeof c.cta === "string" ? c.cta : "", a.landingUrl ?? ""]);
+        rows.push([a.name, n.key, p.key, String(p.width), String(p.height), String(i + 1), ...fieldKeys.map((k) => textsOf(c[k]).join(" | ")), typeof c.cta === "string" ? c.cta : "", a.landingUrl ?? "",
+          made.has(`${p.key}|${i}`) ? `${p.key}/${creativeName(brand.slug, a, p.key, i)}` : ""]);
       });
     }
   }
-  const { brand } = await getBrandDetail(db, ctx, a.brandId);
   // BOM + ";" so Excel opens it in Slovenian locales (same as the day overview, TASK-016).
   return { filename: `${brand.slug}-oglas-${id.slice(0, 8)}-copy.csv`, csv: `﻿${[head, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n` };
 }

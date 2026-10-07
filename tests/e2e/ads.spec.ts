@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { unzip } from "../../src/server/files/zip";
 
 // Ads (TASK-021): an ad concept for Meta and Google, copy written per network within its limits, edited, checked, exported.
 const MAIL_DIR = path.resolve("test-results/mail");
@@ -26,7 +27,7 @@ const serious = async (page: Page) =>
 
 test("ads: Claude writes copy per network within its limits; the owner edits, the copy is checked, copy.csv", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one full flow is enough");
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   const stamp = Date.now();
   const owner = `oglasi-${stamp}@example.test`;
   await signIn(page, "e2e-root@example.test");
@@ -55,6 +56,7 @@ test("ads: Claude writes copy per network within its limits; the owner edits, th
   await form.getByRole("button", { name: "Ustvari oglas" }).click();
 
   await expect(p).toHaveURL(/\/app\/ads\/[^/]+$/);
+  const adUrl = p.url();
   await expect(p.getByTestId("ad-status")).toHaveText("pripravljen");
   await expect(p.getByTestId("ad-placements")).not.toContainText("Story");
   await expect(p.getByTestId("ad-placements")).toContainText("Google Display (responsive): Odzivni 1200×628, Odzivni 1200×1200");
@@ -82,6 +84,39 @@ test("ads: Claude writes copy per network within its limits; the owner edits, th
   const lines = fs.readFileSync((await csv.path())!, "utf8").replace(/^\uFEFF/, "").trim().split("\r\n");
   expect(lines).toHaveLength(1 + 4 * 3);
   expect(lines.find((l) => l.includes(";meta;fb_feed_portrait;1080;1350;1;"))).toContain("Prijavi se na webinar");
+
+  // Creatives need the brand's visual identity: Claude designs it, then the ad gets an image per placement × variant.
+  await expect(p.getByTestId("creatives").getByTestId("no-design")).toBeVisible();
+  await p.getByTestId("creatives").getByRole("link", { name: "Ustvari vizualno podobo" }).click();
+  const design = p.getByTestId("design");
+  await design.getByLabel("Kako naj grafike izgledajo?").fill("Temne kartice, rdeč poudarek.");
+  await design.getByRole("button", { name: "Ustvari vizualno podobo" }).click();
+  await expect(design.getByTestId("design-templates").getByRole("img").first()).toBeVisible({ timeout: 30_000 });
+  await p.goto(adUrl);
+  const creatives = p.getByTestId("creatives");
+  await expect(creatives.getByTestId("creatives-estimate")).toContainText("~3 AI ilustracij · največ");
+  await creatives.getByRole("button", { name: "Ustvari slike" }).click();
+  await expect(p.getByTestId("creatives-status")).toHaveText("Pripravljene", { timeout: 45_000 });
+  for (const [key, w] of [["fb_feed_portrait", 1080], ["gdn_responsive_landscape", 1200]] as const) {
+    const imgs = p.getByTestId(`placement-${key}`).getByRole("img");
+    await expect(imgs).toHaveCount(3);
+    await expect.poll(() => imgs.first().evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth), { timeout: 15_000 }).toBe(w);
+  }
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("ad-creatives.png"), fullPage: true });
+  // Words on the creatives, redrawn without a new illustration.
+  const falBefore = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length;
+  await p.getByTestId("creative-texts").getByLabel("Naslov · 1").fill("Popravljen *naslov*");
+  await p.getByRole("button", { name: "Shrani in osveži" }).click();
+  await expect(p.getByTestId("creatives-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  await expect(p.getByTestId("creative-texts").getByLabel("Naslov · 1")).toHaveValue("Popravljen *naslov*");
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falBefore);
+  // The whole ad set as a ZIP: copy.csv + a folder per placement.
+  const [zip] = await Promise.all([p.waitForEvent("download"), p.getByTestId("ad-zip").click()]);
+  const names = unzip(new Uint8Array(fs.readFileSync((await zip.path())!))).map((e) => e.name);
+  expect(names[0]).toBe("copy.csv");
+  expect(names.filter((n) => n.endsWith(".png"))).toHaveLength(4 * 3);
+  expect(names).toContain("gdn_responsive_square/tecaj_brezplacen-webinar-v-cetrtek_gdn_responsive_square_v2.png");
 
   // Back on the brand: the ad set in the list.
   await p.getByRole("link", { name: /Tečaj · Oglasi/ }).click();

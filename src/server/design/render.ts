@@ -42,6 +42,11 @@ export type RenderInput = {
   logo?: Uint8Array | null;
   /** TTF/OTF of the brand font (used where the design says "brand"). */
   brandFont?: Uint8Array | null;
+  /**
+   * Pixels the platform's UI covers (a Story's top bar and reply field, TASK-021b). The background still fills the
+   * whole canvas; every element is laid out in the box inside these insets, so no text or logo lands under the UI.
+   */
+  safe?: { top: number; right: number; bottom: number; left: number } | null;
 };
 
 type Node = { type: string; props: Record<string, unknown> };
@@ -87,7 +92,7 @@ export function fitText(lines: string[][], boxW: number, boxH: number, o: { max:
   return Math.floor(o.min);
 }
 
-function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number): Node | null {
+function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number, ox = 0, oy = 0): Node | null {
   if (!value.trim()) return null;
   const family = e.font === "heading" ? spec.typography.heading : spec.typography.body;
   const pad = (e.padding / 100) * W;
@@ -109,7 +114,7 @@ function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H:
     ...(e.fill ? { backgroundColor: color(spec, e.fill), padding: pad, borderRadius: (e.radius / 100) * W, paddingRight: Math.max(0, pad - gap) } : {}),
   }, rows);
   return el("div", {
-    position: "absolute", left: (e.x / 100) * W, top: (e.y / 100) * H, width: bw, height: bh, display: "flex", flexDirection: "column",
+    position: "absolute", left: ox + (e.x / 100) * W, top: oy + (e.y / 100) * H, width: bw, height: bh, display: "flex", flexDirection: "column",
     // No overflow:hidden here or on the canvas: Satori turns it into SVG masks that make librsvg ~10× slower. fitText
     // keeps text inside its box; the canvas edge clips anyway.
     justifyContent: e.valign === "middle" ? "center" : e.valign === "bottom" ? "flex-end" : "flex-start", alignItems: justify, opacity: e.opacity,
@@ -154,21 +159,24 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
       children.push(el("div", { position: "absolute", left: 0, top: 0, width: W, height: H, backgroundImage: grad }));
     }
   }
+  // Elements live in the safe box (the whole canvas when no insets are given); sizes in % of the box.
+  const ox = input.safe?.left ?? 0, oy = input.safe?.top ?? 0;
+  const BW = W - ox - (input.safe?.right ?? 0), BH = H - oy - (input.safe?.bottom ?? 0);
   for (const e of t.elements) {
-    const x = (e.x / 100) * W, y = (e.y / 100) * H, w = (e.w / 100) * W, h = (e.h / 100) * H;
+    const x = ox + (e.x / 100) * BW, y = oy + (e.y / 100) * BH, w = (e.w / 100) * BW, h = (e.h / 100) * BH;
     if (e.type === "shape") {
       children.push(el("div", {
         position: "absolute", left: x, top: y, width: w, height: h, backgroundColor: color(s, e.color), opacity: e.opacity,
-        borderRadius: (e.radius / 100) * W, ...(e.borderColor && e.borderWidth ? { border: `${(e.borderWidth * W) / 1080}px solid ${color(s, e.borderColor)}` } : {}),
+        borderRadius: (e.radius / 100) * BW, ...(e.borderColor && e.borderWidth ? { border: `${(e.borderWidth * BW) / 1080}px solid ${color(s, e.borderColor)}` } : {}),
       }));
     } else if (e.type === "image") {
       const src = e.source === "logo" ? input.logo : picture;
       if (!src) continue;
-      children.push(el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * W, opacity: e.opacity }, undefined,
+      children.push(el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
         { src: await fitted(src, w, h, e.source === "logo" ? "contain" : e.fit, e.source === "logo"), width: w, height: h }));
     } else {
       const value = e.slot === "static" ? e.text ?? "" : input.slots[e.slot] ?? "";
-      children.push(textNode(s, e, value, W, H));
+      children.push(textNode(s, e, value, BW, BH, ox, oy));
     }
   }
   const svg = await satori(el("div", base, children.filter(Boolean)) as unknown as Parameters<typeof satori>[0], { width: W, height: H, fonts });

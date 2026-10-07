@@ -144,6 +144,14 @@ http
         }))])));
         return reply(tool, { variants });
       }
+      // Ad creatives (TASK-021b): per variant the first template with an illustration, its headline as the words.
+      if (tool === "plan_ad_visuals") {
+        const templates = JSON.parse(user.match(/<templates>\n(.*)\n<\/templates>/)[1]);
+        const heads = [...user.matchAll(/<headline>(.*?)<\/headline>/g)].map((m) => m[1]);
+        const t = templates.find((x) => x.illustration) ?? templates[0];
+        const visuals = heads.map((h, i) => ({ templateId: t.id, slots: { headline: h, ...(t.slots.includes("label") ? { label: "Webinar" } : {}) }, illustration: t.illustration ? `Ad illustration ${i + 1}` : null }));
+        return reply(tool, { visuals });
+      }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);
         const format = user.match(/formats="([^",]+)/)[1];

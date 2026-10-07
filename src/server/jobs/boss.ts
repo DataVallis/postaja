@@ -4,6 +4,7 @@ import { PgBoss } from "pg-boss";
 import { POST_TEXT_QUEUE, type JobQueue } from "../bulk/service";
 import { POST_IMAGE_QUEUE } from "../images/service";
 import { DESIGN_QUEUE } from "../design/service";
+import { AD_IMAGE_QUEUE } from "../ads/creatives";
 
 let started: Promise<PgBoss> | undefined;
 
@@ -20,6 +21,8 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
     await boss.createQueue(POST_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 600 }).catch(() => undefined);
     // Brand designs (TASK-017): one Claude call with pictures, a few renders; no automatic retry (the owner sees why).
     await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 1800 }).catch(() => undefined);
+    // Ad creatives (TASK-021b): a plan, up to 3 illustrations and a render per placement × variant; one retry.
+    await boss.createQueue(AD_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
     return boss;
   })();
   return started;
