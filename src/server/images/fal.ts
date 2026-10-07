@@ -126,8 +126,17 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
   };
 }
 
-/** Video model bodies (TASK-022): Hailuo takes 6 or 10 s and the prompt optimizer off (the prompt is ours). */
+/**
+ * Video model bodies (TASK-022). Kling 3.0: start image, 3–15 s as a string, no native audio (Postaja adds a silent
+ * track), text kept out by the negative prompt too. Hailuo takes 6 or 10 s and the prompt optimizer off.
+ */
 export function videoBody(app: string, req: VideoRequest): Record<string, unknown> {
+  if (app.startsWith("fal-ai/kling-video/v3/")) {
+    return {
+      prompt: req.prompt, start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false,
+      negative_prompt: "text, letters, words, watermark, logo, blur, distort, low quality",
+    };
+  }
   if (app.startsWith("fal-ai/minimax/hailuo")) return { prompt: req.prompt, image_url: req.image, duration: String(req.durationS >= 10 ? 10 : 6), prompt_optimizer: false };
   return { prompt: req.prompt, image_url: req.image, duration: String(req.durationS) };
 }

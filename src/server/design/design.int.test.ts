@@ -439,15 +439,15 @@ describe("animation (TASK-022)", () => {
     const fal = falWithVideo();
     expect(await runVideoJob(db, { llm: fakeClaude().client, images: fal.client, storage }, jobs[0])).toBe("done");
     expect(fal.videoCalls).toHaveLength(1);
-    expect(fal.videoCalls[0]).toMatchObject({ model: "fal-ai/minimax/hailuo-02/standard/image-to-video", durationS: 6 });
+    expect(fal.videoCalls[0]).toMatchObject({ model: "fal-ai/kling-video/v3/standard/image-to-video", durationS: 5 }); // Kling 3.0 (owner)
     expect(fal.videoCalls[0].prompt).toContain("Slow push-in, red light pulses");
     expect(fal.videoCalls[0].prompt).toContain("No text");
     expect(fal.videoCalls[0].image).toMatch(/^data:image\/jpeg;base64,/);
     expect((await sql`select video_status, video_error from posts where id = ${id}`)[0]).toEqual({ video_status: "ready", video_error: null });
     const [v] = await sql`select width, height, storage_key, content_type from post_media where post_id = ${id} and kind = 'video'`;
     expect(v).toMatchObject({ width: 1080, height: 1350, content_type: "video/mp4" });
-    const cost = await sql`select state, cost_micro_usd::text c from usage_ledger where post_id = ${id} and model like 'fal-ai/minimax%'`;
-    expect(cost).toEqual([{ state: "settled", c: "270000" }]); // $0.045 × 6 s
+    const cost = await sql`select state, cost_micro_usd::text c from usage_ledger where post_id = ${id} and model like 'fal-ai/kling-video%'`;
+    expect(cost).toEqual([{ state: "settled", c: "420000" }]); // $0.084 × 5 s, no audio
     const zip = await postArchive(db, storage, A, id);
     expect(zip.entries.map((e) => e.name)).toContain("video.mp4");
 
@@ -471,12 +471,12 @@ describe("animation (TASK-022)", () => {
     await requestAnimation(db, q, A, carousel, { position: 0, motion: "Move" });
     expect(await runVideoJob(db, { llm: fakeClaude().client, images: falWithVideo(new ImageError("IMAGE_PROVIDER")).client, storage }, jobs[0])).toBe("failed");
     expect((await sql`select video_status, video_error from posts where id = ${carousel}`)[0]).toEqual({ video_status: "failed", video_error: "IMAGE_PROVIDER" });
-    expect(await sql`select 1 from usage_ledger where post_id = ${carousel} and model like 'fal-ai/minimax%'`).toHaveLength(0); // released
+    expect(await sql`select 1 from usage_ledger where post_id = ${carousel} and model like 'fal-ai/kling-video%'`).toHaveLength(0); // released
 
     jobs.length = 0;
     await requestAnimation(db, q, A, carousel, { position: 0, motion: "Move" });
     expect(await runVideoJob(db, { llm: fakeClaude().client, images: falWithVideo(new TextEncoder().encode("<html>not a video</html>")).client, storage }, jobs[0])).toBe("failed");
     expect((await sql`select video_error from posts where id = ${carousel}`)[0].video_error).toBe("VIDEO_INVALID");
-    expect(await sql`select state from usage_ledger where post_id = ${carousel} and model like 'fal-ai/minimax%'`).toEqual([{ state: "settled" }]); // the provider charged
+    expect(await sql`select state from usage_ledger where post_id = ${carousel} and model like 'fal-ai/kling-video%'`).toEqual([{ state: "settled" }]); // the provider charged
   }, 120_000);
 });

@@ -183,6 +183,13 @@
       "when": 1791386626251,
       "tag": "0025_seed_video_model",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791389022579,
+      "tag": "0026_video_model_kling_3",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 // fal.ai client (TASK-015/017): the queue protocol with a fake fetch, host allowlist, per-model request bodies.
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { billedMegapixels, createFalClient, generationSize, ImageError, requestBody } from "./fal";
+import { billedMegapixels, createFalClient, generationSize, ImageError, requestBody, videoBody } from "./fal";
 
 describe("request bodies", () => {
   it("Ideogram gets the brand's examples as style references and a negative prompt; FLUX gets neither", () => {
@@ -73,5 +73,18 @@ describe("fal client", () => {
     expect(generationSize(512, 512)).toEqual({ width: 512, height: 512 });
     expect(billedMegapixels(864, 1072)).toBe(1);
     expect(billedMegapixels(1080, 1350)).toBe(2);
+  });
+});
+
+describe("videoBody", () => {
+  it("Kling 3.0: start image, duration as a string within 3–15 s, no native audio, text kept out", () => {
+    expect(videoBody("fal-ai/kling-video/v3/standard/image-to-video", { model: "x", prompt: "Push in.", image: "data:image/jpeg;base64,AA", durationS: 5 })).toEqual({
+      prompt: "Push in.", start_image_url: "data:image/jpeg;base64,AA", duration: "5", generate_audio: false,
+      negative_prompt: "text, letters, words, watermark, logo, blur, distort, low quality",
+    });
+    expect(videoBody("fal-ai/kling-video/v3/pro/image-to-video", { model: "x", prompt: "p", image: "i", durationS: 40 }).duration).toBe("15");
+  });
+  it("Hailuo: 6 or 10 s, prompt optimizer off", () => {
+    expect(videoBody("fal-ai/minimax/hailuo-02/standard/image-to-video", { model: "x", prompt: "p", image: "i", durationS: 5 })).toEqual({ prompt: "p", image_url: "i", duration: "6", prompt_optimizer: false });
   });
 });

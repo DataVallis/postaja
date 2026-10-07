@@ -90,10 +90,10 @@ function fal(req, res) {
         return;
       }
       const id = `req-${++falSeq}`;
-      if (r.image_url && !r.image_size) {
+      if ((r.image_url || r.start_image_url) && !r.image_size) {
         // Image-to-video: the app must send the clean picture and a prompt without text.
         falPrompts.set(id, { prompt: r.prompt, video: true });
-        falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, image: String(r.image_url).slice(0, 23) });
+        falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, image: String(r.start_image_url ?? r.image_url).slice(0, 23) });
         return send(200, { request_id: id, status_url: `${base}/fal-ai/${submit[1]}/requests/${id}/status`, response_url: `${base}/fal-ai/${submit[1]}/requests/${id}` });
       }
       falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height, references: r.image_urls?.length ?? 0 });
