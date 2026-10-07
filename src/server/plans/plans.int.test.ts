@@ -89,6 +89,15 @@ describe("reading a spreadsheet plan", () => {
     }
   });
 
+  it("a file naming another brand never lands on the only channel of the platform (owner: CHERR X plan on AI Builders)", async () => {
+    await createBrand(db, A, { name: "Cherr", slug: "cherr", languages: ["en"] });
+    const x = makeXlsx([{ name: "X", rows: [["Datum", "Platforma", "Besedilo"], ["2026-10-08", "X", "Cherr post one"], ["2026-10-09", "X", "Cherr post two"]] }]);
+    const v = await importView(db, A, await start(A, x, "CHERR.IO X posts 001 (1).xlsx", [{ error: new LlmError("PROVIDER") }]).id);
+    expect(v.brand?.name).toBe("Cherr");
+    expect(v.groups.map((g) => [g.key, g.channelId])).toEqual([["x|", null]]); // David's X channel is not suggested
+    expect(await confirmImport(db, A, v.import.id)).toMatchObject({ created: 0, noChannel: 2 });
+  });
+
   it("spend cap reached → the import is refused before any call", async () => {
     await sql`update org_settings set spend_cap_micro_usd = 0`;
     const { llm, id } = start(A, plan());

@@ -71,6 +71,7 @@ export default async function ImportReview({ params, searchParams }: { params: P
           <form action={saveImportAction} className="grid gap-6">
             <input type="hidden" name="importId" value={r.id} />
             <Section id="channels-h" title={t("channelsTitle")} description={t("channelsHint")}>
+              {v.brand ? <p className="text-sm" data-testid="import-brand">{t("brandFromFile", { brand: v.brand.name })}</p> : null}
               <DataTable testId="import-groups" head={[t("platform"), t("account"), t("count"), t("channel")]}>
                 {v.groups.map((g, gi) => (
                   <tr key={g.key}>
@@ -84,7 +85,12 @@ export default async function ImportReview({ params, searchParams }: { params: P
                         {v.channels.filter((c) => !g.platform || c.platform === g.platform).map((c) => <option key={c.id} value={c.id}>{c.brandName} · {t(`platforms.${c.platform}`)} · {c.handle}</option>)}
                         <option value="skip">{t("skipGroup")}</option>
                       </select>
-                      {g.platform && !v.channels.some((c) => c.platform === g.platform) ? <p className="mt-1 text-xs text-muted">{t("noChannelForPlatform")}</p> : null}
+                      {g.platform && v.brand && !v.channels.some((c) => c.platform === g.platform && c.brandId === v.brand!.id) ? (
+                        <p className="mt-1 text-xs text-muted">
+                          {t("brandHasNoChannel", { brand: v.brand.name, platform: t(`platforms.${g.platform}`) })}{" "}
+                          <Link href={`/app/brands/${v.brand.id}?tab=channels`} className="underline underline-offset-4">{t("addChannel")}</Link>
+                        </p>
+                      ) : g.platform && !v.channels.some((c) => c.platform === g.platform) ? <p className="mt-1 text-xs text-muted">{t("noChannelForPlatform")}</p> : null}
                     </td>
                   </tr>
                 ))}
