@@ -28,6 +28,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-016 | **One-click download**: a post (images + caption with hashtags) or a whole day as ZIP | TASK-015 | Done (PR #37) |
 | TASK-018 | **LinkedIn carousel as PDF**: images of a LinkedIn post as one PDF document (download + in the ZIP) | TASK-016 | Done |
 | TASK-019 | **AI post ideas + no-repeat**: "Predlagaj ideje" per brand channel, repeats of the last 180 days replaced, free slots from the channel goal, ticked ideas → planned posts (ADR-048) | TASK-013 | Done |
+| TASK-020 | **Dashboard goals**: today per brand × channel against its goal (planned, ready, published, missing), streak per brand, spend per brand this month | TASK-013 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

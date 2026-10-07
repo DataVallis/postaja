@@ -10,7 +10,12 @@ Status: **Built** (TASK-013). Builds on ADR-041 (posts have `scheduled_on` / `sc
   `s=` in the URL (repeated); default `CALENDAR_DEFAULT_STATUSES` = everything still to do — published and skipped hidden
   (owner, 2026-10-07); "generating" goes with "planned"; "Privzeto" link resets. Dashboard "Danes" shows all.
 - Post page: "Iz plana" has a slot form (day + time; empty day = off the plan). Published posts keep their slot.
-- Dashboard: "Danes" lists today's posts of every brand.
+- Dashboard: "Danes" lists today's posts of every brand. **Današnji cilj po kanalih** (TASK-020,
+  `src/server/posts/dashboard.ts`): per live brand × channel the goal for today's weekday, posts on the day (not
+  skipped), ready-or-better, published, missing slots; links "Ustvari (N)" (bulk preview for the brand's day) and
+  "Predlagaj ideje" (brand → ideas). **Niz** (streak): consecutive days, back from yesterday (today once met), on which
+  every channel with a goal had at least its goal in published posts; days without any goal are skipped. **Poraba po
+  brandih**: this month's `usage_ledger` per brand (imports without a brand apart). Tested in `dashboard.int.test.ts`.
 - Dates: `src/lib/dates` — local days in `Europe/Ljubljana` (`todayIn` uses the zone, not the server), week starts
   Monday, view ranges, navigation steps. Unit tested incl. New Year and summer-time edges.
 - Server: `src/server/posts/calendar.ts` — `calendarPosts(from, to)` (≤ 2,000 rows, day/time order, no time last),

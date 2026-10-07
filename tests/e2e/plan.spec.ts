@@ -134,6 +134,14 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
   await p.goto("/app");
   await expect(p.getByTestId("today-posts").getByRole("row")).toHaveCount(2);
   await expect(p.getByTestId("today-posts")).toContainText("Zjutraj objavimo to.");
+  // Today's goal per channel (TASK-020): the Instagram channel with its post of today; spend per brand.
+  const goals = p.getByTestId("today-goals");
+  await expect(goals.getByRole("row").nth(1)).toContainText("Inženirji");
+  await expect(goals.getByRole("row").nth(1)).toContainText("instagram · @inzenirji");
+  await expect(p.getByTestId("streak")).toHaveText(/^\d+ (dan|dneva|dnevi|dni)$/);
+  await expect(p.getByTestId("brand-costs")).toContainText("Inženirji");
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("dashboard.png"), fullPage: true });
 
   // Phone: the grid becomes an agenda.
   await p.setViewportSize({ width: 390, height: 844 });
