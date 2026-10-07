@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-07: Fix (owner): a CHERR.IO X plan was offered AI Builders' X channel (the only X channel was suggested in a one-brand org). No more guessing across brands; the import review asks "Za kateri brand je plan" — an existing brand or "+ Nov brand" (name from the file name, language, channel handles), created right there.
 - 2026-10-07: Fix (owner): a CHERR.IO X plan was offered AI Builders' X channel (the only X channel in the org). Import suggestions now follow the account (handle or brand-name word) and the brand named in the file name; the only channel is suggested only in one-brand orgs; the review shows the recognised brand and a link to add its missing channel.
 - 2026-10-07: TASK-010b files from Claude — MCP `create_brand`, `add_file` (public URL downloaded by Postaja behind an SSRF guard, or base64 for small files; logo / past-post example / material / font / ZIP through the normal upload checks), `upload_link`; CGP, materials and files create the brand when it does not exist (ADR-046). Owner: refresh the Postaja connector in Claude to see the new tools.
 - 2026-10-07: TASK-016 one-click download — post ZIP (text as posted, first comment, images) and day ZIP (all brands or one, folders per post, pregled.csv for Excel), streamed — PR #37. Owner: TASK-010b stays open (files from Claude next to CGP).

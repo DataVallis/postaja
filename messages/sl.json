@@ -663,7 +663,9 @@
       "BAD_STATE": "Ta uvoz je že zaključen.",
       "INVALID": "Izbira ni veljavna.",
       "FAILED": "Shranjevanje ni uspelo.",
-      "PLATFORM_MISMATCH": "Vrstice ene platforme lahko gredo samo na kanal iste platforme (npr. LinkedIn na LinkedIn)."
+      "PLATFORM_MISMATCH": "Vrstice ene platforme lahko gredo samo na kanal iste platforme (npr. LinkedIn na LinkedIn).",
+      "FORBIDDEN": "Brande in kanale lahko ustvari samo lastnik organizacije.",
+      "BRAND_LIMIT": "Organizacija ima že največje število brandov."
     },
     "doneSummary": "Uvoženo: {n} objav.",
     "seePosts": "Odpri objave",
@@ -768,7 +770,20 @@
     "noAccount": "brez računa v planu",
     "brandFromFile": "V imenu datoteke je brand {brand}: predlagam samo njegove kanale.",
     "brandHasNoChannel": "{brand} nima kanala za {platform}.",
-    "addChannel": "Dodaj kanal, nato se vrni sem."
+    "addChannel": "Dodaj kanal, nato se vrni sem.",
+    "brandTitle": "Za kateri brand je plan",
+    "brandHint": "Izberi brand ali ustvari novega. Predlagam samo kanale izbranega branda; manjkajoče kanale ustvarim iz spodnjih profilov.",
+    "brandSelect": "Brand",
+    "chooseBrand": "Izberi brand",
+    "newBrandOption": "+ Nov brand",
+    "newBrandName": "Ime novega branda",
+    "newBrandLanguage": "Jezik novega branda",
+    "newBrandHint": "Uporabi se le pri izbiri »+ Nov brand«. Če brand s tem imenom že obstaja, uporabim njega.",
+    "handleFor": "Profil za {platform}",
+    "handlesHint": "Kanal ustvarim le, če ga brand za to platformo še nima. Prazno = ne ustvari.",
+    "applyBrand": "Uporabi brand",
+    "brandChosen": "Plan je za brand {brand}: predlagam samo njegove kanale.",
+    "noBrandYet": "Brand še ni izbran: kanali niso predlagani, da objave ne pristanejo pri napačnem brandu."
   },
   "PostFormats": {
     "text": "besedilo",

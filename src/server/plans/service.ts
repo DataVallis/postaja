@@ -6,6 +6,8 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
 import { brands, channels, modelRegistry, planImports, posts, postMedia, type ImportSettings, type PostContent, type PostPlan } from "../db/schema";
+import { BrandError, addChannel, createBrandNamed } from "../brands/service";
+import { LANGUAGES } from "../brands/schemas";
 import { ExtractError, materialText } from "../files/extract";
 import { sniff } from "../files/sniff";
 import type { Storage } from "../files/storage";
@@ -23,7 +25,7 @@ export const IMPORT_MAX_BYTES = 20 * 1024 * 1024;
 const MAX_SHEETS = 10;
 
 export class ImportError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "INVALID_FILE" | "NO_POSTS" | "BAD_STATE" | "INVALID" | "AI_FAILED" | "SPEND_CAP" | "NO_MODEL" | "PLATFORM_MISMATCH", public readonly detail?: string) {
+  constructor(public readonly code: "NOT_FOUND" | "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE" | "INVALID_FILE" | "NO_POSTS" | "BAD_STATE" | "INVALID" | "AI_FAILED" | "SPEND_CAP" | "NO_MODEL" | "PLATFORM_MISMATCH" | "FORBIDDEN" | "BRAND_LIMIT", public readonly detail?: string) {
     super(code);
   }
 }
@@ -148,7 +150,8 @@ export function brandFromName(text: string, list: OrgBrand[]): OrgBrand | null {
  * The channel to suggest for a platform + account of a plan. Never a guess across brands:
  * - the account matches one channel's handle (either contains the other) or a word of its brand's name → that channel;
  * - the file names a brand → only that brand's channel of the platform (none → no suggestion, the owner adds it);
- * - otherwise the only channel of the platform, but only when the org has a single brand (no other brand to mix up).
+ * - otherwise nothing: a plan for a brand that is not in Postaja yet must not land on another brand's channel
+ *   (owner, 2026-10-07: a CHERR.IO plan was offered AI Builders' X channel). The owner picks or creates the brand.
  */
 export function suggestChannel(platform: string | null, account: string | null, list: OrgChannel[], hint: { brand: OrgBrand | null; brandCount: number } = { brand: null, brandCount: 1 }): string | null {
   if (!platform) return null;
@@ -167,7 +170,21 @@ export function suggestChannel(platform: string | null, account: string | null, 
     const own = same.filter((c) => c.brandId === hint.brand!.id);
     return own.length === 1 ? own[0].id : null;
   }
-  return hint.brandCount === 1 && same.length === 1 ? same[0].id : null;
+  return null;
+}
+
+const NAME_NOISE = new Set([
+  "instagram", "ig", "x", "twitter", "linkedin", "li", "facebook", "fb", "tiktok", "youtube", "yt", "posts", "post", "objave", "objav",
+  "objava", "plan", "plans", "content", "vsebin", "vsebine", "dni", "dan", "days", "day", "calendar", "koledar", "copy", "kopija",
+  "final", "draft", "v", "of", "za", "the", "in", "and", "on", "teden", "week", "weeks", "mesec", "month",
+]);
+
+/** A brand name from a plan's file name, for a brand that does not exist yet: "CHERR.IO X posts 001 (1).xlsx" → "CHERR.IO". */
+export function brandNameFromFile(filename: string): string | null {
+  const base = filename.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/\([^)]*\)/g, " ");
+  const words = base.split(/[\s_—–]+|\s-\s/).map((w) => w.replace(/^[-.,;:]+|[-.,;:]+$/g, "")).filter((w) => /\p{L}/u.test(w) && !NAME_NOISE.has(w.toLowerCase()) && !/^\d/.test(w));
+  const name = words.join(" ").trim().slice(0, 80);
+  return name.length >= 2 ? name : null;
 }
 
 const addDays = (isoDate: string, n: number) => {
@@ -201,13 +218,16 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
   const r = await ownImport(db, ctx, id);
   const items = importItems(r);
   const list = await orgChannels(db, ctx);
-  const brandList = await db.select({ id: brands.id, name: brands.name, slug: brands.slug }).from(brands).where(and(eq(brands.orgId, ctx.orgId), sql`${brands.archivedAt} is null`));
-  const hint = { brand: brandFromName(r.filename, brandList), brandCount: brandList.length };
+  const brandList = await db.select({ id: brands.id, name: brands.name, slug: brands.slug }).from(brands).where(and(eq(brands.orgId, ctx.orgId), sql`${brands.archivedAt} is null`)).orderBy(brands.name);
+  const chosen = r.settings.brandId ? brandList.find((b) => b.id === r.settings.brandId) ?? null : null;
+  const hint = { brand: chosen ?? brandFromName(r.filename, brandList), brandCount: brandList.length };
+  // A chosen brand limits suggestions to its own channels, account matches included.
+  const pool = chosen ? list.filter((c) => c.brandId === chosen.id) : list;
   const map = r.settings.channelMap ?? {};
   const groups = new Map<string, { key: string; platform: string | null; account: string | null; count: number; channelId: string | null; suggested: string | null }>();
   for (const i of items) {
     const key = groupKey(i);
-    const g = groups.get(key) ?? { key, platform: i.platform, account: i.account, count: 0, channelId: null, suggested: suggestChannel(i.platform, i.account, list, hint) };
+    const g = groups.get(key) ?? { key, platform: i.platform, account: i.account, count: 0, channelId: null, suggested: suggestChannel(i.platform, i.account, pool, hint) };
     g.count++;
     groups.set(key, g);
   }
@@ -218,7 +238,57 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
     const ok = chosen === "skip" || (chosen && (!g.platform || platformOf.get(chosen) === g.platform));
     g.channelId = ok ? chosen! : g.suggested;
   }
-  return { import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list, brand: hint.brand };
+  return {
+    import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list, brand: hint.brand,
+    brandChosen: !!chosen, brands: brandList, newBrandName: hint.brand ? null : brandNameFromFile(r.filename),
+  };
+}
+
+const brandChoiceInput = z.object({
+  brandId: z.string().max(100).optional(),
+  newName: z.string().trim().min(2).max(80).optional(),
+  language: z.enum(LANGUAGES).optional(),
+  /** "platform|account" → handle for a channel the brand does not have yet (empty = do not create). */
+  handles: z.record(z.string().max(500), z.string().trim().max(80)).default({}),
+});
+
+/**
+ * The owner says which brand the plan is for (owner, 2026-10-07): an existing brand, or a new one created here with the
+ * plan's channels (handle per platform from the form, default the plan's account). Choosing resets earlier channel
+ * choices; suggestions then come only from this brand's channels.
+ */
+export async function setImportBrand(db: Db, ctx: OrgContext, id: string, input: z.input<typeof brandChoiceInput>) {
+  const p = brandChoiceInput.parse(input);
+  const r = await ownImport(db, ctx, id);
+  if (r.status !== "draft") throw new ImportError("BAD_STATE");
+  if (!!p.brandId === !!p.newName) throw new ImportError("INVALID");
+  try {
+    let brandId = p.brandId;
+    if (p.newName) {
+      const all = (await forOrg(db, ctx).select(brands)) as (typeof brands.$inferSelect)[];
+      const same = all.find((b) => !b.archivedAt && b.name.trim().toLowerCase() === p.newName!.toLowerCase());
+      brandId = same ? same.id : (await createBrandNamed(db, ctx, { name: p.newName, languages: [p.language ?? "sl"] })).id;
+    }
+    const [b] = (await forOrg(db, ctx).select(brands, eq(brands.id, brandId!))) as (typeof brands.$inferSelect)[];
+    if (!b || b.archivedAt) throw new ImportError("INVALID");
+    const own = (await forOrg(db, ctx).select(channels, eq(channels.brandId, b.id))) as (typeof channels.$inferSelect)[];
+    const made = new Set(own.map((c) => c.platform as string));
+    for (const g of new Map(importItems(r).map((i) => [groupKey(i), i])).values()) {
+      const handle = p.handles[groupKey(g)];
+      if (!g.platform || made.has(g.platform) || !handle) continue;
+      await addChannel(db, ctx, b.id, {
+        platform: g.platform, handle, language: b.languages[0] as (typeof LANGUAGES)[number],
+        goal: { postsPerDay: 1, weekdays: [1, 2, 3, 4, 5] }, allowedTypes: ["text", "single_image", "carousel"],
+      });
+      made.add(g.platform);
+    }
+    await forOrg(db, ctx).update(planImports, { settings: { ...r.settings, brandId: b.id, channelMap: {} } }, eq(planImports.id, id));
+    return { brandId: b.id };
+  } catch (e) {
+    if (e instanceof BrandError) throw new ImportError(e.code === "FORBIDDEN" ? "FORBIDDEN" : e.code === "LIMIT_REACHED" ? "BRAND_LIMIT" : "INVALID", e.code);
+    if (e instanceof z.ZodError) throw new ImportError("INVALID");
+    throw e;
+  }
 }
 
 const updateInput = z.object({

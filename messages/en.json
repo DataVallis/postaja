@@ -663,7 +663,9 @@
       "BAD_STATE": "This import is already finished.",
       "INVALID": "The choice is not valid.",
       "FAILED": "Saving failed.",
-      "PLATFORM_MISMATCH": "Rows of one platform can only go to a channel of the same platform (e.g. LinkedIn to LinkedIn)."
+      "PLATFORM_MISMATCH": "Rows of one platform can only go to a channel of the same platform (e.g. LinkedIn to LinkedIn).",
+      "FORBIDDEN": "Only the organization owner can create brands and channels.",
+      "BRAND_LIMIT": "The organization already has the maximum number of brands."
     },
     "doneSummary": "Imported: {n} posts.",
     "seePosts": "Open posts",
@@ -768,7 +770,20 @@
     "noAccount": "no account in the plan",
     "brandFromFile": "The file name names the brand {brand}: only its channels are suggested.",
     "brandHasNoChannel": "{brand} has no {platform} channel.",
-    "addChannel": "Add the channel, then come back here."
+    "addChannel": "Add the channel, then come back here.",
+    "brandTitle": "Which brand is this plan for",
+    "brandHint": "Pick a brand or create a new one. Only the chosen brand's channels are suggested; missing channels are created from the profiles below.",
+    "brandSelect": "Brand",
+    "chooseBrand": "Choose a brand",
+    "newBrandOption": "+ New brand",
+    "newBrandName": "New brand name",
+    "newBrandLanguage": "New brand language",
+    "newBrandHint": "Used only with \"+ New brand\". If a brand with this name exists, it is used.",
+    "handleFor": "Profile for {platform}",
+    "handlesHint": "A channel is created only if the brand has none for that platform. Empty = do not create.",
+    "applyBrand": "Use brand",
+    "brandChosen": "The plan is for {brand}: only its channels are suggested.",
+    "noBrandYet": "No brand chosen yet: no channels are suggested, so posts do not land on the wrong brand."
   },
   "PostFormats": {
     "text": "text",

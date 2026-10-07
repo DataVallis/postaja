@@ -4,7 +4,8 @@ import type { Db } from "../db/client";
 import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, modelRegistry, orgSettings } from "../db/schema";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
-import { brandInput, channelInput, profileInput } from "./schemas";
+import { slugify } from "@/lib/slug";
+import { brandInput, channelInput, LANGUAGES, profileInput } from "./schemas";
 
 export class BrandError extends Error {
   constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "LIMIT_REACHED" | "DUPLICATE" | "PRESET_MISMATCH" | "ARCHIVED" | "LANGUAGE_NOT_IN_BRAND") {
@@ -62,6 +63,20 @@ export async function createBrand(db: Db, ctx: OrgContext, input: z.input<typeof
     throw e;
   }
   return { id };
+}
+
+/**
+ * A brand from just a name (MCP, plan import): the short name is made from it (`slugify`, numbered when taken) and a
+ * bare website gets https://. Same checks as createBrand.
+ */
+export async function createBrandNamed(db: Db, ctx: OrgContext, input: { name: string; website?: string; languages?: (typeof LANGUAGES)[number][] }) {
+  const base = slugify(input.name) || "brand";
+  const taken = new Set(((await forOrg(db, ctx).select(brands)) as (typeof brands.$inferSelect)[]).map((b) => b.slug));
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 44)}-${n}`;
+  const website = input.website ? (/^https?:\/\//i.test(input.website) ? input.website : `https://${input.website}`) : undefined;
+  const { id } = await createBrand(db, ctx, { name: input.name.trim(), slug, website, languages: input.languages ?? ["sl"] });
+  return { id, slug };
 }
 
 export async function updateBrand(db: Db, ctx: OrgContext, brandId: string, input: z.input<typeof brandInput>) {

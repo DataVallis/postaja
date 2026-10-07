@@ -9,7 +9,7 @@ import { IMPORT_MAX_BYTES, ImportError, startImport } from "./service";
 const MULTIPART_OVERHEAD = 64 * 1024;
 const STATUS: Record<ImportError["code"], number> = {
   NOT_FOUND: 404, EMPTY: 400, TOO_LARGE: 413, UNSUPPORTED_TYPE: 415, INVALID_FILE: 422, NO_POSTS: 422, BAD_STATE: 409,
-  INVALID: 400, AI_FAILED: 502, SPEND_CAP: 402, NO_MODEL: 503, PLATFORM_MISMATCH: 422,
+  INVALID: 400, AI_FAILED: 502, SPEND_CAP: 402, NO_MODEL: 503, PLATFORM_MISMATCH: 422, FORBIDDEN: 403, BRAND_LIMIT: 409,
 };
 const json = (body: unknown, status: number) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 

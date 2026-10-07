@@ -151,5 +151,26 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   await p.getByTestId("posts-table").getByRole("row").nth(1).getByRole("link").first().click();
   await expect(p.getByLabel("Besedilo")).toHaveValue("The code compiled. The tests were green.");
   await expect(p.getByTestId("plan")).toContainText("Minimal 3D, navy background");
+
+  // A plan for a brand that is not in Postaja yet (owner, 2026-10-07): no other brand's X channel is offered; the owner
+  // creates the brand and its X channel from the review, and the posts land there.
+  const cherr = makeXlsx([{ name: "X", rows: [["Datum", "Platforma", "Besedilo objave"], [46300, "X", "Ship small. Ship often."], [46301, "X", "Your backlog is a graveyard."]] }]);
+  await p.goto("/app/import");
+  await p.getByLabel("Izberi plan").setInputFiles({ name: "CHERR.IO X posts 001 (1).xlsx", mimeType: XLSX, buffer: Buffer.from(cherr) });
+  await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  await expect(p.getByTestId("import-brand")).toContainText("Brand še ni izbran");
+  await expect(p.getByTestId("import-groups").getByLabel("Kanal za X")).toHaveValue("");
+  const brandForm = p.getByTestId("import-brand-form");
+  await expect(brandForm.getByLabel("Brand", { exact: true })).toHaveValue("new");
+  await expect(brandForm.getByLabel("Ime novega branda")).toHaveValue("CHERR.IO");
+  await brandForm.getByLabel("Jezik novega branda").selectOption("en");
+  await brandForm.getByLabel("Profil za X").fill("@cherr_io");
+  expect(await serious(p)).toEqual([]);
+  await brandForm.getByRole("button", { name: "Uporabi brand" }).click();
+  await expect(p.getByTestId("import-brand")).toContainText("Plan je za brand CHERR.IO");
+  await expect(p.getByTestId("import-groups").getByLabel("Kanal za X").locator("option:checked")).toHaveText("CHERR.IO · X · @cherr_io");
+  await p.getByRole("button", { name: "Uvozi 2 objav" }).click();
+  await expect(p.getByTestId("posts-table").getByRole("row")).toHaveCount(3);
+  await expect(p.getByTestId("posts-table")).toContainText("CHERR.IO");
   await ctx.close();
 });
