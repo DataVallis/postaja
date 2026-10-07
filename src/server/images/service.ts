@@ -30,7 +30,7 @@ export const REVISION_MAX = 1000;
 export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT") {
+  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL") {
     super(code);
   }
 }
@@ -104,8 +104,8 @@ export async function postMediaUrl(db: Db, storage: Storage, ctx: OrgContext, me
     .innerJoin(brands, and(eq(brands.id, posts.brandId), eq(brands.orgId, ctx.orgId)))
     .where(and(eq(postMedia.id, mediaId), eq(postMedia.orgId, ctx.orgId)));
   if (!m) throw new ImageJobError("NOT_FOUND");
-  const ext = m.type === "image/png" ? "png" : "jpg";
-  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : `ilustracija-${m.position + 1}`}.${ext}`;
+  const ext = m.type === "image/png" ? "png" : m.type === "video/mp4" ? "mp4" : "jpg";
+  const filename = `${m.slug}-${m.on ?? m.postId.slice(0, 8)}-${m.kind === "slide" ? m.position + 1 : m.kind === "video" ? `video-${m.position + 1}` : `ilustracija-${m.position + 1}`}.${ext}`;
   return storage.presignGet(m.key, { filename, contentType: m.type, inline: !download });
 }
 
@@ -246,7 +246,9 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
     const t = forOrg(tx as unknown as Db, ctx);
     if (replaced.length) await t.delete(postMedia, inArray(postMedia.id, replaced.map((m) => m.id)));
     for (const r of newRows) await t.insert(postMedia, r);
-    await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(posts.id, postId));
+    // New images make the post's animation stale (its words or picture changed): it goes with them (TASK-022).
+    const videoGone = replaced.some((m) => m.kind === "video");
+    await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, ...(videoGone ? { videoStatus: "none" as const, videoError: null } : {}), updatedAt: new Date() }, eq(posts.id, postId));
   });
   await Promise.all(replaced.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
   return pngs.length;

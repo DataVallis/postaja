@@ -10,8 +10,13 @@ export type ImageRequest = {
   negativePrompt?: string;
 };
 export type ImageResult = { bytes: Uint8Array; contentType: string; width: number; height: number };
+/** Image-to-video (TASK-022): the clean illustration (data: URI) moves as `prompt` says; no text is ever asked for. */
+export type VideoRequest = { model: string; prompt: string; image: string; durationS: number };
+export type VideoResult = { bytes: Uint8Array };
 export interface ImageClient {
   generate(req: ImageRequest): Promise<ImageResult>;
+  /** Optional: clients without video (older stand-ins) leave it out. */
+  video?(req: VideoRequest): Promise<VideoResult>;
 }
 
 export class ImageError extends Error {
@@ -21,6 +26,7 @@ export class ImageError extends Error {
 }
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 
 type FalOptions = { key?: string; baseUrl?: string; fetch?: typeof fetch; pollMs?: number; timeoutMs?: number };
 
@@ -53,56 +59,57 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
     return (await r.json()) as Record<string, unknown>;
   };
 
+  /** Submit to the queue, poll until done, return the result JSON. Every URL is checked against fal's hosts. */
+  async function run(model: string, body: Record<string, unknown>, timeout: number): Promise<Record<string, unknown>> {
+    const app = model.replace(/^\/+/, "");
+    if (!/^[a-z0-9-]+\/[a-z0-9./-]+$/i.test(app) || app.includes("..")) throw new ImageError("IMAGE_PROVIDER");
+    let submitted: Record<string, unknown>;
+    try {
+      const r = await f(new URL(`/${app}`, base), { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+      if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER");
+      submitted = (await r.json()) as Record<string, unknown>;
+    } catch (e) {
+      if (e instanceof ImageError) throw e;
+      throw new ImageError("IMAGE_PROVIDER");
+    }
+    const id = String(submitted.request_id ?? "");
+    if (!/^[\w-]{1,100}$/.test(id)) throw new ImageError("IMAGE_PROVIDER");
+    // fal returns the status/result URLs; they are built from the app id (owner/name), not the full model path.
+    const root = app.split("/").slice(0, 2).join("/");
+    const statusUrl = typeof submitted.status_url === "string" ? submitted.status_url : new URL(`/${root}/requests/${id}/status`, base).href;
+    const responseUrl = typeof submitted.response_url === "string" ? submitted.response_url : new URL(`/${root}/requests/${id}`, base).href;
+    const deadline = Date.now() + timeout;
+    for (;;) {
+      const st = await getJson(statusUrl).catch((e) => { throw e instanceof ImageError ? e : new ImageError("IMAGE_PROVIDER"); });
+      if (st.status === "COMPLETED") break;
+      if (st.status !== "IN_QUEUE" && st.status !== "IN_PROGRESS") throw new ImageError("IMAGE_PROVIDER");
+      if (Date.now() > deadline) throw new ImageError("IMAGE_TIMEOUT");
+      await new Promise((res) => setTimeout(res, pollMs));
+    }
+    return getJson(responseUrl).catch((e) => { throw e instanceof ImageError ? e : new ImageError("IMAGE_PROVIDER"); });
+  }
+
+  /** Downloads a result file from fal's hosts, at most `max` bytes. */
+  async function download(url: unknown, max: number, timeout: number): Promise<Uint8Array> {
+    if (typeof url !== "string" || !allowedResultUrl(url, base)) throw new ImageError("IMAGE_PROVIDER");
+    try {
+      const r = await f(url, { signal: AbortSignal.timeout(timeout) });
+      if (!r.ok) throw new Error("download");
+      if (Number(r.headers.get("content-length") ?? 0) > max) throw new Error("too large");
+      const bytes = new Uint8Array(await r.arrayBuffer());
+      if (bytes.byteLength === 0 || bytes.byteLength > max) throw new Error("size");
+      return bytes;
+    } catch {
+      throw new ImageError("IMAGE_PROVIDER");
+    }
+  }
+
   return {
     async generate(req) {
-      const app = req.model.replace(/^\/+/, "");
-      if (!/^[a-z0-9-]+\/[a-z0-9./-]+$/i.test(app) || app.includes("..")) throw new ImageError("IMAGE_PROVIDER");
-      let submitted: Record<string, unknown>;
-      try {
-        const r = await f(new URL(`/${app}`, base), {
-          method: "POST",
-          headers,
-          body: JSON.stringify(requestBody(app, req)),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER");
-        submitted = (await r.json()) as Record<string, unknown>;
-      } catch (e) {
-        if (e instanceof ImageError) throw e;
-        throw new ImageError("IMAGE_PROVIDER");
-      }
-      const id = String(submitted.request_id ?? "");
-      if (!/^[\w-]{1,100}$/.test(id)) throw new ImageError("IMAGE_PROVIDER");
-      // fal returns the status/result URLs; they are built from the app id (owner/name), not the full model path.
-      const root = app.split("/").slice(0, 2).join("/");
-      const statusUrl = typeof submitted.status_url === "string" ? submitted.status_url : new URL(`/${root}/requests/${id}/status`, base).href;
-      const responseUrl = typeof submitted.response_url === "string" ? submitted.response_url : new URL(`/${root}/requests/${id}`, base).href;
-
-      const deadline = Date.now() + timeoutMs;
-      for (;;) {
-        const s = await getJson(statusUrl).catch((e) => { throw e instanceof ImageError ? e : new ImageError("IMAGE_PROVIDER"); });
-        if (s.status === "COMPLETED") break;
-        if (s.status !== "IN_QUEUE" && s.status !== "IN_PROGRESS") throw new ImageError("IMAGE_PROVIDER");
-        if (Date.now() > deadline) throw new ImageError("IMAGE_TIMEOUT");
-        await new Promise((res) => setTimeout(res, pollMs));
-      }
-      const out = await getJson(responseUrl).catch((e) => { throw e instanceof ImageError ? e : new ImageError("IMAGE_PROVIDER"); });
+      const out = await run(req.model, requestBody(req.model.replace(/^\/+/, ""), req), timeoutMs);
       const nsfw = out.has_nsfw_concepts;
       if (Array.isArray(nsfw) && nsfw[0] === true) throw new ImageError("IMAGE_BLOCKED");
-      const img = (out.images as { url?: unknown }[] | undefined)?.[0];
-      if (!img || typeof img.url !== "string" || !allowedResultUrl(img.url, base)) throw new ImageError("IMAGE_PROVIDER");
-
-      let bytes: Uint8Array;
-      try {
-        const r = await f(img.url, { signal: AbortSignal.timeout(60_000) });
-        if (!r.ok) throw new Error("download");
-        const len = Number(r.headers.get("content-length") ?? 0);
-        if (len > MAX_IMAGE_BYTES) throw new Error("too large");
-        bytes = new Uint8Array(await r.arrayBuffer());
-        if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("size");
-      } catch {
-        throw new ImageError("IMAGE_PROVIDER");
-      }
+      const bytes = await download((out.images as { url?: unknown }[] | undefined)?.[0]?.url, MAX_IMAGE_BYTES, 60_000);
       // Never trust the bytes: decode them and re-encode as JPEG (drops metadata, proves it is a picture).
       try {
         const { data, info } = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS, failOn: "error" }).rotate().jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
@@ -111,7 +118,18 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
         throw new ImageError("IMAGE_INVALID");
       }
     },
+    async video(req) {
+      // Videos take minutes in the provider's queue; the bytes are checked by ffprobe before use (src/server/video).
+      const out = await run(req.model, videoBody(req.model.replace(/^\/+/, ""), req), Math.max(timeoutMs, 600_000));
+      return { bytes: await download((out.video as { url?: unknown } | undefined)?.url, MAX_VIDEO_BYTES, 120_000) };
+    },
   };
+}
+
+/** Video model bodies (TASK-022): Hailuo takes 6 or 10 s and the prompt optimizer off (the prompt is ours). */
+export function videoBody(app: string, req: VideoRequest): Record<string, unknown> {
+  if (app.startsWith("fal-ai/minimax/hailuo")) return { prompt: req.prompt, image_url: req.image, duration: String(req.durationS >= 10 ? 10 : 6), prompt_optimizer: false };
+  return { prompt: req.prompt, image_url: req.image, duration: String(req.durationS) };
 }
 
 /** The body each model family expects. Ideogram takes style references and a negative prompt; FLUX neither. */

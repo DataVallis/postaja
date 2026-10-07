@@ -1178,5 +1178,27 @@
       "NO_IMAGES": "The ad has no images yet.",
       "NO_PLACEMENT": "The ad has no placements."
     }
+  },
+  "Animation": {
+    "title": "Animation",
+    "hint": "The image's illustration comes alive as a {seconds}-second video; Postaja burns the words, logo and shapes back on, sharp and exactly as on the image. The model never draws text.",
+    "working": "The video is being made (a few minutes) … the page refreshes itself.",
+    "videoLabel": "Animation of image {n}",
+    "download": "Download video (MP4)",
+    "which": "Which image",
+    "motion": "Motion",
+    "motionHint": "Describe what moves (camera, light, objects). Do not describe text — Postaja adds it.",
+    "animate": "Animate",
+    "again": "New animation",
+    "errors": {
+      "FAILED": "The video could not be made. Try again.",
+      "NOT_ANIMATABLE": "This image cannot be animated: its template has no full-bleed illustration.",
+      "NO_VIDEO_MODEL": "No video model is configured.",
+      "BAD_STATE": "The images must be ready first; or an animation is already being made.",
+      "INVALID": "Describe the motion (up to 600 characters).",
+      "VIDEO_INVALID": "The provider returned an invalid video. Try again.",
+      "VIDEO_TOOL": "The video could not be put together.",
+      "VIDEO_TIMEOUT": "Putting the video together took too long."
+    }
   }
 }

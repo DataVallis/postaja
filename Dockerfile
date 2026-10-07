@@ -23,6 +23,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     GIT_SHA=${GIT_SHA}
+# ffmpeg: animations burn the template onto the provider's clip (TASK-022, ADR-021).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 1001 app && useradd --system --uid 1001 --gid app app
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static

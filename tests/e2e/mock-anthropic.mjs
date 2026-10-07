@@ -4,8 +4,23 @@
 //
 // It also stands in for the fal.ai queue API (TASK-015) via FAL_BASE_URL: submit → status COMPLETED → result → a JPEG.
 // A prompt containing "ZAVRNI" is refused like a safety-checker hit.
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
 import http from "node:http";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import sharp from "sharp";
+
+/** A 3 s clip like an image-to-video model returns (TASK-022), made once with ffmpeg. */
+let clip;
+function testClip() {
+  if (!clip) {
+    const out = path.join(mkdtempSync(path.join(tmpdir(), "mock-clip-")), "clip.mp4");
+    execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=768x960:rate=25", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", out]);
+    clip = readFileSync(out);
+  }
+  return clip;
+}
 
 const port = Number(process.env.MOCK_ANTHROPIC_PORT ?? 3199);
 /** Same shape as tests/fixtures/design.ts cardDesign (the mock is plain JS). */
@@ -49,9 +64,11 @@ function fal(req, res) {
   if (status) return send(200, { status: "COMPLETED" });
   const result = req.url.match(/^\/fal-ai\/[\w-]+\/requests\/([\w-]+)$/);
   if (result) {
-    const { prompt, width, height } = falPrompts.get(result[1]) ?? {};
+    const { prompt, width, height, video } = falPrompts.get(result[1]) ?? {};
+    if (video) return send(200, { video: { url: `${base}/fal-files/${result[1]}.mp4`, content_type: "video/mp4" } });
     return send(200, { images: [{ url: `${base}/fal-files/${result[1]}.jpg?w=${width}&h=${height}`, width, height, content_type: "image/jpeg" }], has_nsfw_concepts: [String(prompt).includes("ZAVRNI")] });
   }
+  if (/^\/fal-files\/[\w-]+\.mp4$/.test(req.url)) return send(200, testClip(), "video/mp4");
   const file = req.url.match(/^\/fal-files\/[\w-]+\.jpg\?w=(\d+)&h=(\d+)$/);
   if (file) {
     // A teal-to-amber picture, so a test can tell the background is there.
@@ -73,6 +90,12 @@ function fal(req, res) {
         return;
       }
       const id = `req-${++falSeq}`;
+      if (r.image_url && !r.image_size) {
+        // Image-to-video: the app must send the clean picture and a prompt without text.
+        falPrompts.set(id, { prompt: r.prompt, video: true });
+        falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, image: String(r.image_url).slice(0, 23) });
+        return send(200, { request_id: id, status_url: `${base}/fal-ai/${submit[1]}/requests/${id}/status`, response_url: `${base}/fal-ai/${submit[1]}/requests/${id}` });
+      }
       falPrompts.set(id, { prompt: r.prompt, width: r.image_size.width, height: r.image_size.height, references: r.image_urls?.length ?? 0 });
       falLog.push({ model: req.url.slice(1), references: r.image_urls?.length ?? 0 });
       const app = `fal-ai/${submit[1]}`;

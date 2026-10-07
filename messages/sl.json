@@ -1178,5 +1178,27 @@
       "NO_IMAGES": "Oglas še nima slik.",
       "NO_PLACEMENT": "Oglas nima umestitev."
     }
+  },
+  "Animation": {
+    "title": "Animacija",
+    "hint": "Ilustracija slike oživi v {seconds}-sekundni video; besede, logotip in oblike Postaja vžge nazaj, ostro in točno tako kot na sliki. Model nikoli ne riše besedila.",
+    "working": "Video nastaja (nekaj minut) … stran se osveži sama.",
+    "videoLabel": "Animacija slike {n}",
+    "download": "Prenesi video (MP4)",
+    "which": "Katera slika",
+    "motion": "Gibanje",
+    "motionHint": "Opiši, kaj naj se premika (kamera, svetloba, predmeti). Besedila ne opisuj — doda ga Postaja.",
+    "animate": "Animiraj",
+    "again": "Nova animacija",
+    "errors": {
+      "FAILED": "Videa ni bilo mogoče narediti. Poskusi znova.",
+      "NOT_ANIMATABLE": "Te slike ni mogoče animirati: predloga nima ilustracije čez celo sliko.",
+      "NO_VIDEO_MODEL": "Model za video ni nastavljen.",
+      "BAD_STATE": "Najprej morajo biti slike pripravljene; animacija že nastaja.",
+      "INVALID": "Opiši gibanje (do 600 znakov).",
+      "VIDEO_INVALID": "Ponudnik je vrnil neveljaven video. Poskusi znova.",
+      "VIDEO_TOOL": "Videa ni bilo mogoče sestaviti.",
+      "VIDEO_TIMEOUT": "Sestavljanje videa je trajalo predolgo."
+    }
   }
 }

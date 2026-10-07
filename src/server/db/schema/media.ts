@@ -6,7 +6,8 @@ import { bigint, check, index, integer, pgTable, text, timestamp, uniqueIndex } 
 import { posts } from "./generation";
 import { organization } from "./org";
 
-export type MediaKind = "slide" | "background";
+/** "video": an animated image (TASK-022), MP4 with the template burned in; position = the animated slide. */
+export type MediaKind = "slide" | "background" | "video";
 
 export const postMedia = pgTable(
   "post_media",
@@ -30,7 +31,7 @@ export const postMedia = pgTable(
     index("post_media_org_idx").on(t.orgId),
     uniqueIndex("post_media_post_kind_pos_uq").on(t.postId, t.kind, t.position),
     uniqueIndex("post_media_key_uq").on(t.storageKey),
-    check("post_media_kind_ck", sql`${t.kind} in ('slide','background')`),
+    check("post_media_kind_ck", sql`${t.kind} in ('slide','background','video')`),
     check("post_media_size_ck", sql`${t.width} > 0 and ${t.height} > 0 and ${t.sizeBytes} > 0 and ${t.position} >= 0`),
   ],
 );

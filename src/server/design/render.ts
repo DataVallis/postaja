@@ -47,6 +47,11 @@ export type RenderInput = {
    * whole canvas; every element is laid out in the box inside these insets, so no text or logo lands under the UI.
    */
   safe?: { top: number; right: number; bottom: number; left: number } | null;
+  /**
+   * Only what goes on top of an animated illustration (TASK-022): transparent canvas, no picture, no background colour;
+   * the illustration's overlay (fade) and every element are drawn. Only for templates with a full-bleed illustration.
+   */
+  overlayOnly?: boolean;
 };
 
 type Node = { type: string; props: Record<string, unknown> };
@@ -146,11 +151,11 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
 
   const b = t.background;
   const children: (Node | null)[] = [];
-  const base: Record<string, unknown> = { display: "flex", position: "relative", width: W, height: H, backgroundColor: color(s, b.color) };
-  if (b.type === "gradient") base.backgroundImage = `linear-gradient(${b.angle}deg, ${color(s, b.color)}, ${color(s, b.to ?? "surface")})`;
-  const picture = input.illustration ?? (t.background.type === "illustration" || t.elements.some((e) => e.type === "image" && e.source === "illustration") ? await standIn(s, W, H) : null);
-  if (b.type === "illustration" && picture) {
-    children.push(el("img", { position: "absolute", left: 0, top: 0, width: W, height: H }, undefined, { src: await fitted(picture, W, H, "cover", false), width: W, height: H }));
+  const base: Record<string, unknown> = { display: "flex", position: "relative", width: W, height: H, backgroundColor: input.overlayOnly ? "transparent" : color(s, b.color) };
+  if (b.type === "gradient" && !input.overlayOnly) base.backgroundImage = `linear-gradient(${b.angle}deg, ${color(s, b.color)}, ${color(s, b.to ?? "surface")})`;
+  const picture = input.overlayOnly ? null : input.illustration ?? (t.background.type === "illustration" || t.elements.some((e) => e.type === "image" && e.source === "illustration") ? await standIn(s, W, H) : null);
+  if (b.type === "illustration" && (picture || input.overlayOnly)) {
+    if (!input.overlayOnly && picture) children.push(el("img", { position: "absolute", left: 0, top: 0, width: W, height: H }, undefined, { src: await fitted(picture, W, H, "cover", false), width: W, height: H }));
     if (b.overlay) {
       const c = color(s, b.overlay.color), a = b.overlay.opacity;
       const grad = b.overlay.fade === "bottom" ? `linear-gradient(180deg, ${rgba(c, a * 0.15)} 0%, ${rgba(c, a)} 70%)`
