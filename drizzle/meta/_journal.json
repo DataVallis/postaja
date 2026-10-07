@@ -148,6 +148,20 @@
       "when": 1791377500291,
       "tag": "0020_idea_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791381912240,
+      "tag": "0021_ads",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791381913423,
+      "tag": "0022_seed_ad_networks",
+      "breakpoints": true
     }
   ]
 }

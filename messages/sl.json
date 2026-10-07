@@ -384,7 +384,8 @@
       "design": "Vizualna podoba",
       "profile": "Profil (CGP)",
       "channels": "Kanali",
-      "versions": "Verzije"
+      "versions": "Verzije",
+      "ads": "Oglasi"
     },
     "table": {
       "brand": "Brand",
@@ -1075,6 +1076,92 @@
       "NOT_FOUND": "Brand ne obstaja.",
       "BAD_STATE": "Ti predlogi so že obdelani.",
       "INVALID": "Označi vsaj eno idejo."
+    }
+  },
+  "Ads": {
+    "title": "Oglasi",
+    "newTitle": "Nov oglas",
+    "newHint": "En koncept oglasa za izbrana omrežja: Claude napiše 3 različice besedila za vsako omrežje v njegovih poljih in omejitvah znakov iz CGP-ja in tvoje ponudbe. Kreative za vsako umestitev pridejo v naslednjem koraku.",
+    "objective": "Cilj",
+    "objectives": {
+      "awareness": "Prepoznavnost",
+      "traffic": "Obiski strani",
+      "leads": "Kontakti (leadi)",
+      "sales": "Prodaja"
+    },
+    "landingUrl": "Ciljna stran",
+    "language": "Jezik",
+    "offer": "Ponudba",
+    "offerPlaceholder": "npr. Tečaj Vibe Coding 101, 20 % popusta do 31. 10.",
+    "brief": "Navodila za AI",
+    "briefPlaceholder": "npr. ciljamo samostojne podjetnike, poudari prihranek časa",
+    "networks": "Omrežja in umestitve",
+    "name": "Ime",
+    "namePlaceholder": "izpolni se samo iz ponudbe",
+    "create": "Ustvari oglas",
+    "writing": "Claude piše besedila …",
+    "statusCol": "Stanje",
+    "created": "Ustvarjeno",
+    "none": "Ta brand še nima oglasov.",
+    "status": {
+      "draft": "osnutek",
+      "ready": "pripravljen",
+      "needs_review": "za pregled"
+    },
+    "placements": {
+      "feed": "Feed",
+      "story": "Story / Reels",
+      "story_reels": "Story / Reels",
+      "reels": "Reels",
+      "link": "Povezava",
+      "responsive": "Odzivni",
+      "banner": "Pasica",
+      "photo": "Foto",
+      "document": "Dokument",
+      "video": "Video",
+      "shorts": "Shorts"
+    },
+    "placementsTitle": "Umestitve",
+    "visualsLater": "Slike za vsako umestitev (v točnih dimenzijah in varnih conah) dodam v naslednjem koraku.",
+    "variant": "Različica {n}",
+    "perLine": "vsako v svojo vrstico, največ {max}",
+    "visible": "vidno {n}",
+    "cta": "Gumb (CTA)",
+    "fields": {
+      "primary_text": "Glavno besedilo",
+      "headline": "Naslov",
+      "description": "Opis",
+      "intro_text": "Uvodno besedilo",
+      "headlines": "Kratki naslovi",
+      "long_headline": "Dolgi naslov",
+      "descriptions": "Opisi",
+      "business_name": "Ime podjetja"
+    },
+    "issues": {
+      "too_long": "Predolgo: {actual} od največ {limit} znakov.",
+      "too_few": "Premalo besedil: {actual}, potrebno vsaj {limit}.",
+      "too_many": "Preveč besedil: {actual}, največ {limit}.",
+      "banned_word": "Prepovedana beseda: {actual}.",
+      "bad_cta": "Izberi gumb s seznama omrežja.",
+      "long_visible": "Daljše od vidnega dela ({actual} / {limit}) — konec se skrije pod »Več«."
+    },
+    "issuesSummary": "{n, plural, one {# polje krši pravila} two {# polji kršita pravila} few {# polja kršijo pravila} other {# polj krši pravila}} — popravi in shrani.",
+    "save": "Shrani besedila",
+    "saved": "Shranjeno in preverjeno.",
+    "csv": "Prenesi copy.csv",
+    "rewrite": "Napiši znova",
+    "retry": "Poskusi znova",
+    "rewriteHint": "Nova besedila za isti koncept (nov klic Claude).",
+    "errors": {
+      "FAILED": "Oglasa ni bilo mogoče ustvariti.",
+      "NOT_FOUND": "Oglasa ni.",
+      "INVALID": "Preveri vnos (npr. ciljna stran).",
+      "BAD_STATE": "Brand je arhiviran.",
+      "NO_PLACEMENT": "Izberi vsaj eno umestitev izbranega omrežja.",
+      "LANGUAGE": "Jezik ni med jeziki branda.",
+      "SPEND_CAP": "Mesečni limit porabe je dosežen.",
+      "NO_MODEL": "Model Claude ni nastavljen.",
+      "AI_FAILED": "Claude ni vrnil uporabnih besedil. Poskusi znova."
     }
   }
 }

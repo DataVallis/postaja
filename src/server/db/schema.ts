@@ -13,3 +13,4 @@ export * from "./schema/mcp";
 export * from "./schema/media";
 export * from "./schema/design";
 export * from "./schema/ideas";
+export * from "./schema/ads";

@@ -384,7 +384,8 @@
       "design": "Visual identity",
       "profile": "Profile (CGP)",
       "channels": "Channels",
-      "versions": "Versions"
+      "versions": "Versions",
+      "ads": "Ads"
     },
     "table": {
       "brand": "Brand",
@@ -1075,6 +1076,92 @@
       "NOT_FOUND": "The brand does not exist.",
       "BAD_STATE": "These ideas were already handled.",
       "INVALID": "Tick at least one idea."
+    }
+  },
+  "Ads": {
+    "title": "Ads",
+    "newTitle": "New ad",
+    "newHint": "One ad concept for the chosen networks: Claude writes 3 copy variants for each network in its own fields and character limits, from the CGP and your offer. Creatives per placement come in the next step.",
+    "objective": "Objective",
+    "objectives": {
+      "awareness": "Awareness",
+      "traffic": "Traffic",
+      "leads": "Leads",
+      "sales": "Sales"
+    },
+    "landingUrl": "Landing page",
+    "language": "Language",
+    "offer": "Offer",
+    "offerPlaceholder": "e.g. Vibe Coding 101 course, 20% off until 31 Oct",
+    "brief": "Instructions for AI",
+    "briefPlaceholder": "e.g. target solo founders, stress the time saved",
+    "networks": "Networks and placements",
+    "name": "Name",
+    "namePlaceholder": "filled from the offer",
+    "create": "Create ad",
+    "writing": "Claude is writing …",
+    "statusCol": "Status",
+    "created": "Created",
+    "none": "This brand has no ads yet.",
+    "status": {
+      "draft": "draft",
+      "ready": "ready",
+      "needs_review": "needs review"
+    },
+    "placements": {
+      "feed": "Feed",
+      "story": "Story / Reels",
+      "story_reels": "Story / Reels",
+      "reels": "Reels",
+      "link": "Link",
+      "responsive": "Responsive",
+      "banner": "Banner",
+      "photo": "Photo",
+      "document": "Document",
+      "video": "Video",
+      "shorts": "Shorts"
+    },
+    "placementsTitle": "Placements",
+    "visualsLater": "Images for every placement (exact sizes, safe zones) come in the next step.",
+    "variant": "Variant {n}",
+    "perLine": "one per line, at most {max}",
+    "visible": "visible {n}",
+    "cta": "Button (CTA)",
+    "fields": {
+      "primary_text": "Primary text",
+      "headline": "Headline",
+      "description": "Description",
+      "intro_text": "Introductory text",
+      "headlines": "Short headlines",
+      "long_headline": "Long headline",
+      "descriptions": "Descriptions",
+      "business_name": "Business name"
+    },
+    "issues": {
+      "too_long": "Too long: {actual} of at most {limit} characters.",
+      "too_few": "Too few texts: {actual}, at least {limit}.",
+      "too_many": "Too many texts: {actual}, at most {limit}.",
+      "banned_word": "Banned word: {actual}.",
+      "bad_cta": "Pick a button from the network's list.",
+      "long_visible": "Longer than the visible part ({actual} / {limit}) — the end hides behind \"See more\"."
+    },
+    "issuesSummary": "{n, plural, one {# field breaks a rule} other {# fields break rules}} — fix and save.",
+    "save": "Save copy",
+    "saved": "Saved and checked.",
+    "csv": "Download copy.csv",
+    "rewrite": "Write again",
+    "retry": "Try again",
+    "rewriteHint": "New copy for the same concept (a new Claude call).",
+    "errors": {
+      "FAILED": "The ad could not be created.",
+      "NOT_FOUND": "No such ad.",
+      "INVALID": "Check the input (e.g. the landing page).",
+      "BAD_STATE": "The brand is archived.",
+      "NO_PLACEMENT": "Pick at least one placement of a chosen network.",
+      "LANGUAGE": "The language is not one of the brand's.",
+      "SPEND_CAP": "The monthly spend cap is reached.",
+      "NO_MODEL": "No Claude model is configured.",
+      "AI_FAILED": "Claude returned no usable copy. Try again."
     }
   }
 }

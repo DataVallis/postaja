@@ -132,6 +132,18 @@ http
         return reply(tool, { slides });
       }
       // Post ideas (TASK-019): N numbered ideas in the first allowed format, named after the owner's wish when given.
+      // Ad copy (TASK-021): fill every field of every network the tool asks for, within its limits; variant n's Meta
+      // headline is "Naslov n" so the E2E can find it.
+      if (tool === "submit_ad_copy") {
+        const v = r.tools[0].input_schema.properties.variants;
+        const nets = v.items.properties;
+        const variants = Array.from({ length: v.minItems }, (_, i) => Object.fromEntries(Object.entries(nets).map(([key, net]) => [key, Object.fromEntries(Object.entries(net.properties).map(([f, spec]) => {
+          if (spec.enum) return [f, spec.enum[0]];
+          if (spec.type === "array") return [f, [`Naslov ${i + 1}a`, `Naslov ${i + 1}b`].map((x) => x.slice(0, spec.items.maxLength))];
+          return [f, (f === "headline" ? `Naslov ${i + 1}` : `Besedilo ${f} ${i + 1} za oglas`).slice(0, spec.maxLength)];
+        }))])));
+        return reply(tool, { variants });
+      }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);
         const format = user.match(/formats="([^",]+)/)[1];
