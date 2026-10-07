@@ -2,6 +2,7 @@
 import { useActionState, useRef, useState } from "react";
 import { CgpImport } from "./cgp-import";
 import { useTranslations } from "next-intl";
+import { NameAndSlug } from "@/components/ui/name-slug";
 import { addChannelAction, createBrandAction, discardCgpDraftAction, saveProfileAction, updateChannelAction, type ActionState } from "./actions";
 
 export const input = "rounded-lg border border-muted bg-raised px-3 py-2 text-fg outline-none focus:border-signal disabled:opacity-60";
@@ -32,8 +33,7 @@ export function NewBrandForm() {
   const [state, action, pending] = useActionState(createBrandAction, undefined);
   return (
     <form action={action} className="grid max-w-md gap-4">
-      <Field id="name" label={t("name")}><input id="name" name="name" required minLength={2} className={input} /></Field>
-      <Field id="slug" label={t("slug")}><input id="slug" name="slug" required pattern="[a-z0-9-]+" className={input} /></Field>
+      <NameAndSlug nameLabel={t("name")} slugLabel={t("slug")} inputClass={input} Field={Field} />
       <Field id="website" label={t("website")}><input id="website" name="website" type="url" placeholder="https://" className={input} /></Field>
       <fieldset className="flex flex-wrap gap-4">
         <legend className="mb-1 text-sm font-medium">{t("languages")}</legend>
