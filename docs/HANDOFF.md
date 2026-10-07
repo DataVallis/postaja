@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-07: TASK-018 LinkedIn carousel as PDF — a LinkedIn post with several images downloads as one PDF document ("Prenesi PDF karusel") and the ZIP includes `karusel.pdf`; PDF written in-house.
 - 2026-10-07: Owner: post images can be corrected in words ("Kaj naj AI popravi na slikah?" → *Popravi slike*): Claude sees the current images and changes only what is asked; unchanged illustrations are reused for free, a changed picture is drawn again; the last correction is shown.
 - 2026-10-07: Owner: bulk creation of a whole plan with the cost first — every bulk button opens "Pregled pred zagonom" (texts, images, AI illustrations, models, expected and at-most cost in €, month's budget, over-budget warning), then starts; a finished import has "Ustvari ves plan" (texts + images for all its posts) (ADR-047).
 - 2026-10-07: Owner: the calendar hides published posts by default; a "Prikaži" filter lets him tick which statuses it shows (kept while navigating, "Privzeto" resets). Money is shown with € instead of $ (sign only, amounts unchanged).

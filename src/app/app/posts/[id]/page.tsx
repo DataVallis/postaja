@@ -13,6 +13,7 @@ import { PostEditor } from "../editor";
 import { listPostMedia } from "@/server/images/service";
 import { currentDesign } from "@/server/design/service";
 import { templateSlots } from "@/server/design/spec";
+import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +114,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         aiConfigured={!!process.env.FAL_KEY}
         requestError={imageError}
         designHref={`/app/brands/${post.brandId}?tab=design`}
+        pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
       />
 
       <Card className="p-5" data-testid="plan">

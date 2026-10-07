@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, ImageIcon, RefreshCw, Wand2 } from "lucide-react";
+import { Download, FileText, ImageIcon, RefreshCw, Wand2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, inputClass, textareaClass } from "@/components/ui";
@@ -26,6 +26,8 @@ export async function ImagesSection(props: {
   aiConfigured: boolean;
   requestError?: string;
   designHref: string;
+  /** LinkedIn carousel: offer the images as one PDF (a document post). */
+  pdf?: boolean;
 }) {
   const t = await getTranslations("Images");
   const working = props.status === "queued" || props.status === "rendering";
@@ -74,6 +76,12 @@ export async function ImagesSection(props: {
           ))}
         </ul>
       ) : props.status === "none" && props.templates ? <p className="text-sm text-muted">{t("empty")}</p> : null}
+      {props.pdf && props.status === "ready" ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <a href={`/api/posts/${props.postId}/pdf`} className={buttonClass("secondary", "sm")} data-testid="carousel-pdf"><FileText aria-hidden className="size-4" />{t("pdf")}</a>
+          <span className="text-xs text-muted">{t("pdfHint")}</span>
+        </div>
+      ) : null}
 
       {props.templates ? (
         <form action={requestImagesAction}>

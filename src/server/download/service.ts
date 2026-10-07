@@ -6,6 +6,8 @@ import { isIsoDate } from "@/lib/dates";
 import { slugify } from "@/lib/slug";
 import type { Db } from "../db/client";
 import { brands, channels, postMedia, posts } from "../db/schema";
+import sharp from "sharp";
+import { pdfFromJpegs } from "../files/pdf-writer";
 import type { Storage } from "../files/storage";
 import type { ZipSource } from "../files/zip-writer";
 import type { OrgContext } from "../tenancy/context";
@@ -54,6 +56,20 @@ export function postText(p: Pick<Row, "content">): string | null {
   return p.content.parts?.length ? p.content.parts.join("\n\n---\n\n") : p.content.caption;
 }
 
+/** LinkedIn posts carousels as a document: a post there with two or more images also gets them as one PDF (TASK-018). */
+export const wantsPdf = (platform: string | null, images: number) => platform === "linkedin" && images >= 2;
+
+/** The images (PNG/JPEG keys, in order) as a PDF, one page each, white behind any transparency. */
+async function carouselPdf(storage: Storage, keys: string[], title: string): Promise<Uint8Array> {
+  const pages = [];
+  for (const k of keys) {
+    const img = sharp(await storage.get(k)).flatten({ background: "#ffffff" }).toColourspace("srgb");
+    const { data, info } = await img.jpeg({ quality: 90, chromaSubsampling: "4:4:4" }).toBuffer({ resolveWithObject: true });
+    pages.push({ jpeg: new Uint8Array(data), width: info.width, height: info.height });
+  }
+  return pdfFromJpegs(pages, title);
+}
+
 async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[], dirs: string[]): Promise<ZipSource[]> {
   const media = rows.length
     ? await db.select({ postId: postMedia.postId, position: postMedia.position, key: postMedia.storageKey, type: postMedia.contentType }).from(postMedia)
@@ -66,9 +82,11 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
     const body = postText(p);
     if (body) out.push({ name: `${dir}/besedilo.txt`, bytes: text(`${body}\n`) });
     if (p.plan?.firstComment) out.push({ name: `${dir}/prvi-komentar.txt`, bytes: text(`${p.plan.firstComment}\n`) });
-    for (const m of media.filter((x) => x.postId === p.id)) {
+    const own = media.filter((x) => x.postId === p.id);
+    for (const m of own) {
       out.push({ name: `${dir}/${m.position + 1}.${m.type === "image/png" ? "png" : "jpg"}`, bytes: () => storage.get(m.key) });
     }
+    if (wantsPdf(p.platform, own.length)) out.push({ name: `${dir}/karusel.pdf`, bytes: () => carouselPdf(storage, own.map((m) => m.key), p.plan?.topic || p.brandName) });
   });
   return out;
 }
@@ -105,4 +123,15 @@ export async function dayArchive(db: Db, storage: Storage, ctx: OrgContext, date
   entries.unshift({ name: "pregled.csv", bytes: text(`﻿${csv}\r\n`) });
   const slug = brandId ? rows[0].brandSlug : null;
   return { filename: `postaja-${date}${slug ? `-${slug}` : ""}.zip`, entries };
+}
+
+/** One post's images as a PDF (LinkedIn document carousel); any post with at least one image. */
+export async function postPdf(db: Db, storage: Storage, ctx: OrgContext, postId: string) {
+  const [p] = (await base(db, ctx).where(and(eq(posts.orgId, ctx.orgId), eq(posts.id, postId)))) as Row[];
+  if (!p) throw new DownloadError("NOT_FOUND");
+  const media = await db.select({ key: postMedia.storageKey }).from(postMedia)
+    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, p.id), eq(postMedia.kind, "slide"))).orderBy(asc(postMedia.position));
+  if (!media.length) throw new DownloadError("EMPTY");
+  const [dir] = folders([p], false);
+  return { filename: `${p.brandSlug}-${p.scheduledOn ?? p.id.slice(0, 8)}-${dir}.pdf`, bytes: await carouselPdf(storage, media.map((m) => m.key), p.plan?.topic || p.brandName) };
 }

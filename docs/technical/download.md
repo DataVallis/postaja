@@ -10,3 +10,11 @@
   deflated, images stored. Members only (same access as the post).
 - Tests: `zip-writer.test.ts` (round trip with our reader and the system `unzip`), `download.int.test.ts`, E2E in
   `images.spec.ts`.
+
+## LinkedIn carousel as PDF (TASK-018)
+LinkedIn posts carousels as a document. A LinkedIn post with two or more images gets `karusel.pdf` in its folder (post
+and day ZIP), and the post page offers *Prenesi PDF karusel* (`/api/posts/[id]/pdf`, members of the org).
+`src/server/files/pdf-writer.ts` writes the PDF in-house: one page per image at the image's size (1 px = 1 pt), the
+image embedded as JPEG (DCTDecode; slides flattened on white, quality 90, 4:4:4), title in UTF-16 so č š ž survive.
+Tests: `pdf-writer.test.ts` (read back with pdf.js: page count, sizes, title, refusals), `download.int.test.ts`
+(ZIP content and order, PDF alone, other org 404, no PDF for Instagram or a single image).
