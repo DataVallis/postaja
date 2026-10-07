@@ -234,43 +234,26 @@ export async function passportImageUrl(db: Db, storage: Storage, ctx: OrgContext
 }
 
 // ---- Passport generation ----------------------------------------------------------------------------------------
+// Owner (2026-10-07): one passport picture — a passport-style close-up with the whole DNA in the prompt — made by a
+// photoreal model (Nano Banana Pro, registry kind "image_persona"); it must look like a real person. A new one
+// replaces the previous generated passport picture; the owner's uploads stay.
 
-/**
- * How each angle is asked for, and its shape. The first ("front") is the passport photo itself: the whole DNA,
- * framed as a passport-style portrait; the others keep the person from the references and change only the view.
- */
-const ANGLE: Record<(typeof PASSPORT_ANGLES)[number], { pose: string; width: number; height: number }> = {
-  front: { pose: "Passport-style portrait: head and shoulders, centred, facing the camera straight on at eye level, eyes to the camera", width: 1024, height: 1280 },
-  three_quarter: { pose: "Head-and-shoulders portrait, head turned three-quarters to the left, eyes to the camera", width: 1024, height: 1280 },
-  profile: { pose: "Head-and-shoulders portrait in side profile, facing left", width: 1024, height: 1280 },
-  smile: { pose: "Head-and-shoulders portrait facing the camera with a natural, warm smile", width: 1024, height: 1280 },
-  full_body: { pose: "Full-body photo, whole figure from head to shoes, front view", width: 832, height: 1248 },
-};
+/** The shape of the passport picture (4:5 close-up). */
+export const PASSPORT_SHAPE = { width: 1024, height: 1280 } as const;
 
-/** Angles of the standard set still missing. With any picture present, a front portrait is not needed to start from. */
-export function missingAngles(images: Pick<ImageRow, "angle">[]): (typeof PASSPORT_ANGLES)[number][] {
-  const have = new Set(images.map((i) => i.angle));
-  const room = MAX_PASSPORT - images.length;
-  return PASSPORT_ANGLES.filter((a) => !have.has(a) && !(a === "front" && images.length > 0)).slice(0, Math.max(0, room));
-}
-
-/**
- * The prompt for one passport picture. The DNA goes in whole (owner: "prompt, ki vključuje tvoj DNA"); the framing
- * of the angle overrides the DNA's own camera angle and pose, so the set shows the same person from every side.
- */
-export function passportPrompt(dna: PersonaDna, angle: (typeof PASSPORT_ANGLES)[number], withReferences: boolean): string {
-  const scene = DNA_FIELDS.filter((f) => f !== "camera" && f !== "pose");
+/** The passport prompt: the close-up framing, the whole DNA, and what makes it read as a real photograph. */
+export function passportPrompt(dna: PersonaDna): string {
   return [
-    withReferences
-      ? "The SAME person as in the reference images: keep exactly the same face, features, skin, eyes, hair and age."
-      : "An original, fictional adult person, described by this DNA:",
-    dnaBlock(dna, scene),
-    `Framing: ${ANGLE[angle].pose}. Keep the DNA's clothing, mood, lighting and style; the setting softly out of focus behind.`,
+    "Passport-style close-up photo of a real person: head and shoulders, centred, facing the camera straight on at eye level, looking into the lens.",
+    "The person, as described by this DNA (every detail must be visible and exact):",
+    dnaBlock(dna),
+    "The DNA's camera angle and pose apply only where they fit the passport close-up; the setting is softly out of focus behind.",
+    "A real photograph, indistinguishable from reality: shot on a full-frame camera with an 85 mm lens, natural skin texture with pores, fine lines and small imperfections, individual hair strands, realistic eyes with natural catchlights, true-to-life colours. No retouching, no airbrushing, no CGI, no 3D render, no illustration, no doll-like or plastic skin.",
     "No text, no letters, no watermark, no logo.",
   ].join("\n");
 }
 
-async function defaultModel(db: Db, kind: "image" | "image_ref") {
+async function defaultModel(db: Db, kind: "image" | "image_ref" | "image_persona") {
   return (await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true))))[0];
 }
 
@@ -279,25 +262,24 @@ const priceOf = (m: typeof modelRegistry.$inferSelect, width: number, height: nu
   return m.perImage + BigInt(billedMegapixels(g.width, g.height)) * m.perMegapixel;
 };
 
-/** At most what filling the passport costs now: the missing angles, the first one from text when there is no picture. */
-export async function passportEstimate(db: Db, ctx: OrgContext, personaId: string): Promise<{ count: number; maxCost: bigint | null }> {
+/** The generated passport picture that a new one replaces (the owner's uploads are never replaced). */
+const generatedPassport = (imgs: ImageRow[]) => imgs.find((i) => i.angle === "front" && i.source === "generated");
+
+/** At most what a new passport picture costs; `replaces` when one already exists. */
+export async function passportEstimate(db: Db, ctx: OrgContext, personaId: string): Promise<{ replaces: boolean; maxCost: bigint | null }> {
   const imgs = await passportImages(db, ctx, personaId);
-  const todo = missingAngles(imgs);
-  if (!todo.length) return { count: 0, maxCost: 0n };
-  const [plain, ref] = await Promise.all([defaultModel(db, "image"), defaultModel(db, "image_ref")]);
-  if (!ref || (!imgs.length && !plain)) return { count: todo.length, maxCost: null };
-  let cost = 0n;
-  todo.forEach((a, n) => { cost += !imgs.length && n === 0 ? priceOf(plain!, ANGLE[a].width, ANGLE[a].height) : priceOf(ref, ANGLE[a].width, ANGLE[a].height); });
-  return { count: todo.length, maxCost: cost };
+  const m = await defaultModel(db, "image_persona");
+  return { replaces: !!generatedPassport(imgs), maxCost: m ? priceOf(m, PASSPORT_SHAPE.width, PASSPORT_SHAPE.height) : null };
 }
 
-/** Owner: queue the generation of the missing passport pictures (one run at a time). */
+/** Owner: queue a (new) passport picture (one run at a time). */
 export async function requestPassport(db: Db, queue: Queue, ctx: OrgContext, personaId: string) {
   requireOwner(ctx);
   const p = await personaById(db, ctx, personaId);
   await brandFor(db, ctx, p.brandId, true);
-  if (!missingAngles(await passportImages(db, ctx, p.id)).length) throw new PersonaError("NOTHING_TO_DO");
-  if (!(await defaultModel(db, "image_ref"))) throw new PersonaError("NO_REF_MODEL");
+  const imgs = await passportImages(db, ctx, p.id);
+  if (imgs.length >= MAX_PASSPORT && !generatedPassport(imgs)) throw new PersonaError("LIMIT_REACHED");
+  if (!(await defaultModel(db, "image_persona"))) throw new PersonaError("NO_REF_MODEL");
   const claimed = await forOrg(db, ctx).update(
     personas,
     { passportStatus: "queued", passportError: null, passportRequestedBy: ctx.userId, updatedAt: new Date() },
@@ -309,7 +291,7 @@ export async function requestPassport(db: Db, queue: Queue, ctx: OrgContext, per
 
 /**
  * The persona's pictures as references for a reference model: the primary first, then up to `max - 1` others, each
- * scaled to ≤ 1024 px JPEG data URIs (small requests, no presigned links leaving the org).
+ * scaled to ≤ 1024 px JPEG data URIs (small requests, no presigned links leaving the org). For keyframes (TASK-025).
  */
 export async function passportReferences(db: Db, storage: Storage, ctx: OrgContext, personaId: string, max = 4): Promise<string[]> {
   const imgs = (await passportImages(db, ctx, personaId)).slice(0, max);
@@ -322,51 +304,46 @@ export async function passportReferences(db: Db, storage: Storage, ctx: OrgConte
 }
 
 /**
- * One picture of the persona with the default reference model (or, with no references, the default text-to-image
- * model): cost reserved first, released on provider errors, settled on delivery. Used by the passport and, later, by
- * persona keyframes.
+ * One picture of the persona: with references the default reference model, without them the persona model. Cost
+ * reserved first, released on provider errors, settled on delivery.
  */
 export async function personaPicture(db: Db, deps: Pick<ImageDeps, "images" | "now">, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[]) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
-  const model = await defaultModel(db, references.length ? "image_ref" : "image");
+  const model = await defaultModel(db, references.length ? "image_ref" : "image_persona");
   if (!model) throw new PersonaError("NO_REF_MODEL");
   const gen = generationSize(shape.width, shape.height);
   const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: priceOf(model, shape.width, shape.height), now: deps.now });
   let out;
   try {
-    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: references.length ? references : undefined, negativePrompt: "text, letters, watermark, logo, deformed, extra fingers" });
+    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: references.length ? references : undefined });
   } catch (e) {
     await release(db, ledgerId);
     throw e;
   }
+  // Priced per picture (the persona models); a per-megapixel part, if any, counts what was delivered.
   const billed = billedMegapixels(out.width, out.height);
   await db.update(usageLedger).set({ state: "settled", megapixels: billed, costMicroUsd: model.perImage + BigInt(billed) * model.perMegapixel }).where(eq(usageLedger.id, ledgerId));
   return { ...out, model: model.modelKey };
 }
 
-/** Makes the missing passport pictures one by one; each is kept as soon as it is made. */
-export async function generatePassport(db: Db, deps: ImageDeps, ctx: OrgContext, personaId: string): Promise<number> {
+/** Makes the passport picture; it replaces the previous generated one (and takes its place as primary). */
+export async function generatePassport(db: Db, deps: ImageDeps, ctx: OrgContext, personaId: string): Promise<string> {
   const p = await personaById(db, ctx, personaId);
-  const todo = missingAngles(await passportImages(db, ctx, p.id));
-  let made = 0;
-  for (const angle of todo) {
-    // References are re-read each time, so the second picture already sees the first.
-    const refs = await passportReferences(db, deps.storage, ctx, p.id);
-    const prompt = passportPrompt(p.dna, angle, refs.length > 0);
-    const out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: null }, prompt, ANGLE[angle], refs);
-    try {
-      await addImage(db, deps.storage, ctx, p, { angle, source: "generated", bytes: out.bytes, contentType: out.contentType, width: out.width, height: out.height, model: out.model, prompt });
-      made++;
-    } catch (e) {
-      // The model gave back a picture the passport already has: nothing new to keep, go on with the next angle.
-      if (!(e instanceof PersonaError && e.code === "DUPLICATE")) throw e;
-    }
+  const prompt = passportPrompt(p.dna);
+  const out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: null }, prompt, PASSPORT_SHAPE, []);
+  const old = generatedPassport(await passportImages(db, ctx, p.id));
+  if (old) {
+    await forOrg(db, ctx).delete(personaImages, eq(personaImages.id, old.id));
+    await deps.storage.delete(old.storageKey).catch(() => undefined);
   }
-  return made;
+  const id = await addImage(db, deps.storage, ctx, p, { angle: "front", source: "generated", bytes: out.bytes, contentType: out.contentType, width: out.width, height: out.height, model: out.model, prompt });
+  // The new passport is primary when the old one was, or when nothing else is.
+  if (old?.isPrimary) await setPrimaryImage(db, ctx, id);
+  return id;
 }
 
 export function passportFailureCode(e: unknown): string | null {
-  if (e instanceof ImageError) return e.code;
+  if (e instanceof ImageError) return e.detail ? `${e.code}:${e.detail}` : e.code;
   if (e instanceof SpendCapError) return "SPEND_CAP";
   if (e instanceof PersonaError) return e.code;
   if (e instanceof LlmError) return e.code === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : "LLM_PROVIDER";

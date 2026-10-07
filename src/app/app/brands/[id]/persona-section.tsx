@@ -48,7 +48,7 @@ export async function PersonaSection(props: {
   brandId: string; isOwner: boolean; archived: boolean; error?: string; saved?: boolean;
   data: { persona: Persona; images: Img[] } | null;
   sources: { id: string; filename: string }[];
-  dnaCost: bigint | null; passport: { count: number; maxCost: bigint | null } | null;
+  dnaCost: bigint | null; passport: { replaces: boolean; maxCost: bigint | null } | null;
 }) {
   const t = await getTranslations("Persona");
   const canEdit = props.isOwner && !props.archived;
@@ -109,8 +109,8 @@ export async function PersonaSection(props: {
 
   const { persona, images } = props.data;
   const working = persona.passportStatus === "queued" || persona.passportStatus === "rendering";
-  const [failCode] = (persona.passportError ?? "FAILED").split(":");
-  const first = images.length === 0;
+  const [failCode, ...failRest] = (persona.passportError ?? "FAILED").split(":");
+  const replaces = props.passport?.replaces ?? false;
   return (
     <section aria-labelledby="persona-h" className="grid gap-6" data-testid="persona">
       <AutoRefresh active={working} seconds={4} />
@@ -126,7 +126,7 @@ export async function PersonaSection(props: {
           <span className="text-sm font-normal" data-testid="passport-status"><Badge tone={TONE[persona.passportStatus]} dot>{t(`status.${persona.passportStatus}`)}</Badge></span>
         </h3>
         <p className="max-w-2xl text-sm text-muted">{t("passportHint", { max: MAX_PASSPORT })}</p>
-        {persona.passportStatus === "failed" ? <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm">{t.has(`errors.${failCode}`) ? t(`errors.${failCode}`) : t("errors.FAILED")}</p> : null}
+        {persona.passportStatus === "failed" ? <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm">{t.has(`errors.${failCode}`) ? t(`errors.${failCode}`) : t("errors.FAILED")}{failRest.length ? <span className="mt-1 block text-xs text-muted" data-testid="passport-error-detail">{failRest.join(":")}</span> : null}</p> : null}
         {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
 
         {images.length ? (
@@ -161,12 +161,12 @@ export async function PersonaSection(props: {
 
         {canEdit ? (
           <div className="grid gap-3">
-            {props.passport && props.passport.count > 0 ? (
+            {props.passport ? (
               <form action={requestPassportAction}>
                 <input type="hidden" name="brandId" value={props.brandId} /><input type="hidden" name="personaId" value={persona.id} />
-                <button type="submit" disabled={working} className={buttonClass(first ? "primary" : "secondary")} data-testid="passport-generate">
+                <button type="submit" disabled={working} className={buttonClass(replaces ? "secondary" : "primary")} data-testid="passport-generate">
                   <Sparkles aria-hidden className="size-4" />
-                  {first ? t("generateFirst", { count: props.passport.count - 1 }) : t("generateMore", { count: props.passport.count })}
+                  {replaces ? t("generateAgain") : t("generateFirst")}
                   {props.passport.maxCost !== null ? ` · ${t("atMost", { cost: euro(props.passport.maxCost) })}` : ""}
                 </button>
               </form>

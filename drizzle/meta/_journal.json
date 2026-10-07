@@ -204,6 +204,13 @@
       "when": 1791396459247,
       "tag": "0028_seed_image_ref_models",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791400395065,
+      "tag": "0029_nano_banana_pro",
+      "breakpoints": true
     }
   ]
 }

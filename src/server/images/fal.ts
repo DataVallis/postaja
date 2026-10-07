@@ -20,13 +20,27 @@ export interface ImageClient {
 }
 
 export class ImageError extends Error {
-  constructor(public readonly code: "NO_IMAGE_KEY" | "IMAGE_PROVIDER" | "IMAGE_TIMEOUT" | "IMAGE_BLOCKED" | "IMAGE_INVALID") {
+  /** `detail`: the provider's own reason (e.g. fal's 422 message), short and plain, for the owner to see. */
+  constructor(public readonly code: "NO_IMAGE_KEY" | "IMAGE_PROVIDER" | "IMAGE_TIMEOUT" | "IMAGE_BLOCKED" | "IMAGE_INVALID", public readonly detail?: string) {
     super(code);
   }
 }
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+/** fal's error body → one short plain line ({detail: string} or {detail: [{msg, type}]}). Never the request. */
+export async function falReason(r: Response): Promise<string | undefined> {
+  try {
+    const j = (await r.json()) as { detail?: unknown };
+    const d = j.detail;
+    const text = typeof d === "string" ? d : Array.isArray(d) ? d.map((x) => (x && typeof x === "object" ? String((x as { msg?: unknown; type?: unknown }).msg ?? (x as { type?: unknown }).type ?? "") : String(x))).join("; ") : "";
+    const clean = text.replace(/[^\p{L}\p{N}\p{P}\p{Zs}]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+    return clean || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 type FalOptions = { key?: string; baseUrl?: string; fetch?: typeof fetch; pollMs?: number; timeoutMs?: number };
 
@@ -55,7 +69,7 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
   const getJson = async (url: string) => {
     if (!allowedResultUrl(url, base)) throw new ImageError("IMAGE_PROVIDER");
     const r = await f(url, { headers, signal: AbortSignal.timeout(30_000) });
-    if (!r.ok) throw new ImageError(r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER");
+    if (!r.ok) throw new ImageError(r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER", await falReason(r));
     return (await r.json()) as Record<string, unknown>;
   };
 
@@ -66,7 +80,7 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
     let submitted: Record<string, unknown>;
     try {
       const r = await f(new URL(`/${app}`, base), { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
-      if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER");
+      if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER", r.status === 422 ? await falReason(r) : undefined);
       submitted = (await r.json()) as Record<string, unknown>;
     } catch (e) {
       if (e instanceof ImageError) throw e;
@@ -156,8 +170,13 @@ export function requestBody(app: string, req: ImageRequest): Record<string, unkn
     };
   }
   // Reference models (TASK-024): the persona's passport pictures keep the person; the shape comes from the request.
+  // Nano Banana Pro (TASK-024 follow-up): photoreal people; 2K costs the same as 1K. Text-to-image without references,
+  // the /edit endpoint with them.
+  if (app.startsWith("fal-ai/nano-banana-pro")) {
+    return { prompt: req.prompt, ...(req.references?.length ? { image_urls: req.references } : {}), aspect_ratio: nearestAspect(req.width, req.height), resolution: "2K", num_images: 1, output_format: "jpeg" };
+  }
   if (app.startsWith("fal-ai/nano-banana")) {
-    return { prompt: req.prompt, image_urls: req.references ?? [], aspect_ratio: nearestAspect(req.width, req.height), num_images: 1, output_format: "jpeg" };
+    return { prompt: req.prompt, ...(req.references?.length ? { image_urls: req.references } : {}), aspect_ratio: nearestAspect(req.width, req.height), num_images: 1, output_format: "jpeg" };
   }
   if (app.startsWith("fal-ai/bytedance/seedream/")) {
     // Seedream needs at least 921,600 px; ask for the shape at ~1 MP+.

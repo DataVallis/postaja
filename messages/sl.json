@@ -1225,15 +1225,14 @@
     "createManual": "Ustvari persono",
     "saving": "Shranjujem …",
     "passportTitle": "Potne slike",
-    "passportHint": "3–{max} slik iste osebe; ena je glavna. Prva (passport) slika se ustvari s promptom, ki vključuje celotno DNK; ostali koti se naredijo iz nje, da ostane ista oseba. Lahko naložiš tudi svoje.",
+    "passportHint": "3–{max} slik iste osebe; ena je glavna. Passport slika je fotorealističen bližnji portret, ustvarjen s promptom, ki vključuje celotno DNK (Nano Banana Pro). Nova passport slika zamenja prejšnjo; svoje slike lahko tudi naložiš.",
     "working": "Slike se delajo – stran se osveži sama.",
     "noImages": "Še ni slik.",
     "primary": "glavna",
     "makePrimary": "Nastavi kot glavno",
     "deleteImage": "Izbriši sliko",
     "imageAlt": "Potna slika: {angle}",
-    "generateFirst": "Ustvari passport sliko in {count, plural, one {# kot} two {# kota} few {# kote} other {# kotov}}",
-    "generateMore": "Dopolni potne slike ({count})",
+    "generateFirst": "Ustvari passport sliko",
     "angleLabel": "Kot:",
     "upload": "Naloži slike",
     "uploading": "Nalagam …",
@@ -1279,7 +1278,7 @@
       "NO_IMAGE_KEY": "Ključ za AI slike (fal.ai) ni nastavljen ali ni veljaven.",
       "IMAGE_PROVIDER": "Ponudnik slik se ni odzval. Poskusi znova čez nekaj minut.",
       "IMAGE_TIMEOUT": "Ponudnik slik je predolgo delal. Poskusi znova.",
-      "IMAGE_BLOCKED": "Ponudnik je opis zavrnil. Spremeni DNK in poskusi znova.",
+      "IMAGE_BLOCKED": "Ponudnik je zahtevo zavrnil. Spremeni DNK in poskusi znova.",
       "IMAGE_INVALID": "Ponudnik je vrnil neveljavno sliko. Poskusi znova.",
       "SPEND_CAP": "Dosežena je mesečna omejitev stroškov organizacije.",
       "NO_ACCESS": "Član, ki je zahteval slike, nima več dostopa.",
@@ -1287,6 +1286,7 @@
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "BAD_ORIGIN": "Nalaganje ni dovoljeno.",
       "UNAUTHORIZED": "Prijava je potekla."
-    }
+    },
+    "generateAgain": "Nova passport slika"
   }
 }
