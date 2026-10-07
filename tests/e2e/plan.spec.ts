@@ -86,6 +86,21 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
   // Tomorrow may be in the next month's grid (end of month): open the month that contains it.
   await p.goto(`/app/plan?d=${tomorrow}`);
   await expect(cell(tomorrow)).toContainText("Jutri");
+
+  // Published posts stay out of the calendar unless the owner ticks them (owner, 2026-10-07).
+  const ago = addDays(today, -3);
+  await p.goto(`/app/plan?d=${ago}`);
+  await expect(cell(ago)).not.toContainText("To je že objavljeno.");
+  const show = p.getByTestId("plan-show");
+  await expect(show.getByLabel("objavljena")).not.toBeChecked();
+  await show.getByLabel("objavljena").check();
+  await show.getByLabel("v planu").uncheck();
+  await p.getByRole("button", { name: "Filtriraj" }).click();
+  await expect(cell(ago)).toContainText("To je že objavljeno.");
+  await p.getByRole("navigation", { name: "Pogled" }).getByRole("link", { name: "Teden" }).click(); // the choice stays on navigation
+  await expect(p.getByTestId("plan-show").getByLabel("objavljena")).toBeChecked();
+  await p.getByRole("link", { name: "Privzeto (brez objavljenih)" }).click();
+  await expect(p.getByTestId("plan-show").getByLabel("objavljena")).not.toBeChecked();
   await p.goto("/app/plan");
 
   // Day view from the day number; week view.

@@ -55,7 +55,7 @@
     "members": "Člani",
     "pending": "Vabila",
     "cap": "Limit / mesec",
-    "capUsd": "Mesečni limit porabe (USD)",
+    "capUsd": "Mesečni limit porabe (€)",
     "ownerEmail": "E-pošta lastnika",
     "create": "Ustvari",
     "save": "Shrani",
@@ -433,7 +433,7 @@
     "tags": "{n} / {max} hashtagov",
     "retry": "Poskusi znova",
     "failuresTitle": "Objava krši pravila — popravi besedilo ali jo vseeno odobri:",
-    "cost": "strošek {usd} $",
+    "cost": "strošek {usd} €",
     "fixed": "samodejno popravljeno enkrat",
     "ok": {
       "saved": "Shranjeno, vsa pravila so izpolnjena.",
@@ -587,7 +587,7 @@
       "published": "Objavljene",
       "thisMonth": "ta mesec",
       "spend": "Poraba AI",
-      "ofCap": "od {cap} $ ta mesec",
+      "ofCap": "od {cap} € ta mesec",
       "planned": "V planu"
     },
     "today": "Danes",
@@ -826,7 +826,9 @@
     "noHistory": "Še ni objavljenih objav.",
     "pagination": "Strani",
     "pageOf": "Stran {page} od {pages}",
-    "downloadDay": "Prenesi dan (ZIP, {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}})"
+    "downloadDay": "Prenesi dan (ZIP, {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}})",
+    "show": "Prikaži:",
+    "showDefault": "Privzeto (brez objavljenih)"
   },
   "Bulk": {
     "scope": "Obseg",

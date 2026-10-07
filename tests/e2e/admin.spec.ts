@@ -44,16 +44,16 @@ test("super admin creates an organization, sets the plan, invites an editor; inv
   await page.getByLabel("Kratko ime (slug)").fill(slug);
   await page.getByLabel("E-pošta lastnika").fill(admin);
   await page.getByLabel("Plan").selectOption("comped");
-  await page.getByLabel("Mesečni limit porabe (USD)").fill("12.5");
+  await page.getByLabel("Mesečni limit porabe (€)").fill("12.5");
   expect(await axe(page)).toEqual([]);
   await page.getByRole("button", { name: "Ustvari" }).click();
 
   await expect(page.getByRole("heading", { name: "Data Vallis E2E" })).toBeVisible();
-  await expect(page.getByLabel("Mesečni limit porabe (USD)")).toHaveValue("12.50");
+  await expect(page.getByLabel("Mesečni limit porabe (€)")).toHaveValue("12.50");
   await expect(page.getByTestId("members")).toContainText(`${admin} · lastnik`);
   expect(await axe(page)).toEqual([]);
 
-  await page.getByLabel("Mesečni limit porabe (USD)").fill("abc");
+  await page.getByLabel("Mesečni limit porabe (€)").fill("abc");
   await page.getByRole("button", { name: "Shrani" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Znesek ni veljaven" })).toBeVisible();
 

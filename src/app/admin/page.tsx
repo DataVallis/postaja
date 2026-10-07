@@ -49,7 +49,7 @@ export default async function AdminHome() {
                   <td className="py-2 pr-4">{t(`statuses.${o.status}`)}</td>
                   <td className="py-2 pr-4">{o.members}</td>
                   <td className="py-2 pr-4">{o.pendingInvites}</td>
-                  <td className="py-2 pr-4">${microToUsd(o.spendCapMicroUsd)}</td>
+                  <td className="py-2 pr-4">{microToUsd(o.spendCapMicroUsd)} €</td>
                 </tr>
               ))}
             </tbody>
