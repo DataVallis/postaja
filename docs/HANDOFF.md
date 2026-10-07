@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-07: Owner: post images can be corrected in words ("Kaj naj AI popravi na slikah?" → *Popravi slike*): Claude sees the current images and changes only what is asked; unchanged illustrations are reused for free, a changed picture is drawn again; the last correction is shown.
 - 2026-10-07: Owner: bulk creation of a whole plan with the cost first — every bulk button opens "Pregled pred zagonom" (texts, images, AI illustrations, models, expected and at-most cost in €, month's budget, over-budget warning), then starts; a finished import has "Ustvari ves plan" (texts + images for all its posts) (ADR-047).
 - 2026-10-07: Owner: the calendar hides published posts by default; a "Prikaži" filter lets him tick which statuses it shows (kept while navigating, "Privzeto" resets). Money is shown with € instead of $ (sign only, amounts unchanged).
 - 2026-10-07: Fix (owner): a CHERR.IO X plan was offered AI Builders' X channel (the only X channel was suggested in a one-brand org). No more guessing across brands; the import review asks "Za kateri brand je plan" — an existing brand or "+ Nov brand" (name from the file name, language, channel handles), created right there.

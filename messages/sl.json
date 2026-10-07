@@ -954,7 +954,12 @@
       "cta": "Poziv",
       "number": "Številka",
       "footer": "Noga"
-    }
+    },
+    "reviseLabel": "Kaj naj AI popravi na slikah?",
+    "reviseHint": "Opiši z besedami. Claude spremeni le to, kar napišeš; ilustracije, ki ostanejo enake, se ne plačajo znova.",
+    "revisePlaceholder": "npr. ilustracija naj bo svetlejša in brez ljudi; na drugi sliki krajši naslov",
+    "revise": "Popravi slike",
+    "lastRevision": "Zadnji popravek: {text}"
   },
   "Design": {
     "title": "Vizualna podoba",

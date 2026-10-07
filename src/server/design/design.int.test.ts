@@ -295,6 +295,57 @@ describe("post images from the design", () => {
     await expect(setSlideTexts(db, B, id, [])).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
+  it("a correction in words: Claude sees the images and the request; only changed illustrations are drawn again (owner, 2026-10-07)", async () => {
+    await design();
+    const id = await post({ format: "carousel", plan: { topic: "Koraki", slides: ["Ena", "Dva"] } });
+    const { q, jobs } = memoryQueue();
+    await expect(requestImages(db, q, A, id, "revise", "svetlejše")).rejects.toMatchObject({ code: "BAD_STATE" }); // nothing to fix yet
+    await requestImages(db, q, A, id, "new");
+    await runImages(jobs, fakeClaude(), fakeImages().client);
+    const [{ visual: v1 }] = await sql`select visual from posts where id = ${id}`;
+    const before = await media(id);
+
+    // Words only: the cover illustration stays, nothing is paid to fal.
+    const wordsOnly = structuredClone(v1.slides);
+    wordsOnly[2].slots.headline = "Dva, krajše";
+    jobs.length = 0;
+    await requestImages(db, q, editorA, id, "revise", "  Na tretji sliki krajši naslov.  ");
+    expect(jobs[0].data).toEqual({ postId: id, mode: "revise", instruction: "Na tretji sliki krajši naslov." });
+    let claude = fakeClaude({ plans: [{ slides: wordsOnly }] });
+    let fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls[0].user).toContain("<owner_request>\nNa tretji sliki krajši naslov.\n</owner_request>");
+    expect(claude.calls[0].user).toContain(JSON.stringify(v1.slides));
+    expect(claude.calls[0].images).toHaveLength(3); // the current images, so Claude sees what to fix
+    expect(claude.calls[0].images![0].caption).toBe("Current image 1:");
+    expect(fal.calls).toHaveLength(0);
+    let after = await media(id);
+    expect(after.find((m) => m.kind === "background")!.storage_key).toBe(before.find((m) => m.kind === "background")!.storage_key);
+    const [{ visual: v2 }] = await sql`select visual from posts where id = ${id}`;
+    expect(v2.slides[2].slots.headline).toBe("Dva, krajše");
+    expect(v2.revision).toBe("Na tretji sliki krajši naslov.");
+
+    // The picture itself: the cover's illustration description changes → one new illustration.
+    const brighter = structuredClone(v2.slides);
+    brighter[0].illustration = "A bright glass vault, morning light, no people";
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Ilustracija naj bo svetla, brez ljudi.");
+    claude = fakeClaude({ plans: [{ slides: brighter }] });
+    fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(fal.calls).toHaveLength(1);
+    expect(fal.calls[0].prompt).toContain("A bright glass vault, morning light, no people");
+    after = await media(id);
+    expect(after.filter((m) => m.kind === "background")).toHaveLength(1);
+    expect(after.find((m) => m.kind === "background")!.storage_key).not.toBe(before.find((m) => m.kind === "background")!.storage_key);
+
+    // Refusals: no words, too many words, another org.
+    await expect(requestImages(db, q, A, id, "revise", "   ")).rejects.toMatchObject({ code: "INVALID" });
+    await expect(requestImages(db, q, A, id, "revise", "x".repeat(1001))).rejects.toMatchObject({ code: "INVALID" });
+    await expect(requestImages(db, q, B, id, "revise", "svetlejše")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
   it("a plan that names no template of the brand, twice, fails the images", async () => {
     await design();
     const id = await post();

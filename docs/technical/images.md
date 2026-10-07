@@ -30,6 +30,11 @@ clients; Postaja only renders what the design says.
 4. Postaja renders each slide (`design/render.ts`: Satori → sharp PNG) at the channel's preset size; rows in
    `post_media` (`slide` PNGs, `background` = illustrations per slide position).
 5. *Shrani in osveži*: edited words (`setSlideTexts`) re-render on the stored illustrations — no Claude, no fal.
+6. *Popravi slike* (owner, 2026-10-07): a correction in words (≤ 1,000 chars, any member) → job mode `revise` with the
+   instruction. Claude gets the current plan (`<current_images>`), the current images (JPEG 540 px) and the request,
+   and must keep everything it was not asked to change verbatim. An illustration is reused when its image keeps the
+   same description and an illustration box of the same proportions; otherwise it is drawn again (paid). The request is
+   kept as `posts.visual.revision` ("Zadnji popravek"). The image forms remount when the images change.
 
 Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 
@@ -41,4 +46,4 @@ Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 ## Tests
 `design/design.test.ts` (spec rules, fitting, emphasis, rendering at 3 shapes, fonts, prompts), `images/fal.test.ts`,
 `design/design.int.test.ts` (Claude inputs, retry, versions, cap, post flow with style references, free word edits,
-access, bulk, HTTP), E2E `tests/e2e/images.spec.ts` (design, revision, versions, post images, word edits, bulk carousel).
+access, bulk, HTTP, corrections: words only reuse the illustration, a picture change redraws one, refusals), E2E `tests/e2e/images.spec.ts` (design, revision, versions, post images, word edits, corrections in words, bulk carousel).

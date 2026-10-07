@@ -4,26 +4,29 @@
 // reference); Postaja renders every image → PNGs in S3 + post_media rows. "Osveži tekst" re-renders the edited words on
 // the stored illustrations at no image cost.
 import { and, asc, eq, inArray, lt, or } from "drizzle-orm";
+import sharp from "sharp";
 import { z } from "zod";
 import { postLanguage } from "@/lib/language";
 import type { Db } from "../db/client";
 import { brands, formatPresets, modelRegistry, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
-import { postVisualRequest, postVisualSchema, issues } from "../design/ai";
+import { postVisualRequest, postVisualSchema, issues, type VisualRevision } from "../design/ai";
 import { renderTemplate } from "../design/render";
-import { brandAssetBytes, brandExamples, currentDesign } from "../design/service";
+import { brandAssetBytes, brandExamples, currentDesign, toBlock } from "../design/service";
 import { needsIllustration, SLOTS, type DesignSpec, type Template } from "../design/spec";
 import type { Storage } from "../files/storage";
 import { cappedCall } from "../llm/call";
 import { reserve, release, SpendCapError } from "../llm/spend";
-import { LlmError, type LlmClient } from "../llm/types";
+import { LlmError, type ImageBlock, type LlmClient } from "../llm/types";
 import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { billedMegapixels, generationSize, ImageError, type ImageClient } from "./fal";
 
 export const POST_IMAGE_QUEUE = "post-image";
-export type ImageMode = "new" | "text";
-export type PostImageJob = { postId: string; mode: ImageMode };
+/** new: plan and draw again; text: redraw the stored plan; revise: Claude applies the owner's words to the current images. */
+export type ImageMode = "new" | "text" | "revise";
+export type PostImageJob = { postId: string; mode: ImageMode; instruction?: string };
+export const REVISION_MAX = 1000;
 export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
@@ -63,11 +66,14 @@ export function illustrationShape(t: Template, size: { width: number; height: nu
 const STALE_MS = 10 * 60 * 1000;
 
 /** Any member. Claims the post's images (a second request while one runs is refused) and queues the job. */
-export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode) {
-  z.enum(["new", "text"]).parse(mode);
+export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string) {
+  z.enum(["new", "text", "revise"]).parse(mode);
+  const words = instruction?.trim() ?? "";
+  if (mode === "revise" && (!words || words.length > REVISION_MAX)) throw new ImageJobError("INVALID");
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
+  if (mode === "revise" && !p.visual) throw new ImageJobError("BAD_STATE");
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
   const claimed = await forOrg(db, ctx).update(
     posts,
@@ -78,7 +84,7 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
     )!,
   );
   if (!claimed.length) throw new ImageJobError("BAD_STATE");
-  await queue.send(POST_IMAGE_QUEUE, { postId, mode } satisfies PostImageJob, `post:${postId}:image`);
+  await queue.send(POST_IMAGE_QUEUE, { postId, mode, ...(mode === "revise" ? { instruction: words } : {}) } satisfies PostImageJob, `post:${postId}:image`);
 }
 
 export async function listPostMedia(db: Db, ctx: OrgContext, postId: string) {
@@ -108,13 +114,13 @@ const key = (orgId: string, postId: string, ext: string) => `org/${orgId}/posts/
 type MediaRow = Omit<typeof postMedia.$inferInsert, "orgId">;
 
 /** Claude's plan for the post's images (one retry with the validation errors). */
-async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect, spec: DesignSpec, designId: string, where: { brandName: string; platform: Platform | null; language: string }): Promise<PostVisual> {
+async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof posts.$inferSelect, spec: DesignSpec, designId: string, where: { brandName: string; platform: Platform | null; language: string }, revise?: VisualRevision): Promise<PostVisual> {
   const schema = postVisualSchema(spec);
   let invalid: { draft: unknown; errors: string } | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     const req = postVisualRequest(spec, {
       ...where, format: p.format, brief: p.brief, plan: p.plan as Record<string, unknown>, caption: p.content?.caption ?? null,
-    }, invalid);
+    }, invalid, revise);
     const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now }, req);
     const parsed = schema.safeParse(out.input);
     if (parsed.success) {
@@ -158,7 +164,7 @@ async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, p:
  * Makes the images of one post as `ctx` (the member who asked). Throws ImageError / SpendCapError / LlmError /
  * ImageJobError for expected outcomes; the caller records them on the post.
  */
-export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode) {
+export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string) {
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   const design = await currentDesign(db, ctx, p.brandId);
@@ -169,11 +175,37 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const size = await slideSize(db, channel?.platform ?? null, channel?.defaultPresetKey ?? null);
   const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
 
-  // Re-plan for new images, or when the words were planned for another design version.
-  const replan = mode === "new" || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
-  const visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages) }) : p.visual!;
-
   const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
+  const where = { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages) };
+  // A correction in words: Claude sees the current plan and images and changes only what was asked.
+  const revising = mode === "revise" && !!p.visual && p.visual.designId === design.id && !!instruction?.trim();
+  // Re-plan for new images, or when the words were planned for another design version.
+  const replan = mode === "new" || revising || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
+  let visual: PostVisual;
+  if (revising) {
+    const previews: ImageBlock[] = [];
+    for (const m of old.filter((x) => x.kind === "slide").sort((a, b) => a.position - b.position).slice(0, 10)) {
+      try {
+        previews.push({ ...toBlock(new Uint8Array(await sharp(await deps.storage.get(m.storageKey)).resize({ width: 540 }).jpeg({ quality: 80 }).toBuffer())), caption: `Current image ${m.position + 1}:` });
+      } catch { /* a missing image is described by the plan alone */ }
+    }
+    visual = { ...(await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews })), revision: instruction!.trim() };
+  } else {
+    visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, where) : p.visual!;
+  }
+  // An illustration is reused when nothing about it changed: always for word edits, and for a correction when Claude
+  // kept that image's template and illustration description.
+  const before = p.visual?.slides ?? [];
+  const sameBox = (a: string, b: string) => {
+    const ta = spec.templates.find((t) => t.id === a);
+    const tb = spec.templates.find((t) => t.id === b);
+    if (!ta || !tb) return false;
+    const [x, y] = [illustrationShape(ta, size), illustrationShape(tb, size)];
+    return Math.abs(x.width / x.height - y.width / y.height) < 0.02;
+  };
+  const reuse = (i: number, slide: PostVisual["slides"][number]) =>
+    !replan || (revising && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
+
   const oldIllustrations = new Map(old.filter((m) => m.kind === "background").map((m) => [m.position, m]));
   let references: string[] | null = null;
   const newRows: MediaRow[] = [];
@@ -184,7 +216,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
     let illustration: Uint8Array | null = null;
     if (needsIllustration(t)) {
       const prev = oldIllustrations.get(i);
-      if (!replan && prev) {
+      if (prev && reuse(i, slide)) {
         illustration = await deps.storage.get(prev.storageKey);
         keptIllustrations.add(prev.id);
       } else {
@@ -248,7 +280,7 @@ export async function runImageJob(db: Db, deps: ImageDeps, job: PostImageJob): P
     throw e;
   }
   try {
-    await renderPostImages(db, deps, ctx, p.id, job.mode);
+    await renderPostImages(db, deps, ctx, p.id, job.mode, job.instruction);
     return "done";
   } catch (e) {
     const code = imageFailureCode(e);

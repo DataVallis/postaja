@@ -141,7 +141,10 @@ export function postVisualSchema(spec: DesignSpec) {
   });
 }
 
-export function postVisualRequest(spec: DesignSpec, p: PostVisualInputs, invalid?: { draft: unknown; errors: string }): Omit<StructuredRequest, "model"> {
+/** A correction of a post's images in the owner's words (owner, 2026-10-07): the current plan and how it looks now. */
+export type VisualRevision = { current: { templateId: string; slots: Record<string, string>; illustration: string | null }[]; instruction: string; previews: ImageBlock[] };
+
+export function postVisualRequest(spec: DesignSpec, p: PostVisualInputs, invalid?: { draft: unknown; errors: string }, revise?: VisualRevision): Omit<StructuredRequest, "model"> {
   const templates = spec.templates.map((t) => ({
     id: t.id, name: t.name, use: t.use, slots: templateSlots(t), illustration: needsIllustration(t), sample: t.sample,
   }));
@@ -172,8 +175,14 @@ Rules:
       `<plan>${JSON.stringify(p.plan)}</plan>`,
       p.caption ? `<caption>${p.caption.slice(0, 3000)}</caption>` : "",
       "</post>",
+      revise ? `<current_images>\n${JSON.stringify(revise.current)}\n</current_images>\nThe images above are these current images, in order.` : "",
+      revise ? `<owner_request>\n${revise.instruction.trim()}\n</owner_request>` : "",
+      revise
+        ? `Apply the owner's request to the current images and submit all images again. Change only what the request asks for (and what it implies); keep every other image, template, word and illustration description exactly as it is — identical text — so unchanged illustrations are reused at no cost. If the request is about the picture itself (subject, colours, mood, composition), rewrite that image's illustration description; if it is about words, change the slots; if it is about layout, pick another of the brand's templates. Adding or removing images only when asked.`
+        : "",
       invalid ? `Your previous answer did not validate. Fix:\n${invalid.errors}\n<previous>${JSON.stringify(invalid.draft).slice(0, 8000)}</previous>` : "",
     ].filter(Boolean).join("\n"),
+    ...(revise?.previews.length ? { images: revise.previews } : {}),
     tool: { name: "plan_post_images", description: "Choose template, words and illustration for each image of the post.", inputSchema: schema },
     maxTokens: 4000,
     timeoutMs: 3 * 60_000,

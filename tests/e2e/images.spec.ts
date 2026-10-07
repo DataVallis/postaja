@@ -141,6 +141,20 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect(images.getByTestId("slide-texts").getByLabel("Naslov")).toHaveValue("Nov naslov.\n*Še ena vrstica.*");
   expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falLog.length); // no new illustration
 
+  // A correction in words for the AI (owner, 2026-10-07): Claude sees the images and changes only what was asked.
+  const revise = images.getByTestId("image-revise");
+  await revise.getByLabel("Kaj naj AI popravi na slikah?").fill("Naslov: Krajši naslov.");
+  expect(await serious(p)).toEqual([]);
+  await revise.getByRole("button", { name: "Popravi slike" }).click();
+  await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  await expect(images.getByTestId("slide-texts").getByLabel("Naslov")).toHaveValue("Krajši naslov.");
+  await expect(images.getByTestId("image-revision")).toHaveText("Zadnji popravek: Naslov: Krajši naslov.");
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falLog.length); // words only: no new illustration
+  await revise.getByLabel("Kaj naj AI popravi na slikah?").fill("Ilustracija naj bo svetlejša.");
+  await revise.getByRole("button", { name: "Popravi slike" }).click();
+  await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 1);
+  await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
   await p.goto(`/app/plan?view=day&d=${today}`);
   await p.getByTestId("day-bulk").getByRole("button", { name: "Ustvari slike (1)" }).click();
