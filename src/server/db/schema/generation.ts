@@ -17,8 +17,9 @@ export const modelRegistry = pgTable(
     id: text("id").primaryKey(),
     provider: text("provider").$type<"anthropic" | "fal">().notNull(),
     modelKey: text("model_key").notNull(),
-    /** "image_style": an image model that takes the brand's example images as style reference (TASK-017). */
-    kind: text("kind").$type<"text" | "image" | "image_style" | "video">().notNull(),
+    /** "image_style": takes the brand's example images as style reference (TASK-017); "image_ref": takes a persona's
+     *  passport images as identity reference (TASK-024). */
+    kind: text("kind").$type<"text" | "image" | "image_style" | "image_ref" | "video">().notNull(),
     label: text("label").notNull(),
     inputPerMtok: bigint("input_per_mtok", { mode: "bigint" }).notNull(),
     outputPerMtok: bigint("output_per_mtok", { mode: "bigint" }).notNull(),

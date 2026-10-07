@@ -23,13 +23,15 @@ import { listDesigns } from "@/server/design/service";
 import { DesignSection } from "./design-section";
 import { ModelSection } from "./model-section";
 import { listTextModels } from "@/server/brands/service";
+import { dnaEstimate, getBrandPersona, passportEstimate } from "@/server/personas/service";
+import { PersonaSection } from "./persona-section";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["posts", "ads", "files", "design", "profile", "channels", "versions"] as const;
+const TABS = ["posts", "ads", "persona", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -42,7 +44,10 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   });
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
-  const [adNets, adSetList] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id)]);
+  const [adNets, adSetList, personaData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id)]);
+  const [dnaCost, passport] = tab === "persona"
+    ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
+    : [null, null];
   const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
@@ -90,6 +95,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         tabs={[
           { key: "posts", label: t("tabs.posts"), href: href("posts"), count: recentPosts.length },
           { key: "ads", label: t("tabs.ads"), href: href("ads"), count: adSetList.length },
+          { key: "persona", label: t("tabs.persona"), href: href("persona"), count: personaData ? personaData.images.length : undefined },
           { key: "files", label: t("tabs.files"), href: href("files"), count: files.sources.length + files.logos.length + files.fonts.length },
           { key: "design", label: t("tabs.design"), href: href("design"), count: designs.filter((d) => d.status === "ready").length },
           { key: "profile", label: t("tabs.profile"), href: href("profile") },
@@ -103,6 +109,10 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       ) : null}
 
       {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
+      {tab === "persona" ? (
+        <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
+          data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport} />
+      ) : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 
       {tab === "design" ? (

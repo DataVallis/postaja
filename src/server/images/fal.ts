@@ -155,7 +155,30 @@ export function requestBody(app: string, req: ImageRequest): Record<string, unkn
       ...(req.references?.length ? { image_urls: req.references } : {}),
     };
   }
+  // Reference models (TASK-024): the persona's passport pictures keep the person; the shape comes from the request.
+  if (app.startsWith("fal-ai/nano-banana")) {
+    return { prompt: req.prompt, image_urls: req.references ?? [], aspect_ratio: nearestAspect(req.width, req.height), num_images: 1, output_format: "jpeg" };
+  }
+  if (app.startsWith("fal-ai/bytedance/seedream/")) {
+    // Seedream needs at least 921,600 px; ask for the shape at ~1 MP+.
+    const s = generationSize(req.width, req.height, 1_100_000);
+    return { prompt: req.prompt, image_urls: (req.references ?? []).slice(-10), image_size: s, num_images: 1, enable_safety_checker: true };
+  }
   return { prompt: req.prompt, image_size: { width: req.width, height: req.height }, num_images: 1, output_format: "jpeg", enable_safety_checker: true };
+}
+
+const ASPECTS = ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"] as const;
+/** The closest aspect ratio a model with fixed ratios offers (compared on a log scale). */
+export function nearestAspect(width: number, height: number): (typeof ASPECTS)[number] {
+  const want = Math.log(width / height);
+  let best: (typeof ASPECTS)[number] = "1:1";
+  let diff = Infinity;
+  for (const a of ASPECTS) {
+    const [w, h] = a.split(":").map(Number);
+    const d = Math.abs(Math.log(w / h) - want);
+    if (d < diff) { diff = d; best = a; }
+  }
+  return best;
 }
 
 /** Size to ask the model for: the slide's aspect ratio within `maxPixels`, sides multiples of 16 (≥ 256). */

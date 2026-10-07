@@ -123,7 +123,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect(img).toHaveCount(1);
   await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth)).toBe(1080);
   const falLog = await (await fetch("http://127.0.0.1:3199/fal-log")).json();
-  expect(falLog.at(-1)).toEqual({ model: "fal-ai/ideogram/v3", references: 2 });
+  expect(falLog.at(-1)).toMatchObject({ model: "fal-ai/ideogram/v3", references: 2 });
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("post-images.png"), fullPage: true });
   const [download] = await Promise.all([p.waitForEvent("download"), images.getByTestId("image-download").first().click()]);

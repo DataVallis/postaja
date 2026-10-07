@@ -1,7 +1,7 @@
 // fal.ai client (TASK-015/017): the queue protocol with a fake fetch, host allowlist, per-model request bodies.
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { billedMegapixels, createFalClient, generationSize, ImageError, requestBody, videoBody } from "./fal";
+import { billedMegapixels, createFalClient, generationSize, ImageError, nearestAspect, requestBody, videoBody } from "./fal";
 
 describe("request bodies", () => {
   it("Ideogram gets the brand's examples as style references and a negative prompt; FLUX gets neither", () => {
@@ -11,6 +11,23 @@ describe("request bodies", () => {
     expect(flux).not.toHaveProperty("image_urls");
     expect(flux).not.toHaveProperty("negative_prompt");
     expect(requestBody("fal-ai/ideogram/v3", { ...req, references: [] })).not.toHaveProperty("image_urls");
+  });
+
+  it("reference models (TASK-024): the persona's pictures as image_urls; Nano Banana by aspect ratio, Seedream ≥ 0.92 MP", () => {
+    const refs = Array.from({ length: 12 }, (_, i) => `data:image/jpeg;base64,${i}`);
+    const req = { model: "x", prompt: "p", width: 1024, height: 1280, references: refs.slice(0, 3) };
+    expect(requestBody("fal-ai/nano-banana/edit", req)).toEqual({ prompt: "p", image_urls: refs.slice(0, 3), aspect_ratio: "4:5", num_images: 1, output_format: "jpeg" });
+    const sd = requestBody("fal-ai/bytedance/seedream/v4/edit", { ...req, width: 1080, height: 1920, references: refs }) as { image_urls: string[]; image_size: { width: number; height: number } };
+    expect(sd.image_urls).toEqual(refs.slice(-10));
+    expect(sd.image_size.width * sd.image_size.height).toBeGreaterThanOrEqual(921_600);
+    expect(sd.image_size.width / sd.image_size.height).toBeCloseTo(1080 / 1920, 1);
+  });
+
+  it("nearest aspect ratio", () => {
+    expect(nearestAspect(1080, 1920)).toBe("9:16");
+    expect(nearestAspect(832, 1248)).toBe("2:3");
+    expect(nearestAspect(1600, 900)).toBe("16:9");
+    expect(nearestAspect(1000, 1000)).toBe("1:1");
   });
 });
 
