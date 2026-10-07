@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 const TABS = ["posts", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -95,7 +95,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       />
 
       {tab === "posts" ? (
-        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} />
+        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} />
       ) : null}
 
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}

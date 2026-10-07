@@ -1025,5 +1025,40 @@
       "NO_TOOL_CALL": "Claude did not return a design. Try again.",
       "NO_ACCESS": "The member who asked no longer has access."
     }
+  },
+  "Ideas": {
+    "title": "Suggest ideas",
+    "intro": "Claude proposes topics for the chosen channel from the CGP and pillars, without repeating posts of the last 180 days. Ideas get the channel's free slots; keep the ones you like and they become planned posts.",
+    "channel": "Channel",
+    "count": "How many ideas",
+    "from": "From",
+    "hint": "Wish (optional)",
+    "hintPlaceholder": "e.g. prices and discounts this week; one post about the new lesson",
+    "submit": "Suggest ideas",
+    "working": "Claude is thinking …",
+    "reviewTitle": "Suggested ideas",
+    "day": "Day",
+    "status": {
+      "draft": "to review",
+      "accepted": "accepted",
+      "discarded": "discarded"
+    },
+    "replaced": "{n, plural, one {# suggestion repeated an earlier post and was replaced} other {# suggestions repeated earlier posts and were replaced}}.",
+    "similar": "Similar ({score} %) to:",
+    "accept": "Add ticked to the plan",
+    "discard": "Discard",
+    "acceptHint": "Postaja writes texts and images later, as for any plan.",
+    "acceptedSummary": "{n, plural, one {# idea is in the plan.} other {# ideas are in the plan.}}",
+    "toPlan": "Open the plan",
+    "errors": {
+      "FAILED": "Ideas could not be prepared. Try again.",
+      "SPEND_CAP": "The monthly spend cap is reached.",
+      "AI_FAILED": "Claude returned no usable ideas. Try again or add a wish.",
+      "NO_MODEL": "No AI model is configured.",
+      "NO_CHANNEL": "The channel no longer exists.",
+      "NOT_FOUND": "The brand does not exist.",
+      "BAD_STATE": "These ideas were already handled.",
+      "INVALID": "Tick at least one idea."
+    }
   }
 }

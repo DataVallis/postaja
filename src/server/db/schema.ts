@@ -12,3 +12,4 @@ export * from "./schema/oauth";
 export * from "./schema/mcp";
 export * from "./schema/media";
 export * from "./schema/design";
+export * from "./schema/ideas";

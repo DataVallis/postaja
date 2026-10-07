@@ -1025,5 +1025,40 @@
       "NO_TOOL_CALL": "Claude ni vrnil podobe. Poskusi znova.",
       "NO_ACCESS": "Član, ki je zahteval podobo, nima več dostopa."
     }
+  },
+  "Ideas": {
+    "title": "Predlagaj ideje",
+    "intro": "Claude predlaga teme za izbrani kanal iz CGP-ja in stebrov, brez ponavljanja objav zadnjih 180 dni. Ideje dobijo proste termine kanala; obdržiš, kar ti je všeč, in postanejo planirane objave.",
+    "channel": "Kanal",
+    "count": "Koliko idej",
+    "from": "Od dneva",
+    "hint": "Želja (neobvezno)",
+    "hintPlaceholder": "npr. ta teden o cenah in popustih; ena objava o novi lekciji",
+    "submit": "Predlagaj ideje",
+    "working": "Claude razmišlja …",
+    "reviewTitle": "Predlogi idej",
+    "day": "Dan",
+    "status": {
+      "draft": "za pregled",
+      "accepted": "sprejeto",
+      "discarded": "zavrženo"
+    },
+    "replaced": "{n, plural, one {# predlog je ponavljal staro objavo in je zamenjan} two {# predloga sta ponavljala staro objavo in sta zamenjana} few {# predlogi so ponavljali stare objave in so zamenjani} other {# predlogov je ponavljalo stare objave in so zamenjani}}.",
+    "similar": "Podobno ({score} %) objavi:",
+    "accept": "Dodaj označene v plan",
+    "discard": "Zavrzi",
+    "acceptHint": "Besedila in slike naredi Postaja kasneje, kot pri vsakem planu.",
+    "acceptedSummary": "{n, plural, one {# ideja je v planu.} two {# ideji sta v planu.} few {# ideje so v planu.} other {# idej je v planu.}}",
+    "toPlan": "Odpri plan",
+    "errors": {
+      "FAILED": "Idej ni bilo mogoče pripraviti. Poskusi znova.",
+      "SPEND_CAP": "Mesečni limit porabe je dosežen.",
+      "AI_FAILED": "Claude ni vrnil uporabnih idej. Poskusi znova ali dodaj željo.",
+      "NO_MODEL": "AI model ni nastavljen.",
+      "NO_CHANNEL": "Kanal ne obstaja več.",
+      "NOT_FOUND": "Brand ne obstaja.",
+      "BAD_STATE": "Ti predlogi so že obdelani.",
+      "INVALID": "Označi vsaj eno idejo."
+    }
   }
 }
