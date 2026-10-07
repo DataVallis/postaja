@@ -48,7 +48,12 @@ export const MEDIA_STATUSES = ["none", "queued", "rendering", "ready", "failed"]
 export type MediaStatus = (typeof MEDIA_STATUSES)[number];
 /** What Claude chose for a post's images (TASK-017): a template of the brand design per slide, the words on it, and
  *  what the illustration should show (null when the template has none). The owner can edit the words. */
-export type PostVisual = { designId: string; slides: { templateId: string; slots: Record<string, string>; illustration: string | null }[] };
+export type PostVisual = {
+  designId: string;
+  slides: { templateId: string; slots: Record<string, string>; illustration: string | null }[];
+  /** The owner's last correction in words (TASK-017 follow-up), shown on the post page. */
+  revision?: string;
+};
 export const POST_FORMATS = ["text", "image", "carousel", "thread", "video"] as const;
 export type PostFormat = (typeof POST_FORMATS)[number];
 /** What a content plan says about a post beyond its text (TASK-012). Everything optional; shown on the post page. */

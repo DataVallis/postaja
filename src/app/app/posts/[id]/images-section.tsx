@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Download, ImageIcon, RefreshCw } from "lucide-react";
+import { Download, ImageIcon, RefreshCw, Wand2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, inputClass, textareaClass } from "@/components/ui";
 import type { MediaStatus, PostVisual } from "@/server/db/schema";
-import { requestImagesAction, saveSlidesAction } from "../actions";
+import { requestImagesAction, reviseImagesAction, saveSlidesAction } from "../actions";
 
 type Media = { id: string; position: number; width: number; height: number };
 type TemplateInfo = { id: string; name: string; slots: string[] };
@@ -29,6 +29,9 @@ export async function ImagesSection(props: {
 }) {
   const t = await getTranslations("Images");
   const working = props.status === "queued" || props.status === "rendering";
+  // New images → the forms mount again, so their fields show the words now on the images (uncontrolled fields keep old
+  // values across a refresh otherwise).
+  const version = props.media.map((m) => m.id).join(",");
   return (
     <Card className="grid gap-4 p-5" id="images" data-testid="images">
       <AutoRefresh active={working} seconds={3} />
@@ -82,8 +85,19 @@ export async function ImagesSection(props: {
         </form>
       ) : null}
 
+      {props.visual && props.templates && props.media.length ? (
+        <form key={`revise-${version}`} action={reviseImagesAction} className="grid gap-2 border-t border-line pt-4" data-testid="image-revise">
+          <input type="hidden" name="postId" value={props.postId} />
+          <label htmlFor="image-instruction" className="text-sm font-semibold">{t("reviseLabel")}</label>
+          <p id="image-instruction-hint" className="text-xs text-muted">{t("reviseHint")}</p>
+          <textarea id="image-instruction" name="instruction" rows={3} required maxLength={1000} aria-describedby="image-instruction-hint" placeholder={t("revisePlaceholder")} className={textareaClass} />
+          {props.visual.revision ? <p className="text-xs text-muted" data-testid="image-revision">{t("lastRevision", { text: props.visual.revision })}</p> : null}
+          <div><button type="submit" disabled={working} className={buttonClass("secondary")}><Wand2 aria-hidden className="size-4" />{t("revise")}</button></div>
+        </form>
+      ) : null}
+
       {props.visual && props.templates ? (
-        <form action={saveSlidesAction} className="grid gap-4 border-t border-line pt-4" data-testid="slide-texts">
+        <form key={`texts-${version}`} action={saveSlidesAction} className="grid gap-4 border-t border-line pt-4" data-testid="slide-texts">
           <input type="hidden" name="postId" value={props.postId} />
           <div>
             <h3 className="text-sm font-semibold">{t("textsTitle")}</h3>

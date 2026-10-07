@@ -116,6 +116,16 @@ http
       }
       // Post images: the cover with the plan's overlay text (or topic); carousels add one "points" slide per plan slide.
       if (tool === "plan_post_images") {
+        // A correction in words: keep the current images; "Naslov: X" sets the first headline, "ilustracij…" redraws it.
+        const current = user.match(/<current_images>\n(.*)\n<\/current_images>/);
+        if (current) {
+          const slides = JSON.parse(current[1]);
+          const ask = user.match(/<owner_request>\n([\s\S]*?)\n<\/owner_request>/)[1];
+          const head = ask.match(/naslov:\s*(.+)/i);
+          if (head) slides[0].slots.headline = head[1].trim();
+          if (/ilustracij/i.test(ask)) slides[0].illustration = `${slides[0].illustration} (revised)`;
+          return reply(tool, { slides });
+        }
         const plan = JSON.parse(user.match(/<plan>(.*)<\/plan>/)[1]);
         const cover = { templateId: "cover", slots: { headline: plan.overlayText ?? plan.topic ?? "Objava", ...(plan.category ? { label: plan.category } : {}), footer: "Polygon" }, illustration: `Illustration for ${plan.topic ?? "post"}` };
         const slides = [cover, ...(plan.slides ?? []).map((x, i) => ({ templateId: "points", slots: { number: `0${i + 1}`, headline: x }, illustration: null }))];

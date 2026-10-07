@@ -117,6 +117,21 @@ export async function requestImagesAction(f: FormData): Promise<void> {
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
 }
 
+/** "Popravi slike": the owner's correction in words; Claude changes only that, unchanged illustrations are reused. */
+export async function reviseImagesAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""));
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "FAILED";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
+}
+
 /** The words on the images, edited per image and slot, then re-rendered on the same illustrations (no image cost). */
 export async function saveSlidesAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();

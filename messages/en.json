@@ -954,7 +954,12 @@
       "cta": "Call to action",
       "number": "Number",
       "footer": "Footer"
-    }
+    },
+    "reviseLabel": "What should AI fix on the images?",
+    "reviseHint": "Describe it in words. Claude changes only what you write; illustrations that stay the same are not paid for again.",
+    "revisePlaceholder": "e.g. make the illustration brighter and without people; shorter headline on image 2",
+    "revise": "Fix the images",
+    "lastRevision": "Last correction: {text}"
   },
   "Design": {
     "title": "Visual identity",
