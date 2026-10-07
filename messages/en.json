@@ -762,7 +762,8 @@
     "discard": "Discard import",
     "reopen": "Import the rest",
     "reopenHint": "Added a channel (e.g. X or LinkedIn) that did not exist at import time? Open the import again, connect the platform to the channel and import — posts already imported are not duplicated.",
-    "noChannelForPlatform": "No channel for this platform — add one to the brand."
+    "noChannelForPlatform": "No channel for this platform — add one to the brand.",
+    "noAccount": "no account in the plan"
   },
   "PostFormats": {
     "text": "text",

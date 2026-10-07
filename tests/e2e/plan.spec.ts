@@ -45,8 +45,11 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
   const p = await ctx.newPage();
   await signIn(p, owner);
   await p.goto("/app/brands/new");
-  await p.getByLabel("Ime", { exact: true }).fill("Inženirji");
+  await p.getByLabel("Ime", { exact: true }).fill("Inženirji d.o.o.");
+  await expect(p.getByLabel("Kratko ime (slug)")).toHaveValue("inzenirji-d-o-o"); // made from the name
   await p.getByLabel("Kratko ime (slug)").fill("inzenirji");
+  await p.getByLabel("Ime", { exact: true }).fill("Inženirji"); // a slug typed by hand is kept
+  await expect(p.getByLabel("Kratko ime (slug)")).toHaveValue("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
   await tab("Kanali");

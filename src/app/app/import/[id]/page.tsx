@@ -75,7 +75,7 @@ export default async function ImportReview({ params, searchParams }: { params: P
                 {v.groups.map((g, gi) => (
                   <tr key={g.key}>
                     <td className={td}>{g.platform ? t(`platforms.${g.platform}`) : <span className="text-muted">{t("noPlatform")}</span>}</td>
-                    <td className={td}>{g.account ?? <span className="text-muted">—</span>}</td>
+                    <td className={td}>{g.account ?? <span className="text-muted">{t("noAccount")}</span>}</td>
                     <td className={`${td} tabular-nums`}>{g.count}</td>
                     <td className={td}>
                       <label htmlFor={`ch-${gi}`} className="sr-only">{t("channelFor", { what: label(g.key) })}</label>

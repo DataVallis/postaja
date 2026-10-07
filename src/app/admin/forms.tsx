@@ -1,6 +1,7 @@
 "use client";
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
+import { NameAndSlug } from "@/components/ui/name-slug";
 import { createOrgAction, inviteMemberAction, updateSettingsAction, type ActionState } from "./actions";
 
 const PLANS = ["trial", "starter", "pro", "comped"] as const;
@@ -28,8 +29,7 @@ export function CreateOrgForm() {
   const [state, action, pending] = useActionState(createOrgAction, undefined);
   return (
     <form action={action} className="grid max-w-md gap-4">
-      <Field id="name" label={t("name")}><input id="name" name="name" required minLength={2} className={input} /></Field>
-      <Field id="slug" label={t("slug")}><input id="slug" name="slug" required pattern="[a-z0-9-]+" className={input} /></Field>
+      <NameAndSlug nameLabel={t("name")} slugLabel={t("slug")} inputClass={input} Field={Field} />
       <Field id="ownerEmail" label={t("ownerEmail")}><input id="ownerEmail" name="ownerEmail" type="email" required className={input} /></Field>
       <Field id="plan" label={t("plan")}>
         <select id="plan" name="plan" defaultValue="trial" className={input}>
