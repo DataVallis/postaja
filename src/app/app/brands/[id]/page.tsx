@@ -1,3 +1,5 @@
+import { adNetworkInfo, listAdSets } from "@/server/ads/service";
+import { AdsSection } from "./ads-section";
 import { Archive } from "lucide-react";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
@@ -24,10 +26,10 @@ import { listTextModels } from "@/server/brands/service";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["posts", "files", "design", "profile", "channels", "versions"] as const;
+const TABS = ["posts", "ads", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -40,6 +42,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   });
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
+  const [adNets, adSetList] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id)]);
   const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
@@ -86,6 +89,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         defaultKey="posts"
         tabs={[
           { key: "posts", label: t("tabs.posts"), href: href("posts"), count: recentPosts.length },
+          { key: "ads", label: t("tabs.ads"), href: href("ads"), count: adSetList.length },
           { key: "files", label: t("tabs.files"), href: href("files"), count: files.sources.length + files.logos.length + files.fonts.length },
           { key: "design", label: t("tabs.design"), href: href("design"), count: designs.filter((d) => d.status === "ready").length },
           { key: "profile", label: t("tabs.profile"), href: href("profile") },
@@ -98,6 +102,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} />
       ) : null}
 
+      {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 
       {tab === "design" ? (

@@ -17,7 +17,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-006 | ~~Brand ingestion: extract + synthesize CGP proposal + review/accept~~ | — | **Dropped** (ADR-035: owner provides the CGP) |
 | TASK-007 | Post generation core: CGP + materials + effective rules → text (Claude, JSON schema) → rule check → one auto-fix → `needs_review`; cost recorded | TASK-005c, owner `ANTHROPIC_API_KEY` (set 2026-10-06) | Done (PR #18, deployed) |
 | TASK-008 | CGP from a document: upload DOCX/PDF/MD/TXT → text copied verbatim into the CGP editor, owner saves a version | TASK-005c | Done (PR #19, deployed) |
-| TASK-009 | Knowledge base: PDF/DOCX/XLSX/PPTX/TXT/CSV text read at upload into `brand_sources.extract`; per post the passages matching the brief (BM25) | TASK-008 | In review |
+| TASK-009 | Knowledge base: PDF/DOCX/XLSX/PPTX/TXT/CSV text read at upload into `brand_sources.extract`; per post the passages matching the brief (BM25) | TASK-008 | Done |
 | TASK-010a | Claude → Postaja over MCP: OAuth 2.1 (DCR, PKCE, consent), `/api/mcp` with `list_brands`, `get_brand`, `propose_cgp` (draft), `add_material`; `/app/connect` | TASK-008 | Live on dev (PR #20; owner tried it) |
 | TASK-011 | App frame: sidebar + top bar, dark/light theme, UI kit, dashboard, all-posts table with filters, brands table, brand tabs (ADR-040) | — | Done (PR #22, deployed; owner: "super je") |
 | TASK-012 | **Plan import**: upload any content plan (XLSX/CSV/DOCX, any columns or sections, relative dates) → AI maps it to planned posts (date/time, platform, channel, format, topic, text, slides, image prompt, overlay text, hashtags, CTA, status); owner reviews the mapping before saving; already published rows go to history | TASK-011 | Done (PR #23, deployed) |
@@ -29,6 +29,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-018 | **LinkedIn carousel as PDF**: images of a LinkedIn post as one PDF document (download + in the ZIP) | TASK-016 | Done |
 | TASK-019 | **AI post ideas + no-repeat**: "Predlagaj ideje" per brand channel, repeats of the last 180 days replaced, free slots from the channel goal, ticked ideas → planned posts (ADR-048) | TASK-013 | Done |
 | TASK-020 | **Dashboard goals**: today per brand × channel against its goal (planned, ready, published, missing), streak per brand, spend per brand this month | TASK-013 | Done |
+| TASK-021 | **Ads** (phase 1b): a) ad sets — copy per network (Meta, LinkedIn, Google Display) within limits from data, checks, copy.csv (ADR-049); b) creatives per placement from the brand design, ZIP per ad set | TASK-017 | a) Done; b) Planned |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.
