@@ -182,88 +182,91 @@ describe("passport uploads", () => {
 
 describe("passport generation", () => {
   const queue = () => { const sent: { name: string; data: PassportJob }[] = []; return { sent, send: async (name: string, data: object) => { sent.push({ name, data: data as PassportJob }); } }; };
+  const deps = (images: ImageClient) => ({ llm: createFakeLlm().client, storage, images });
 
-  it("from nothing: a passport picture from the whole DNA (text-to-image), then 4 angles with the persona as reference", async () => {
+  it("one photoreal passport close-up from the whole DNA with Nano Banana Pro; booked on the brand", async () => {
     const id = await manual();
-    const est = await passportEstimate(db, A, id);
-    // FLUX 1.1 pro (1 MP × $0.04) + 4 × Nano Banana edit ($0.039).
-    expect(est).toEqual({ count: 5, maxCost: 40_000n + 4n * 39_000n });
+    expect(await passportEstimate(db, A, id)).toEqual({ replaces: false, maxCost: 150_000n });
     const q = queue();
     await requestPassport(db, q, A, id);
     await expect(requestPassport(db, q, A, id)).rejects.toMatchObject({ code: "BAD_STATE" });
     expect(q.sent).toEqual([{ name: "persona-passport", data: { personaId: id } }]);
 
     const images = fakeImages();
-    expect(await runPassportJob(db, { llm: createFakeLlm().client, storage, images: images.client }, q.sent[0].data)).toBe("done");
-    expect(images.requests.map((r) => [r.model, r.references?.length ?? 0])).toEqual([
-      ["fal-ai/flux-pro/v1.1", 0], ["fal-ai/nano-banana/edit", 1], ["fal-ai/nano-banana/edit", 2], ["fal-ai/nano-banana/edit", 3], ["fal-ai/nano-banana/edit", 4],
-    ]);
-    const first = images.requests[0].prompt;
-    // The first prompt includes the DNA (all but camera and pose, which the passport framing replaces) and no text.
-    for (const v of [dna.gender, dna.age, dna.ethnicity, dna.hairStyle, dna.hairColour, dna.clothing, dna.mood, dna.environment, dna.lighting, dna.style, dna.extra]) expect(first).toContain(v);
-    expect(first).toContain("Passport-style portrait");
-    expect(first).not.toContain(dna.pose);
-    expect(first).toContain("No text");
-    expect(images.requests[1].prompt).toContain("SAME person as in the reference images");
-    expect(images.requests[4].prompt).toContain("Full-body");
-    expect(images.requests[1].references![0]).toMatch(/^data:image\/jpeg;base64,/);
+    expect(await runPassportJob(db, deps(images.client), q.sent[0].data)).toBe("done");
+    expect(images.requests).toHaveLength(1);
+    const [r] = images.requests;
+    expect(r).toMatchObject({ model: "fal-ai/nano-banana-pro", references: undefined });
+    expect(r.width / r.height).toBeCloseTo(0.8, 2);
+    // The whole DNA, the passport close-up, and real-photo cues.
+    for (const v of Object.values(dna)) expect(r.prompt).toContain(v);
+    expect(r.prompt).toContain("Passport-style close-up");
+    expect(r.prompt).toContain("indistinguishable from reality");
+    expect(r.prompt).toContain("No text");
 
     const got = (await getBrandPersona(db, A, brandA))!;
     expect(got.persona.passportStatus).toBe("ready");
-    expect(got.images.map((i) => [i.angle, i.isPrimary, i.source])).toEqual([
-      ["front", true, "generated"], ["three_quarter", false, "generated"], ["profile", false, "generated"], ["smile", false, "generated"], ["full_body", false, "generated"],
-    ]);
-    expect(got.images[1].model).toBe("fal-ai/nano-banana/edit");
+    expect(got.images.map((i) => [i.angle, i.isPrimary, i.source, i.model])).toEqual([["front", true, "generated", "fal-ai/nano-banana-pro"]]);
     const ledger = await db.select().from(usageLedger);
-    expect(ledger.every((l) => l.state === "settled" && l.brandId === brandA && l.postId === null)).toBe(true);
-    expect(ledger.reduce((s, l) => s + l.costMicroUsd, 0n)).toBe(40_000n + 4n * 39_000n);
-    expect(await passportEstimate(db, A, id)).toEqual({ count: 0, maxCost: 0n });
-    await expect(requestPassport(db, q, A, id)).rejects.toMatchObject({ code: "NOTHING_TO_DO" });
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]).toMatchObject({ state: "settled", brandId: brandA, postId: null, costMicroUsd: 150_000n, model: "fal-ai/nano-banana-pro" });
+    expect(await passportEstimate(db, A, id)).toEqual({ replaces: true, maxCost: 150_000n });
   });
 
-  it("with the owner's own pictures: no new front picture, only the missing angles from the uploads", async () => {
+  it("a new passport picture replaces the previous generated one (primary stays with it); uploads stay", async () => {
     const id = await manual();
-    await uploadPassportImage(db, storage, A, id, { filename: "a.jpg", bytes: await jpeg() });
-    await uploadPassportImage(db, storage, A, id, { filename: "b.jpg", bytes: await jpeg(600, 750, 10) }, "smile");
-    expect(await passportEstimate(db, A, id)).toEqual({ count: 3, maxCost: 3n * 39_000n });
     const q = queue();
-    await requestPassport(db, q, A, id);
     const images = fakeImages();
-    await runPassportJob(db, { llm: createFakeLlm().client, storage, images: images.client }, q.sent[0].data);
-    expect(images.requests.map((r) => r.references?.length)).toEqual([2, 3, 4]);
-    expect((await getBrandPersona(db, A, brandA))!.images.map((i) => i.angle).sort()).toEqual(["full_body", "other", "profile", "smile", "three_quarter"]);
+    await requestPassport(db, q, A, id);
+    await runPassportJob(db, deps(images.client), q.sent[0].data);
+    const up = await uploadPassportImage(db, storage, A, id, { filename: "mine.jpg", bytes: await jpeg() }, "smile");
+    const first = (await getBrandPersona(db, A, brandA))!.images.find((i) => i.source === "generated")!;
+    await requestPassport(db, q, A, id);
+    await runPassportJob(db, deps(images.client), q.sent[1].data);
+    const imgs = (await getBrandPersona(db, A, brandA))!.images;
+    expect(imgs).toHaveLength(2);
+    expect(imgs.map((i) => i.id)).not.toContain(first.id);
+    expect(imgs[0]).toMatchObject({ angle: "front", source: "generated", isPrimary: true });
+    expect(imgs[1]).toMatchObject({ id: up, isPrimary: false });
+    // With the upload as primary, a new passport does not take it over.
+    await setPrimaryImage(db, A, up);
+    await requestPassport(db, q, A, id);
+    await runPassportJob(db, deps(images.client), q.sent[2].data);
+    expect((await getBrandPersona(db, A, brandA))!.images.map((i) => [i.source, i.isPrimary])).toEqual([["uploaded", true], ["generated", false]]);
   });
 
-  it("a provider error keeps what was made, releases the reservation and records the failure", async () => {
+  it("a refusal is recorded with the provider's reason; the reservation is released", async () => {
     const id = await manual();
     const q = queue();
     await requestPassport(db, q, A, id);
-    const images = fakeImages((n) => (n === 3 ? new ImageError("IMAGE_BLOCKED") : null));
-    expect(await runPassportJob(db, { llm: createFakeLlm().client, storage, images: images.client }, q.sent[0].data)).toBe("failed");
+    const images = fakeImages(() => new ImageError("IMAGE_BLOCKED", "Content policy violation"));
+    expect(await runPassportJob(db, deps(images.client), q.sent[0].data)).toBe("failed");
     const got = (await getBrandPersona(db, A, brandA))!;
-    expect(got.persona).toMatchObject({ passportStatus: "failed", passportError: "IMAGE_BLOCKED" });
-    expect(got.images).toHaveLength(2);
-    expect((await db.select().from(usageLedger)).every((l) => l.state === "settled")).toBe(true);
-    // Trying again fills only what is missing.
-    expect(await passportEstimate(db, A, id)).toMatchObject({ count: 3 });
+    expect(got.persona).toMatchObject({ passportStatus: "failed", passportError: "IMAGE_BLOCKED:Content policy violation" });
+    expect(got.images).toEqual([]);
+    expect(await db.select().from(usageLedger)).toEqual([]);
   });
 
-  it("the spend cap stops it before any call; an editor cannot start it; a demoted owner's job fails", async () => {
+  it("a full passport (10 own pictures) has no room; the spend cap stops it before any call; editors cannot; a demoted owner's job fails", async () => {
     const id = await manual();
     await expect(requestPassport(db, queue(), editorA, id)).rejects.toMatchObject({ code: "FORBIDDEN" });
     await db.update(orgSettings).set({ spendCapMicroUsd: 10_000n }).where(eq(orgSettings.orgId, A.orgId));
     const q = queue();
     await requestPassport(db, q, A, id);
     const images = fakeImages();
-    expect(await runPassportJob(db, { llm: createFakeLlm().client, storage, images: images.client }, q.sent[0].data)).toBe("failed");
+    expect(await runPassportJob(db, deps(images.client), q.sent[0].data)).toBe("failed");
     expect(images.requests).toHaveLength(0);
     expect((await getBrandPersona(db, A, brandA))!.persona.passportError).toBe("SPEND_CAP");
 
     await db.update(orgSettings).set({ spendCapMicroUsd: 100_000_000n }).where(eq(orgSettings.orgId, A.orgId));
     await requestPassport(db, q, A, id);
     await sql`update member set role = 'editor' where user_id = ${A.userId} and organization_id = ${A.orgId}`;
-    expect(await runPassportJob(db, { llm: createFakeLlm().client, storage, images: images.client }, q.sent[1].data)).toBe("failed");
+    expect(await runPassportJob(db, deps(images.client), q.sent[1].data)).toBe("failed");
     expect((await getBrandPersona(db, A, brandA))!.persona.passportError).toBe("NO_ACCESS");
+    await sql`update member set role = 'owner' where user_id = ${A.userId} and organization_id = ${A.orgId}`;
+
+    for (let n = 0; n < 10; n++) await uploadPassportImage(db, storage, A, id, { filename: `${n}.jpg`, bytes: await jpeg(600, 750, 10 + n * 20) });
+    await expect(requestPassport(db, queue(), A, id)).rejects.toMatchObject({ code: "LIMIT_REACHED" });
   });
 });
 

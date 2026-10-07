@@ -78,7 +78,7 @@ function fal(req, res) {
     sharp(Buffer.from(svg)).jpeg().toBuffer().then((b) => send(200, b, "image/jpeg"));
     return;
   }
-  const submit = req.method === "POST" && req.url.match(/^\/fal-ai\/([\w-]+)\/[\w.\/-]+$/);
+  const submit = req.method === "POST" && req.url.match(/^\/fal-ai\/([\w-]+)(?:\/[\w.\/-]+)?$/);
   if (submit) {
     let body = "";
     req.on("data", (c) => (body += c));

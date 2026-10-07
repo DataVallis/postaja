@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 // Persona (TASK-024): the owner describes a person, Claude fills in the DNA framework, Postaja makes the passport
-// (the first picture from the whole DNA, the other angles with that picture as reference), the owner edits and uploads.
+// (one photoreal passport close-up from the whole DNA), the owner edits and uploads.
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
   if (!fs.existsSync(MAIL_DIR)) return undefined;
@@ -62,21 +62,20 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await expect(dna.getByLabel("Extra Notes")).toHaveValue(/26-letna Ljubljančanka/);
   await expect(p.getByTestId("passport-status")).toHaveText("Ni slik");
 
-  // The passport: one picture from the DNA, then 4 angles from it.
+  // The passport: one photoreal close-up from the whole DNA (Nano Banana Pro).
   const before = (await falLog()).length;
-  await p.getByTestId("passport-generate").click();
+  await p.getByRole("button", { name: /Ustvari passport sliko · največ 0\.15 €/ }).click();
   await expect(p.getByTestId("passport-status")).toHaveText("Pripravljeno", { timeout: 60_000 });
   const images = p.getByTestId("passport-images").getByRole("listitem");
-  await expect(images).toHaveCount(5);
+  await expect(images).toHaveCount(1);
   await expect(images.first()).toContainText("Spredaj (passport) · glavna");
   const calls = (await falLog()).slice(before);
-  expect(calls.map((c) => [c.model, c.references])).toEqual([
-    ["fal-ai/flux-pro/v1.1", 0], ["fal-ai/nano-banana/edit", 1], ["fal-ai/nano-banana/edit", 2], ["fal-ai/nano-banana/edit", 3], ["fal-ai/nano-banana/edit", 4],
-  ]);
+  expect(calls.map((c) => [c.model, c.references])).toEqual([["fal-ai/nano-banana-pro", 0]]);
   expect(calls[0].prompt).toContain("Hair Colour: Jet black");
-  expect(calls[0].prompt).toContain("Passport-style portrait");
-  for (const img of await p.getByTestId("passport-images").getByRole("img").all()) await expect.poll(() => img.evaluate((e: HTMLImageElement) => e.naturalWidth)).toBeGreaterThan(0);
-  await expect(p.getByTestId("passport-generate")).toHaveCount(0);
+  expect(calls[0].prompt).toContain("Pose / Action: Walking, looking back");
+  expect(calls[0].prompt).toContain("Passport-style close-up");
+  await expect.poll(() => images.first().getByRole("img").evaluate((e: HTMLImageElement) => e.naturalWidth)).toBeGreaterThan(0);
+  await expect(p.getByTestId("passport-generate")).toHaveText(/Nova passport slika/);
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("persona.png"), fullPage: true });
 
@@ -87,7 +86,7 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await expect(p.getByTestId("persona-dna").getByLabel("Hair Colour *")).toHaveValue("Platinum blonde");
   const photo = await sharp({ create: { width: 800, height: 1000, channels: 3, background: { r: 30, g: 160, b: 90 } } }).jpeg().toBuffer();
   await p.getByLabel("Naloži slike").setInputFiles({ name: "moja.jpg", mimeType: "image/jpeg", buffer: photo });
-  await expect(images).toHaveCount(6);
+  await expect(images).toHaveCount(2);
   await expect(p.getByText("moja.jpg — dodano")).toBeVisible();
   await images.last().getByRole("button", { name: "Nastavi kot glavno" }).click();
   await expect(images.first()).toContainText("Drugo · glavna");

@@ -1225,15 +1225,14 @@
     "createManual": "Create persona",
     "saving": "Saving …",
     "passportTitle": "Passport pictures",
-    "passportHint": "3–{max} pictures of the same person; one is primary. The first (passport) picture is made with a prompt that includes the whole DNA; the other angles are made from it so it stays the same person. You can also upload your own.",
+    "passportHint": "3–{max} pictures of the same person; one is primary. The passport picture is a photoreal close-up made with a prompt that includes the whole DNA (Nano Banana Pro). A new passport picture replaces the previous one; you can also upload your own.",
     "working": "Pictures are being made – the page refreshes itself.",
     "noImages": "No pictures yet.",
     "primary": "primary",
     "makePrimary": "Make primary",
     "deleteImage": "Delete picture",
     "imageAlt": "Passport picture: {angle}",
-    "generateFirst": "Create passport picture and {count, plural, one {# angle} other {# angles}}",
-    "generateMore": "Fill in passport pictures ({count})",
+    "generateFirst": "Create passport picture",
     "angleLabel": "Angle:",
     "upload": "Upload pictures",
     "uploading": "Uploading …",
@@ -1279,7 +1278,7 @@
       "NO_IMAGE_KEY": "The AI image key (fal.ai) is missing or invalid.",
       "IMAGE_PROVIDER": "The image provider did not respond. Try again in a few minutes.",
       "IMAGE_TIMEOUT": "The image provider took too long. Try again.",
-      "IMAGE_BLOCKED": "The provider refused the description. Change the DNA and try again.",
+      "IMAGE_BLOCKED": "The provider refused the request. Change the DNA and try again.",
       "IMAGE_INVALID": "The provider returned an invalid picture. Try again.",
       "SPEND_CAP": "The organization's monthly spend cap is reached.",
       "NO_ACCESS": "The member who asked no longer has access.",
@@ -1287,6 +1286,7 @@
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "BAD_ORIGIN": "Upload not allowed.",
       "UNAUTHORIZED": "Your session has expired."
-    }
+    },
+    "generateAgain": "New passport picture"
   }
 }

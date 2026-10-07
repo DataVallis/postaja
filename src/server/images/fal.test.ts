@@ -23,6 +23,12 @@ describe("request bodies", () => {
     expect(sd.image_size.width / sd.image_size.height).toBeCloseTo(1080 / 1920, 1);
   });
 
+  it("Nano Banana Pro: text-to-image without references, 2K, aspect ratio; image_urls only with references", () => {
+    const req = { model: "x", prompt: "p", width: 1024, height: 1280 };
+    expect(requestBody("fal-ai/nano-banana-pro", req)).toEqual({ prompt: "p", aspect_ratio: "4:5", resolution: "2K", num_images: 1, output_format: "jpeg" });
+    expect(requestBody("fal-ai/nano-banana-pro/edit", { ...req, width: 1080, height: 1920, references: ["data:a"] })).toMatchObject({ image_urls: ["data:a"], aspect_ratio: "9:16" });
+  });
+
   it("nearest aspect ratio", () => {
     expect(nearestAspect(1080, 1920)).toBe("9:16");
     expect(nearestAspect(832, 1248)).toBe("2:3");
@@ -34,7 +40,7 @@ describe("request bodies", () => {
 describe("fal client", () => {
   const jpeg = () => sharp({ create: { width: 64, height: 80, channels: 3, background: "#336699" } }).jpeg().toBuffer();
   /** A fake fal: records requests, answers the queue protocol. */
-  function fakeFetch(opts: { imageUrl?: string; nsfw?: boolean; submitStatus?: number; statuses?: string[] } = {}) {
+  function fakeFetch(opts: { imageUrl?: string; nsfw?: boolean; submitStatus?: number; statuses?: string[]; resultStatus?: number; resultBody?: unknown } = {}) {
     const calls: { url: string; init?: RequestInit }[] = [];
     const statuses = [...(opts.statuses ?? ["IN_QUEUE", "COMPLETED"])];
     const f = (async (input: string | URL, init?: RequestInit) => {
@@ -45,11 +51,20 @@ describe("fal client", () => {
         return Response.json({ request_id: "abc-1", status_url: "https://queue.fal.run/fal-ai/flux-pro/requests/abc-1/status", response_url: "https://queue.fal.run/fal-ai/flux-pro/requests/abc-1" });
       }
       if (url.endsWith("/status")) return Response.json({ status: statuses.shift() ?? "COMPLETED" });
+      if (url.endsWith("/abc-1") && opts.resultStatus) return Response.json(opts.resultBody ?? {}, { status: opts.resultStatus });
       if (url.endsWith("/abc-1")) return Response.json({ images: [{ url: opts.imageUrl ?? "https://v3.fal.media/files/x.jpg", width: 64, height: 80 }], has_nsfw_concepts: [opts.nsfw ?? false] });
       return new Response(new Uint8Array(await jpeg()), { status: 200, headers: { "content-type": "image/jpeg" } });
     }) as typeof fetch;
     return { f, calls };
   }
+
+  it("a refusal carries fal's reason, short and plain", async () => {
+    const body = { detail: [{ loc: ["body", "prompt"], msg: "The prompt was flagged by the content checker.\u0000", type: "content_policy_violation" }] };
+    await expect(createFalClient({ key: "k", fetch: fakeFetch({ resultStatus: 422, resultBody: body }).f, pollMs: 1 })!.generate({ model: "fal-ai/nano-banana-pro", prompt: "p", width: 512, height: 512 }))
+      .rejects.toMatchObject({ code: "IMAGE_BLOCKED", detail: "The prompt was flagged by the content checker." });
+    await expect(createFalClient({ key: "k", fetch: fakeFetch({ submitStatus: 422 }).f })!.generate({ model: "fal-ai/nano-banana-pro", prompt: "p", width: 512, height: 512 }))
+      .rejects.toMatchObject({ code: "IMAGE_BLOCKED", detail: undefined });
+  });
 
   it("is off without a key", () => {
     expect(createFalClient({ key: "" })).toBeNull();
