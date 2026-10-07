@@ -765,7 +765,10 @@
     "reopen": "Uvozi manjkajoče",
     "reopenHint": "Si dodal kanal (npr. X ali LinkedIn), ki ga ob uvozu še ni bilo? Odpri uvoz znova, poveži platformo s kanalom in uvozi — že uvožene objave se ne podvojijo.",
     "noChannelForPlatform": "Ni kanala za to platformo — dodaj ga pri brandu.",
-    "noAccount": "brez računa v planu"
+    "noAccount": "brez računa v planu",
+    "brandFromFile": "V imenu datoteke je brand {brand}: predlagam samo njegove kanale.",
+    "brandHasNoChannel": "{brand} nima kanala za {platform}.",
+    "addChannel": "Dodaj kanal, nato se vrni sem."
   },
   "PostFormats": {
     "text": "besedilo",

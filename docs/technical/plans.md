@@ -22,8 +22,11 @@ sections and one shared image style (LinkedIn). Postaja reads any of them into p
    slides ("1: …\n2: …", "a | b"), numbered threads ("1/ …"), statuses (Objavljeno/posted/published → history;
    preskočeno/skip → not imported), hashtags from a hashtags or mixed "CTA / hashtags" column. Unknown values become
    warnings, never guesses.
-4. Review `/app/import/[id]`: counts, **which channel each platform/account goes to** (`suggestChannel`: same
-   platform and the handle contained in the account, or the only channel of that platform; "Ne uvozi" skips a group),
+4. Review `/app/import/[id]`: counts, **which channel each platform/account goes to** (`suggestChannel`, same
+   platform only: the account matches a channel's handle or a word of its brand's name; else, if the file name names one
+   brand (`brandFromName`), only that brand's channel — none means no suggestion and a link to add the channel; the only
+   channel of the platform is suggested only in an org with a single brand, so a plan never lands on another brand's
+   channel by default; "Ne uvozi" skips a group),
    start day for relative plans, start + gap for undated items, editable column meanings ("Preberi znova").
 5. `confirmImport` (row-locked, a double click imports once): per item a post on the chosen channel with
    `format`, `scheduled_on`/`scheduled_time`, `plan` (topic, category, audience, account, CTA, link, first comment,

@@ -130,17 +130,44 @@ export const groupKey = (i: Pick<PlanItem, "platform" | "account">) => `${i.plat
 const handle = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]/g, "");
 
 type OrgChannel = { id: string; platform: string; handle: string; brandId: string; brandName: string };
+type OrgBrand = { id: string; name: string; slug: string };
 
-/** A channel of the same platform whose handle matches the account (either contains the other), or the only one. */
-export function suggestChannel(platform: string | null, account: string | null, list: OrgChannel[]): string | null {
+/** The brand a plan file names (file or sheet name contains its name or slug), when exactly one does. */
+export function brandFromName(text: string, list: OrgBrand[]): OrgBrand | null {
+  const t = handle(text);
+  const hits = list.filter((b) => [b.name, b.slug].some((n) => { const h = handle(n); return h.length > 2 && t.includes(h); }));
+  // "aibuilders" and "ai" style overlaps: the longest name wins only if it contains every other hit.
+  if (hits.length > 1) {
+    const best = [...hits].sort((a, b) => handle(b.name).length - handle(a.name).length)[0];
+    return hits.every((h) => handle(best.name).includes(handle(h.name)) || handle(best.slug).includes(handle(h.slug))) ? best : null;
+  }
+  return hits[0] ?? null;
+}
+
+/**
+ * The channel to suggest for a platform + account of a plan. Never a guess across brands:
+ * - the account matches one channel's handle (either contains the other) or a word of its brand's name → that channel;
+ * - the file names a brand → only that brand's channel of the platform (none → no suggestion, the owner adds it);
+ * - otherwise the only channel of the platform, but only when the org has a single brand (no other brand to mix up).
+ */
+export function suggestChannel(platform: string | null, account: string | null, list: OrgChannel[], hint: { brand: OrgBrand | null; brandCount: number } = { brand: null, brandCount: 1 }): string | null {
   if (!platform) return null;
   const same = list.filter((c) => c.platform === platform);
   if (account) {
     const a = handle(account);
     const hit = same.filter((c) => { const h = handle(c.handle); return h.length > 2 && a.length > 2 && (a.includes(h) || h.includes(a)); });
     if (hit.length === 1) return hit[0].id;
+    // "David (osebni profil)" → the brand "David Tacer": a word of the account (≥ 4 letters) is a word of the brand name.
+    const words = (x: string) => new Set(x.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
+    const aw = words(account);
+    const byName = same.filter((c) => [...words(c.brandName)].some((w) => aw.has(w)));
+    if (byName.length === 1) return byName[0].id;
   }
-  return same.length === 1 ? same[0].id : null;
+  if (hint.brand) {
+    const own = same.filter((c) => c.brandId === hint.brand!.id);
+    return own.length === 1 ? own[0].id : null;
+  }
+  return hint.brandCount === 1 && same.length === 1 ? same[0].id : null;
 }
 
 const addDays = (isoDate: string, n: number) => {
@@ -174,11 +201,13 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
   const r = await ownImport(db, ctx, id);
   const items = importItems(r);
   const list = await orgChannels(db, ctx);
+  const brandList = await db.select({ id: brands.id, name: brands.name, slug: brands.slug }).from(brands).where(and(eq(brands.orgId, ctx.orgId), sql`${brands.archivedAt} is null`));
+  const hint = { brand: brandFromName(r.filename, brandList), brandCount: brandList.length };
   const map = r.settings.channelMap ?? {};
   const groups = new Map<string, { key: string; platform: string | null; account: string | null; count: number; channelId: string | null; suggested: string | null }>();
   for (const i of items) {
     const key = groupKey(i);
-    const g = groups.get(key) ?? { key, platform: i.platform, account: i.account, count: 0, channelId: null, suggested: suggestChannel(i.platform, i.account, list) };
+    const g = groups.get(key) ?? { key, platform: i.platform, account: i.account, count: 0, channelId: null, suggested: suggestChannel(i.platform, i.account, list, hint) };
     g.count++;
     groups.set(key, g);
   }
@@ -189,7 +218,7 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
     const ok = chosen === "skip" || (chosen && (!g.platform || platformOf.get(chosen) === g.platform));
     g.channelId = ok ? chosen! : g.suggested;
   }
-  return { import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list };
+  return { import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list, brand: hint.brand };
 }
 
 const updateInput = z.object({

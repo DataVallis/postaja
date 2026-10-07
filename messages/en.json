@@ -765,7 +765,10 @@
     "reopen": "Import the rest",
     "reopenHint": "Added a channel (e.g. X or LinkedIn) that did not exist at import time? Open the import again, connect the platform to the channel and import — posts already imported are not duplicated.",
     "noChannelForPlatform": "No channel for this platform — add one to the brand.",
-    "noAccount": "no account in the plan"
+    "noAccount": "no account in the plan",
+    "brandFromFile": "The file name names the brand {brand}: only its channels are suggested.",
+    "brandHasNoChannel": "{brand} has no {platform} channel.",
+    "addChannel": "Add the channel, then come back here."
   },
   "PostFormats": {
     "text": "text",
