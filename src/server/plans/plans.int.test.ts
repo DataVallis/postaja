@@ -12,7 +12,7 @@ import { LlmError } from "../llm/types";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { editPost } from "../posts/generate";
-import { confirmImport, discardImport, importView, listImports, reopenImport, startImport, updateImport } from "./service";
+import { confirmImport, discardImport, importView, listImports, reopenImport, setImportBrand, startImport, updateImport } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -201,7 +201,9 @@ describe("confirming", () => {
     const liB = (await addChannel(db, B, brandB, { ...chan("linkedin", "davidtacer"), language: "en" })).id;
     await expect(reopenImport(db, A, bImport)).rejects.toMatchObject({ code: "BAD_STATE" }); // other org
     await reopenImport(db, B, bImport);
-    expect((await importView(db, B, bImport)).groups.find((g) => g.platform === "linkedin")!.channelId).toBe(liB); // suggested now
+    expect((await importView(db, B, bImport)).groups.find((g) => g.platform === "linkedin")!.channelId).toBeNull(); // no guessing across brands
+    await setImportBrand(db, B, bImport, { brandId: brandB });
+    expect((await importView(db, B, bImport)).groups.find((g) => g.platform === "linkedin")!.channelId).toBe(liB); // the chosen brand's channel
     expect(await confirmImport(db, B, bImport)).toMatchObject({ created: 1, duplicates: 3, noChannel: 1 });
     expect((await sql`select created_count, status from plan_imports where id = ${bImport}`)[0]).toEqual({ created_count: 4, status: "imported" });
     await expect(reopenImport(db, A, await start(A, plan()).id)).rejects.toMatchObject({ code: "BAD_STATE" }); // a draft is not "imported"
@@ -226,12 +228,41 @@ describe("confirming", () => {
     }
     const liB = (await addChannel(db, B, brandB, { ...chan("linkedin", "davidtacer"), language: "en" })).id;
     await reopenImport(db, B, importId);
+    await setImportBrand(db, B, importId, { brandId: brandB });
     const counts = await confirmImport(db, B, importId);
     expect(counts).toMatchObject({ moved: liItems.length, created: 3 });
     const onLi = await sql`select media_status, visual from posts where channel_id = ${liB}`;
     expect(onLi).toHaveLength(liItems.length);
     expect(onLi.every((p) => p.media_status === "none" && p.visual === null)).toBe(true);
     expect((await sql`select count(*)::int n from posts where channel_id = ${igB} and import_id = ${importId}`)[0].n).toBe(3);
+  });
+
+  it("the owner says which brand the plan is for, or creates it here with its channels (owner, 2026-10-07)", async () => {
+    // A CHERR.IO plan in an org that has no such brand: nothing is suggested from another brand, a name is offered.
+    const xOnly = makeXlsx([{ name: "X", rows: [["Datum", "Platforma", "Besedilo objave"], [46294, "X", "Ship it."], [46295, "X", "Again."]] }]);
+    const id = await start(A, xOnly, "CHERR.IO X posts 001 (1).xlsx", [{ input: { columns: ["date", "platform", "text"], defaultPlatform: null } }]).id;
+    let v = await importView(db, A, id);
+    expect(v.brand).toBeNull();
+    expect(v.newBrandName).toBe("CHERR.IO");
+    expect(v.groups).toMatchObject([{ platform: "x", account: null, channelId: null }]); // David Tacer's X is not offered
+    // An editor cannot create brands; another org's brand is refused.
+    await expect(setImportBrand(db, editorA, id, { newName: "CHERR.IO", handles: { "x|": "@cherr_io" } })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const cherrB = (await sql`select brand_id from channels where id = ${igB}`)[0].brand_id as string;
+    await expect(setImportBrand(db, A, id, { brandId: cherrB })).rejects.toMatchObject({ code: "INVALID" });
+    await expect(setImportBrand(db, A, id, {})).rejects.toMatchObject({ code: "INVALID" });
+    // The owner creates the brand with its X channel right here.
+    const { brandId } = await setImportBrand(db, A, id, { newName: "CHERR.IO", language: "en", handles: { "x|": "@cherr_io" } });
+    expect((await sql`select name, slug, languages from brands where id = ${brandId}`)[0]).toEqual({ name: "CHERR.IO", slug: "cherr-io", languages: ["en"] });
+    const ch = await sql`select id, platform, handle, language from channels where brand_id = ${brandId}`;
+    expect(ch).toMatchObject([{ platform: "x", handle: "@cherr_io", language: "en" }]);
+    v = await importView(db, A, id);
+    expect(v).toMatchObject({ brandChosen: true, brand: { id: brandId }, groups: [{ channelId: ch[0].id }] });
+    // Choosing again with the same name reuses the brand and does not double the channel.
+    expect((await setImportBrand(db, A, id, { newName: "cherr.io", handles: { "x|": "@other" } })).brandId).toBe(brandId);
+    expect(await sql`select count(*)::int n from channels where brand_id = ${brandId}`).toEqual([{ n: 1 }]);
+    expect(await confirmImport(db, A, id)).toMatchObject({ created: 2 });
+    expect(await sql`select count(*)::int n from posts where brand_id = ${brandId}`).toEqual([{ n: 2 }]);
+    await expect(setImportBrand(db, A, id, { brandId })).rejects.toMatchObject({ code: "BAD_STATE" });
   });
 
   it("an editor can import too", async () => {

@@ -12,6 +12,8 @@ export type ImportSettings = {
   intervalDays?: number | null;
   /** "platform|account" → channel id, or "skip". */
   channelMap?: Record<string, string>;
+  /** The brand the owner chose for this plan: suggestions come only from its channels. */
+  brandId?: string | null;
 };
 
 export const planImports = pgTable(

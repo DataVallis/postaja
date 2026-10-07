@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandFromName, suggestChannel } from "./service";
+import { brandFromName, brandNameFromFile, suggestChannel } from "./service";
 
 const brands = [
   { id: "ab", name: "AI Builders", slug: "aibuilders" },
@@ -31,14 +31,25 @@ describe("suggestChannel", () => {
     expect(suggestChannel("x", "@cherr_io", channels, many("plan.xlsx"))).toBeNull(); // the account is someone else's
   });
 
-  it("suggests by account handle, then by the brand the file names, then the only channel of a one-brand org", () => {
+  it("suggests by account handle, then by the brand the file names, never the only channel of another brand", () => {
     expect(suggestChannel("x", "@aibuilders_si", channels, many("plan.xlsx"))).toBe("ab-x");
     expect(suggestChannel("instagram", null, channels, many("CHERR.IO IG.xlsx"))).toBe("ch-ig");
     expect(suggestChannel("x", null, channels, many("AI Builders X.xlsx"))).toBe("ab-x");
     expect(suggestChannel("instagram", "@cherr.io", channels, many("AI Builders.xlsx"))).toBe("ch-ig"); // account wins
     const li = [...channels, { id: "dt-li", platform: "linkedin", handle: "davidtacer", brandId: "dt", brandName: "David Tacer" }];
     expect(suggestChannel("linkedin", "David (osebni profil)", li, many("AI Builders 30 dni.xlsx"))).toBe("dt-li");
-    expect(suggestChannel("x", null, channels.slice(0, 1), { brand: null, brandCount: 1 })).toBe("ab-x");
+    // A one-brand org: a plan that names no brand is not put on that brand's channel by guess (CHERR.IO plan → AI Builders X).
+    expect(suggestChannel("x", null, channels.slice(0, 1), { brand: null, brandCount: 1 })).toBeNull();
     expect(suggestChannel(null, null, channels, many("x.xlsx"))).toBeNull();
+  });
+});
+
+describe("brandNameFromFile", () => {
+  it("keeps the brand part of a plan's file name", () => {
+    expect(brandNameFromFile("CHERR.IO X posts 001 (1).xlsx")).toBe("CHERR.IO");
+    expect(brandNameFromFile("AI Builders — 30 dni objav (29. 9. – 28. 10. 2026).xlsx")).toBe("AI Builders");
+    expect(brandNameFromFile("IG_Content_Plan___100_dni_inzenirji.si.xlsx")).toBe("inzenirji.si");
+    expect(brandNameFromFile("LinkedIn plan.docx")).toBeNull();
+    expect(brandNameFromFile("2026-10.csv")).toBeNull();
   });
 });

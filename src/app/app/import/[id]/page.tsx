@@ -7,7 +7,7 @@ import { getDb } from "@/server/db/client";
 import { PLAN_FIELDS, PLAN_PLATFORMS, type ColumnMapping } from "@/server/plans/mapping";
 import { groupKey, ImportError, importView } from "@/server/plans/service";
 import type { PlanTable } from "@/server/plans/table";
-import { discardImportAction, reopenImportAction, saveImportAction, saveMappingAction } from "../actions";
+import { discardImportAction, reopenImportAction, saveImportAction, saveMappingAction, setImportBrandAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function ImportReview({ params, searchParams }: { params: P
   });
   const t = await getTranslations("Import");
   const tp = await getTranslations("PostFormats");
+  const tb = await getTranslations("Brands");
   const f = await getFormatter();
   const r = v.import;
   const draft = r.status === "draft";
@@ -68,10 +69,48 @@ export default async function ImportReview({ params, searchParams }: { params: P
 
       <div className="grid gap-8">
         {draft ? (
+          <Section id="brand-h" title={t("brandTitle")} description={t("brandHint")}>
+            <form action={setImportBrandAction} className="grid gap-4" data-testid="import-brand-form">
+              <input type="hidden" name="importId" value={r.id} />
+              <Card className="grid gap-4 p-4 sm:grid-cols-3">
+                <div className="grid gap-1">
+                  <label htmlFor="importBrand" className="text-sm font-medium">{t("brandSelect")}</label>
+                  <select id="importBrand" name="brand" defaultValue={v.brand?.id ?? (v.newBrandName ? "new" : "")} className={selectClass}>
+                    <option value="">{t("chooseBrand")}</option>
+                    {v.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    <option value="new">{t("newBrandOption")}</option>
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label htmlFor="newBrandName" className="text-sm font-medium">{t("newBrandName")}</label>
+                  <input id="newBrandName" name="newName" defaultValue={v.newBrandName ?? ""} aria-describedby="newBrandHint" className={inputClass} />
+                  <p id="newBrandHint" className="text-xs text-muted">{t("newBrandHint")}</p>
+                </div>
+                <div className="grid gap-1">
+                  <label htmlFor="newBrandLanguage" className="text-sm font-medium">{t("newBrandLanguage")}</label>
+                  <select id="newBrandLanguage" name="language" defaultValue="sl" className={selectClass}>
+                    {(["sl", "en", "de", "hr", "it"] as const).map((l) => <option key={l} value={l}>{tb(`lang.${l}`)}</option>)}
+                  </select>
+                </div>
+                {v.groups.filter((g) => g.platform).map((g, gi) => (
+                  <div key={g.key} className="grid gap-1">
+                    <label htmlFor={`h-${gi}`} className="text-sm font-medium">{t("handleFor", { platform: t(`platforms.${g.platform}`) })}{g.account ? ` (${g.account})` : ""}</label>
+                    <input id={`h-${gi}`} name={`h:${encodeURIComponent(g.key)}`} defaultValue={g.account ?? ""} placeholder="@ime" aria-describedby="handlesHint" className={inputClass} />
+                  </div>
+                ))}
+                <p id="handlesHint" className="text-xs text-muted sm:col-span-3">{t("handlesHint")}</p>
+              </Card>
+              <div><button type="submit" className={buttonClass("secondary")}>{t("applyBrand")}</button></div>
+            </form>
+          </Section>
+        ) : null}
+        {draft ? (
           <form action={saveImportAction} className="grid gap-6">
             <input type="hidden" name="importId" value={r.id} />
             <Section id="channels-h" title={t("channelsTitle")} description={t("channelsHint")}>
-              {v.brand ? <p className="text-sm" data-testid="import-brand">{t("brandFromFile", { brand: v.brand.name })}</p> : null}
+              <p className="text-sm" data-testid="import-brand">
+                {v.brand ? t(v.brandChosen ? "brandChosen" : "brandFromFile", { brand: v.brand.name }) : <span className="text-muted">{t("noBrandYet")}</span>}
+              </p>
               <DataTable testId="import-groups" head={[t("platform"), t("account"), t("count"), t("channel")]}>
                 {v.groups.map((g, gi) => (
                   <tr key={g.key}>

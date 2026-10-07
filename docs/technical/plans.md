@@ -24,9 +24,13 @@ sections and one shared image style (LinkedIn). Postaja reads any of them into p
    warnings, never guesses.
 4. Review `/app/import/[id]`: counts, **which channel each platform/account goes to** (`suggestChannel`, same
    platform only: the account matches a channel's handle or a word of its brand's name; else, if the file name names one
-   brand (`brandFromName`), only that brand's channel — none means no suggestion and a link to add the channel; the only
-   channel of the platform is suggested only in an org with a single brand, so a plan never lands on another brand's
-   channel by default; "Ne uvozi" skips a group),
+   brand (`brandFromName`), only that brand's channel — none means no suggestion and a link to add the channel; otherwise
+   **nothing**, not even in a one-brand org (owner 2026-10-07: a CHERR.IO plan was offered AI Builders' X channel);
+   "Ne uvozi" skips a group). **"Za kateri brand je plan"** (`setImportBrand`, settings.brandId): pick a brand, or
+   "+ Nov brand" with the name read from the file (`brandNameFromFile`: "CHERR.IO X posts 001 (1)" → "CHERR.IO") and a
+   language; the brand (owner only; reused if the name exists) and missing channels per platform (handle from the form,
+   default the plan's account) are created there. Choosing resets earlier channel choices; suggestions then come only
+   from that brand's channels,
    start day for relative plans, start + gap for undated items, editable column meanings ("Preberi znova").
 5. `confirmImport` (row-locked, a double click imports once): per item a post on the chosen channel with
    `format`, `scheduled_on`/`scheduled_time`, `plan` (topic, category, audience, account, CTA, link, first comment,

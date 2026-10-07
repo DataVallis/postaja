@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { CGP_MAX_CHARS, listBrandFiles, uploadAuto, uploadBrandFile, type Slot } from "../brands/files";
 import { LANGUAGES } from "../brands/schemas";
-import { BrandError, createBrand, getBrandDetail, listBrands } from "../brands/service";
+import { BrandError, createBrandNamed, getBrandDetail, listBrands } from "../brands/service";
 import { slugify } from "@/lib/slug";
 import type { Db } from "../db/client";
 import { brands, cgpDrafts, mcpToolCalls } from "../db/schema";
@@ -65,13 +65,8 @@ export async function ensureBrand(db: Db, ctx: OrgContext, input: z.input<typeof
   const existing = await lookupBrand(db, ctx, data.name);
   if (existing) return { id: existing.id, slug: existing.slug, name: existing.name, created: false, url: `${appUrl}/app/brands/${existing.id}` };
   requireOwner(ctx, "create brands");
-  const base = slugify(data.name) || "brand";
-  const taken = new Set(((await forOrg(db, ctx).select(brands)) as (typeof brands.$inferSelect)[]).map((b) => b.slug));
-  let slug = base;
-  for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 44)}-${n}`;
-  const website = data.website ? (/^https?:\/\//i.test(data.website) ? data.website : `https://${data.website}`) : undefined;
   try {
-    const { id } = await createBrand(db, ctx, { name: data.name, slug, website, languages: data.languages ?? ["sl"] });
+    const { id, slug } = await createBrandNamed(db, ctx, { name: data.name, website: data.website, languages: data.languages });
     return { id, slug, name: data.name, created: true, url: `${appUrl}/app/brands/${id}` };
   } catch (e) {
     if (e instanceof BrandError && e.code === "LIMIT_REACHED") throw new McpError("FORBIDDEN", "The organization has reached its number of brands.");

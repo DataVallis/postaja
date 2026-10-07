@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLAN_FIELDS, PLAN_PLATFORMS, type ColumnMapping, type PlanField, type PlanPlatform } from "@/server/plans/mapping";
-import { confirmImport, discardImport, ImportError, importView, reopenImport, updateImport } from "@/server/plans/service";
+import { confirmImport, discardImport, ImportError, importView, reopenImport, setImportBrand, updateImport } from "@/server/plans/service";
 
 const back = (id: string, error?: string) => redirect(`/app/import/${id}${error ? `?error=${error}` : ""}`);
 const code = (e: unknown) => (e instanceof ImportError ? e.code : "FAILED");
@@ -79,6 +79,25 @@ export async function reopenImportAction(f: FormData) {
   if (!ctx) redirect("/login");
   try {
     await reopenImport(getDb(), ctx, id);
+  } catch (e) {
+    back(id, code(e));
+  }
+  revalidatePath(`/app/import/${id}`);
+  back(id);
+}
+
+/** Which brand the plan is for: an existing one, or a new one created here with the plan's channels. */
+export async function setImportBrandAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  const id = String(f.get("importId") ?? "");
+  if (!ctx) redirect("/login");
+  const choice = String(f.get("brand") ?? "");
+  const handles: Record<string, string> = {};
+  for (const [k, v] of f.entries()) if (k.startsWith("h:") && typeof v === "string") handles[decodeURIComponent(k.slice(2))] = v;
+  const language = String(f.get("language") ?? "sl") as "sl";
+  try {
+    if (!choice) throw new ImportError("INVALID");
+    await setImportBrand(getDb(), ctx, id, choice === "new" ? { newName: String(f.get("newName") ?? ""), language, handles } : { brandId: choice, handles });
   } catch (e) {
     back(id, code(e));
   }
