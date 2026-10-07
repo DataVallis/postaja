@@ -30,7 +30,8 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-019 | **AI post ideas + no-repeat**: "Predlagaj ideje" per brand channel, repeats of the last 180 days replaced, free slots from the channel goal, ticked ideas → planned posts (ADR-048) | TASK-013 | Done |
 | TASK-020 | **Dashboard goals**: today per brand × channel against its goal (planned, ready, published, missing), streak per brand, spend per brand this month | TASK-013 | Done |
 | TASK-021 | **Ads** (phase 1b): a) ad sets — copy per network (Meta, LinkedIn, Google Display) within limits from data, checks, copy.csv (ADR-049); b) creatives per placement from the brand design, ZIP per ad set | TASK-017 | Done (ADR-049, ADR-050) |
-| TASK-022 | **Animation** (phase 1b): animate a post image — clean illustration → fal image-to-video → template burned on with ffmpeg; MP4 in downloads (ADR-051) | TASK-017 | Done |
+| TASK-022 | **Animation** (phase 1b): animate a post image — clean illustration → fal image-to-video → template burned on with ffmpeg; MP4 in downloads (ADR-051) | TASK-017 | Done; for posts replaced by TASK-023 |
+| TASK-023 | **Animation by Claude**: motion spec per image (entrances, word-by-word, rules, illustration drift), drawn frame by frame by Postaja, MP4 (ADR-052); Kling 3.0 kept for persona video | TASK-022 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

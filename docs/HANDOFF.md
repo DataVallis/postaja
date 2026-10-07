@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-07: TASK-023 (owner): post animations are designed by Claude and drawn by Postaja frame by frame (any image, text-only too; optional instructions; one Claude call) — replaces image-to-video for posts. Kling 3.0 is only for AI-influencer videos once personas (DNA + passport, created or imported) exist (ADR-052).
 - 2026-10-07: TASK-022 animation — post page → Animacija: the image's clean illustration becomes a 5 s video (Kling 3.0 Standard on fal — owner's choice, ≈ $0.42), Postaja burns the words/logo back on with ffmpeg at the exact size; MP4 download and in the ZIPs (ADR-051). Docker image now includes ffmpeg.
 - 2026-10-07: TASK-021b ad creatives — on an ad set: *Ustvari slike* (max cost shown) → per variant a brand template, short hook and illustration; one illustration per variant, every placement rendered in its exact size with text inside the safe zone (Story UI); word edits redrawn free; ZIP with copy.csv + a folder per placement (ADR-050).
 - 2026-10-07: TASK-021a ads (owner chose ads after phase 1) — brand → Oglasi: an ad concept for Meta / LinkedIn / Google Display; Claude writes 3 copy variants per network within each field's limit (limits are data, `ad_networks`), one fix round, checks on save, copy.csv per network × placement × variant (ADR-049). Next: TASK-021b creatives per placement + ZIP.

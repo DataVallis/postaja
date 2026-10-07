@@ -1181,24 +1181,25 @@
   },
   "Animation": {
     "title": "Animacija",
-    "hint": "Ilustracija slike oživi v {seconds}-sekundni video; besede, logotip in oblike Postaja vžge nazaj, ostro in točno tako kot na sliki. Model nikoli ne riše besedila.",
-    "working": "Video nastaja (nekaj minut) … stran se osveži sama.",
+    "hint": "Claude zasnuje gibanje (kdaj in kako se pojavi naslov, besedilo, črte, logotip, kako se premika ilustracija), Postaja pa vsako sličico nariše s pravimi pisavami in barvami branda. Model nikoli ne riše črk, zato se da animirati vsako sliko.",
+    "working": "Animacija nastaja (do minute) … stran se osveži sama.",
     "videoLabel": "Animacija slike {n}",
     "download": "Prenesi video (MP4)",
     "which": "Katera slika",
-    "motion": "Gibanje",
-    "motionHint": "Opiši, kaj naj se premika (kamera, svetloba, predmeti). Besedila ne opisuj — doda ga Postaja.",
+    "motion": "Navodila za animacijo (neobvezno)",
+    "motionHint": "Brez navodil Claude sam izbere mirno, premišljeno animacijo v slogu branda.",
     "animate": "Animiraj",
     "again": "Nova animacija",
     "errors": {
-      "FAILED": "Videa ni bilo mogoče narediti. Poskusi znova.",
-      "NOT_ANIMATABLE": "Te slike ni mogoče animirati: predloga nima ilustracije čez celo sliko.",
-      "NO_VIDEO_MODEL": "Model za video ni nastavljen.",
-      "BAD_STATE": "Najprej morajo biti slike pripravljene; animacija že nastaja.",
-      "INVALID": "Opiši gibanje (do 600 znakov).",
-      "VIDEO_INVALID": "Ponudnik je vrnil neveljaven video. Poskusi znova.",
+      "FAILED": "Animacije ni bilo mogoče narediti. Poskusi znova.",
+      "NOT_ANIMATABLE": "Ta slika še nima končne slike — najprej ustvari slike.",
+      "BAD_STATE": "Najprej morajo biti slike pripravljene; ali pa animacija že nastaja.",
+      "INVALID": "Navodila so predolga (do 600 znakov).",
+      "INVALID_OUTPUT": "Claude ni vrnil uporabne animacije. Poskusi znova.",
       "VIDEO_TOOL": "Videa ni bilo mogoče sestaviti.",
       "VIDEO_TIMEOUT": "Sestavljanje videa je trajalo predolgo."
-    }
+    },
+    "motionPlaceholder": "npr. naslov naj se izpiše besedo za besedo, logotip naj se pojavi na koncu, 5 sekund",
+    "atMost": "največ {cost}"
   }
 }

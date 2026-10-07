@@ -16,7 +16,7 @@ import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
 import { AnimationSection } from "./animation-section";
-import { animatablePositions, defaultMotion, postVideo, videoModel, VIDEO_SECONDS } from "@/server/video/service";
+import { animatablePositions, animationEstimate, postVideo } from "@/server/video/service";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
-  const [animatable, video, vModel] = await Promise.all([animatablePositions(db, org, post), postVideo(db, org, post.id), videoModel(db)]);
+  const [animatable, video, animCost] = await Promise.all([animatablePositions(db, org, post), postVideo(db, org, post.id), animationEstimate(db, post.brandId)]);
   const design = await currentDesign(db, org, post.brandId);
   const templates = design?.spec ? design.spec.templates.map((tp) => ({ id: tp.id, name: tp.name, slots: templateSlots(tp) })) : null;
   const editable = post.status === "planned" || post.status === "ready" || post.status === "needs_review" || post.status === "approved";
@@ -123,8 +123,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         <AnimationSection
           postId={post.id} status={post.videoStatus} error={post.videoError} requestError={videoError}
           positions={animatable} position={post.videoPosition} motion={post.videoMotion} video={video}
-          motions={Object.fromEntries(animatable.map((i) => [i, defaultMotion(post.visual?.slides[i]?.illustration)]))}
-          clipPrice={vModel?.clipPrice ?? null} seconds={VIDEO_SECONDS}
+          maxCost={animCost}
         />
       ) : null}
 

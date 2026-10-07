@@ -96,3 +96,44 @@ export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: 
     return { bytes, probe: await probeFile(out) };
   });
 }
+
+/**
+ * An animation from frames (TASK-023): `count` PNG frames, made one at a time by `frame(i)`, piped into ffmpeg at
+ * `fps` — never all in memory — and encoded as H.264 yuv420p + silent stereo AAC, +faststart.
+ */
+export function encodeFrames(count: number, frame: (i: number) => Promise<Uint8Array>, o: { width: number; height: number; fps: number }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
+  return withTemp(async (dir) => {
+    const out = path.join(dir, "out.mp4");
+    const child = spawn(FFMPEG, [
+      "-hide_banner", "-loglevel", "error", "-protocol_whitelist", "file,pipe,lavfi",
+      "-f", "image2pipe", "-framerate", String(o.fps), "-c:v", "png", "-i", "pipe:0",
+      "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+      "-vf", `scale=${o.width}:${o.height},setsar=1,format=yuv420p`, "-map", "0:v", "-map", "1:a", "-shortest",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", String(o.fps),
+      "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", "-y", out,
+    ], { stdio: ["pipe", "ignore", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (d) => { if (stderr.length < 20_000) stderr += d; });
+    child.stdin.on("error", () => undefined); // EPIPE when ffmpeg stops early; its exit code tells why
+    const done = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new VideoError("VIDEO_TIMEOUT")); }, 300_000);
+      child.on("error", () => { clearTimeout(timer); reject(new VideoError("VIDEO_TOOL")); });
+      child.on("close", (code) => { clearTimeout(timer); if (code === 0) resolve(); else reject(Object.assign(new VideoError("VIDEO_TOOL"), { detail: stderr.slice(-500) })); });
+    });
+    done.catch(() => undefined); // observed below; avoids an unhandled rejection while frames are still being written
+    try {
+      for (let i = 0; i < count; i++) {
+        const png = await frame(i);
+        if (!child.stdin.write(png)) await new Promise((r) => child.stdin.once("drain", r));
+      }
+    } catch (e) {
+      child.kill("SIGKILL");
+      throw e;
+    } finally {
+      child.stdin.end();
+    }
+    await done;
+    const bytes = new Uint8Array(await readFile(out));
+    return { bytes, probe: await probeFile(out) };
+  });
+}

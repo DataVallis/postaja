@@ -1181,24 +1181,25 @@
   },
   "Animation": {
     "title": "Animation",
-    "hint": "The image's illustration comes alive as a {seconds}-second video; Postaja burns the words, logo and shapes back on, sharp and exactly as on the image. The model never draws text.",
-    "working": "The video is being made (a few minutes) … the page refreshes itself.",
+    "hint": "Claude designs the motion (when and how the headline, text, rules and logo appear, how the illustration moves); Postaja draws every frame with the brand's real fonts and colours. No model ever draws letters, so any image can be animated.",
+    "working": "The animation is being made (up to a minute) … the page refreshes itself.",
     "videoLabel": "Animation of image {n}",
     "download": "Download video (MP4)",
     "which": "Which image",
-    "motion": "Motion",
-    "motionHint": "Describe what moves (camera, light, objects). Do not describe text — Postaja adds it.",
+    "motion": "Animation instructions (optional)",
+    "motionHint": "Without instructions Claude picks a calm, considered animation in the brand's style.",
     "animate": "Animate",
     "again": "New animation",
     "errors": {
-      "FAILED": "The video could not be made. Try again.",
-      "NOT_ANIMATABLE": "This image cannot be animated: its template has no full-bleed illustration.",
-      "NO_VIDEO_MODEL": "No video model is configured.",
+      "FAILED": "The animation could not be made. Try again.",
+      "NOT_ANIMATABLE": "This image has no finished picture yet — create the images first.",
       "BAD_STATE": "The images must be ready first; or an animation is already being made.",
-      "INVALID": "Describe the motion (up to 600 characters).",
-      "VIDEO_INVALID": "The provider returned an invalid video. Try again.",
+      "INVALID": "The instructions are too long (up to 600 characters).",
+      "INVALID_OUTPUT": "Claude returned no usable animation. Try again.",
       "VIDEO_TOOL": "The video could not be put together.",
       "VIDEO_TIMEOUT": "Putting the video together took too long."
-    }
+    },
+    "motionPlaceholder": "e.g. reveal the headline word by word, the logo last, 5 seconds",
+    "atMost": "at most {cost}"
   }
 }

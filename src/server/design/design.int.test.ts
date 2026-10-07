@@ -16,10 +16,9 @@ import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { ImageError, type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
 import { listPostMedia, requestImages, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
-import { testClip } from "../../../tests/fixtures/video";
 import { postArchive } from "../download/service";
-import type { VideoRequest } from "../images/fal";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
+import { probeVideo } from "../video/ffmpeg";
 import { LlmError, type LlmClient, type StructuredRequest } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
@@ -409,14 +408,24 @@ describe("HTTP", () => {
   });
 });
 
-describe("animation (TASK-022)", () => {
-  /** fal stand-in with video: returns `clip` (or throws) and records calls. */
-  function falWithVideo(clip: Uint8Array | Error = testClip({ width: 768, height: 960, seconds: 7 })) {
-    const images = fakeImages();
-    const videoCalls: VideoRequest[] = [];
-    const client: ImageClient = { generate: images.client.generate, async video(req) { videoCalls.push(req); if (clip instanceof Error) throw clip; return { bytes: clip }; } };
-    return { client, videoCalls };
+describe("animation by Claude (TASK-023)", () => {
+  /** Claude stand-in for motion specs: returns `specs` in order, records the requests. */
+  function motionClaude(specs: unknown[]) {
+    const calls: StructuredRequest[] = [];
+    const queue = [...specs];
+    const client: LlmClient = { async structured(req) { calls.push(req); return { input: queue.length > 1 ? queue.shift() : queue[0], usage: { inputTokens: 2000, outputTokens: 400, cacheWriteTokens: 0, cacheReadTokens: 0 } }; } };
+    return { client, calls };
   }
+  const goodSpec = {
+    durationS: 4,
+    background: { motion: "zoom_in", amount: 0.08 },
+    elements: [
+      { index: 0, enter: { effect: "pop", at: 0.2, duration: 0.5 } },
+      { index: 1, enter: { effect: "words", at: 0.5, duration: 1.2 } },
+      { index: 2, enter: { effect: "grow_x", at: 1.4, duration: 0.6 }, loop: "none" },
+      { index: 3, enter: { effect: "fade", at: 1.8, duration: 0.5 }, loop: "float" },
+    ],
+  };
   async function readyPost(extra: Partial<typeof posts.$inferInsert> = {}) {
     const id = await post(extra);
     const { q, jobs } = memoryQueue();
@@ -426,57 +435,60 @@ describe("animation (TASK-022)", () => {
   }
   const videoQueue = () => { const jobs: PostVideoJob[] = []; return { jobs, q: { async send(_n: string, data: object) { jobs.push(data as PostVideoJob); } } }; };
 
-  it("the clean illustration is animated; the template is burned on at the slide's size; one video per post, in the ZIP", async () => {
+  it("Claude designs the motion from the template's elements; Postaja renders every frame; MP4 at the image size, in the ZIP", async () => {
     await design();
     const before = await post();
-    await expect(requestAnimation(db, videoQueue().q, A, before, { position: 0, motion: "Slow push-in" })).rejects.toMatchObject({ code: "BAD_STATE" }); // no images yet
+    await expect(requestAnimation(db, videoQueue().q, A, before, { position: 0, motion: "" })).rejects.toMatchObject({ code: "BAD_STATE" }); // no images yet
     const id = await readyPost();
-    const [row] = await db.select().from(posts).where(eq(posts.id, id));
-    expect(await animatablePositions(db, A, row)).toEqual([0]); // the cover has a full-bleed illustration
     const { q, jobs } = videoQueue();
-    await requestAnimation(db, q, editorA, id, { position: 0, motion: "Slow push-in, red light pulses" });
-    await expect(requestAnimation(db, q, A, id, { position: 0, motion: "again" })).rejects.toMatchObject({ code: "BAD_STATE" }); // one at a time
-    const fal = falWithVideo();
-    expect(await runVideoJob(db, { llm: fakeClaude().client, images: fal.client, storage }, jobs[0])).toBe("done");
-    expect(fal.videoCalls).toHaveLength(1);
-    expect(fal.videoCalls[0]).toMatchObject({ model: "fal-ai/kling-video/v3/standard/image-to-video", durationS: 5 }); // Kling 3.0 (owner)
-    expect(fal.videoCalls[0].prompt).toContain("Slow push-in, red light pulses");
-    expect(fal.videoCalls[0].prompt).toContain("No text");
-    expect(fal.videoCalls[0].image).toMatch(/^data:image\/jpeg;base64,/);
+    await requestAnimation(db, q, editorA, id, { position: 0, motion: "Naslov besedo za besedo" });
+    await expect(requestAnimation(db, q, A, id, { position: 0, motion: "" })).rejects.toMatchObject({ code: "BAD_STATE" }); // one at a time
+    const claude = motionClaude([goodSpec]);
+    expect(await runVideoJob(db, { llm: claude.client, storage }, jobs[0])).toBe("done");
+    expect(claude.calls).toHaveLength(1);
+    expect(claude.calls[0].tool.name).toBe("submit_motion");
+    expect(claude.calls[0].user).toContain("<owner_wish>\nNaslov besedo za besedo\n</owner_wish>");
+    expect(claude.calls[0].user).toContain('"slot":"headline","text":"Daš. *Zaklenjeno je.*"');
+    expect(claude.calls[0].system[0].text).toContain(cardDesign.summary);
     expect((await sql`select video_status, video_error from posts where id = ${id}`)[0]).toEqual({ video_status: "ready", video_error: null });
-    const [v] = await sql`select width, height, storage_key, content_type from post_media where post_id = ${id} and kind = 'video'`;
-    expect(v).toMatchObject({ width: 1080, height: 1350, content_type: "video/mp4" });
-    const cost = await sql`select state, cost_micro_usd::text c from usage_ledger where post_id = ${id} and model like 'fal-ai/kling-video%'`;
-    expect(cost).toEqual([{ state: "settled", c: "420000" }]); // $0.084 × 5 s, no audio
-    const zip = await postArchive(db, storage, A, id);
-    expect(zip.entries.map((e) => e.name)).toContain("video.mp4");
+    const [v] = await sql`select width, height, storage_key, prompt, model from post_media where post_id = ${id} and kind = 'video'`;
+    expect(v).toMatchObject({ width: 1080, height: 1350, model: "postaja-motion" });
+    expect(JSON.parse(v.prompt)).toMatchObject({ durationS: 4, background: { motion: "zoom_in" } });
+    const probe = await probeVideo(await storage.get(v.storage_key));
+    expect(probe.durationS).toBeGreaterThan(3.8);
+    expect(probe.durationS).toBeLessThan(4.3);
+    expect(await sql`select 1 from usage_ledger where post_id = ${id} and model like 'fal-ai/%video%'`).toHaveLength(0); // no video model is paid
+    expect((await postArchive(db, storage, A, id)).entries.map((e) => e.name)).toContain("video.mp4");
 
     // New images make the video stale: it is removed with them.
     const { q: iq, jobs: ij } = memoryQueue();
     await requestImages(db, iq, A, id, "new");
     await runImages(ij, fakeClaude(), fakeImages().client);
     expect((await sql`select video_status from posts where id = ${id}`)[0].video_status).toBe("none");
-    expect(await sql`select 1 from post_media where post_id = ${id} and kind = 'video'`).toHaveLength(0);
     expect(await storage.exists(v.storage_key)).toBe(false);
   }, 120_000);
 
-  it("refuses images without a full-bleed illustration, bad motion, other orgs; provider failures release the cost, bad clips do not", async () => {
+  it("any image can move, text-only slides too; a spec naming missing elements is retried, twice is a failure; other orgs refused", async () => {
     await design();
     const carousel = await readyPost({ format: "carousel", plan: { topic: "Koraki", slides: ["Ena", "Dva"] } });
+    const [row] = await db.select().from(posts).where(eq(posts.id, carousel));
+    expect(await animatablePositions(db, A, row)).toEqual([0, 1, 2]); // the "points" slides have no illustration and still move
     const { q, jobs } = videoQueue();
-    await expect(requestAnimation(db, q, A, carousel, { position: 1, motion: "Move" })).rejects.toMatchObject({ code: "NOT_ANIMATABLE" }); // a "points" slide
-    await expect(requestAnimation(db, q, A, carousel, { position: 0, motion: "" })).rejects.toMatchObject({ code: "INVALID" });
-    await expect(requestAnimation(db, q, B, carousel, { position: 0, motion: "Move" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(requestAnimation(db, q, B, carousel, { position: 1, motion: "" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(requestAnimation(db, q, A, carousel, { position: 7, motion: "" })).rejects.toMatchObject({ code: "NOT_ANIMATABLE" });
+    await expect(requestAnimation(db, q, A, carousel, { position: 1, motion: "x".repeat(601) })).rejects.toMatchObject({ code: "INVALID" });
 
-    await requestAnimation(db, q, A, carousel, { position: 0, motion: "Move" });
-    expect(await runVideoJob(db, { llm: fakeClaude().client, images: falWithVideo(new ImageError("IMAGE_PROVIDER")).client, storage }, jobs[0])).toBe("failed");
-    expect((await sql`select video_status, video_error from posts where id = ${carousel}`)[0]).toEqual({ video_status: "failed", video_error: "IMAGE_PROVIDER" });
-    expect(await sql`select 1 from usage_ledger where post_id = ${carousel} and model like 'fal-ai/kling-video%'`).toHaveLength(0); // released
+    await requestAnimation(db, q, A, carousel, { position: 1, motion: "" });
+    const bad = { ...goodSpec, elements: [{ index: 30, enter: { effect: "fade", at: 0, duration: 1 } }] };
+    const ok = { durationS: 3, background: { motion: "none", amount: 0 }, elements: [{ index: 0, enter: { effect: "pop", at: 0, duration: 0.5 } }] };
+    const claude = motionClaude([bad, ok]);
+    expect(await runVideoJob(db, { llm: claude.client, storage }, jobs[0])).toBe("done");
+    expect(claude.calls).toHaveLength(2);
+    expect(claude.calls[1].user).toContain("index 30 does not exist");
 
     jobs.length = 0;
-    await requestAnimation(db, q, A, carousel, { position: 0, motion: "Move" });
-    expect(await runVideoJob(db, { llm: fakeClaude().client, images: falWithVideo(new TextEncoder().encode("<html>not a video</html>")).client, storage }, jobs[0])).toBe("failed");
-    expect((await sql`select video_error from posts where id = ${carousel}`)[0].video_error).toBe("VIDEO_INVALID");
-    expect(await sql`select state from usage_ledger where post_id = ${carousel} and model like 'fal-ai/kling-video%'`).toEqual([{ state: "settled" }]); // the provider charged
+    await requestAnimation(db, q, A, carousel, { position: 2, motion: "" });
+    expect(await runVideoJob(db, { llm: motionClaude([bad]).client, storage }, jobs[0])).toBe("failed");
+    expect((await sql`select video_error from posts where id = ${carousel}`)[0].video_error).toBe("INVALID_OUTPUT");
   }, 120_000);
 });
