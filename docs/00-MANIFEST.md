@@ -72,4 +72,4 @@ davidtacer.com (LinkedIn) · inzenirji.si (Instagram) · aibuilders.si (Instagra
 
 ## 8. Docs map
 `00-MANIFEST.md` (this) · `01-PRODUCT-SPEC.md` · `02-ARCHITECTURE.md` · `03-DECISIONS.md` · `HANDOFF.md` ·
-`DEVELOPMENT-RULES.md` · `templates/BRAND-CGP-TEMPLATE.md` (what users fill per brand) · `brand/` (Postaja's own identity).
+`DEVELOPMENT-RULES.md` · `templates/BRAND-CGP-TEMPLATE.md` (what users fill per brand) · `brand/` (Postaja's own identity) · `business/BUSINESS-PLAN.sl.md` (business plan, Slovenian).
