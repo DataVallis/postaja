@@ -1412,7 +1412,12 @@
     "back": "All chapters",
     "onThisPage": "On this page",
     "empty": "The guide is not available yet.",
-    "slOnly": "The guide is in Slovenian for now."
+    "slOnly": "",
+    "pdf": "Download the guide (PDF)",
+    "pdfTitle": "User guide",
+    "pdfSubtitle": "Postaja · as of {date}",
+    "pdfContents": "Contents",
+    "pdfPage": "page"
   },
   "Team": {
     "title": "Team and plan",

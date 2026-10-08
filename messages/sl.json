@@ -1412,7 +1412,12 @@
     "back": "Vsa poglavja",
     "onThisPage": "Na tej strani",
     "empty": "Navodila še niso na voljo.",
-    "slOnly": ""
+    "slOnly": "",
+    "pdf": "Prenesi navodila (PDF)",
+    "pdfTitle": "Navodila za uporabo",
+    "pdfSubtitle": "Postaja · stanje {date}",
+    "pdfContents": "Vsebina",
+    "pdfPage": "stran"
   },
   "Team": {
     "title": "Ekipa in paket",

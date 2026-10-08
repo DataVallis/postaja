@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { Download } from "lucide-react";
+import { buttonClass, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireOrgPage } from "@/server/auth/require";
 import { guideChapters } from "@/server/guide/guide";
 import { plain } from "@/server/guide/markdown";
@@ -15,7 +16,8 @@ export default async function HelpPage() {
   const chapters = await guideChapters(locale);
   return (
     <>
-      <PageHeader title={t("title")} description={<>{t("description")}{t("slOnly") ? <> {t("slOnly")}</> : null}</>} />
+      <PageHeader title={t("title")} description={<>{t("description")}{t("slOnly") ? <> {t("slOnly")}</> : null}</>}
+        actions={<a href="/api/help/pdf" className={buttonClass("secondary")} data-testid="help-pdf"><Download aria-hidden className="size-4" />{t("pdf")}</a>} />
       {chapters.length === 0 ? <EmptyState title={t("empty")} /> : (
         <nav aria-label={t("chapters")}>
           <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="help-chapters">

@@ -52,3 +52,7 @@ Kar ustvariš (slike, videi, potne slike, besedila oglasov), ostane, dokler sam 
 ## Jezik in tema
 
 Zgoraj desno preklopiš med slovenščino in angleščino ter med svetlo in temno temo.
+
+## Navodila
+
+Ta navodila so v meniju **Navodila za uporabo**, v slovenščini in angleščini (po izbranem jeziku). Z gumbom **Prenesi navodila (PDF)** jih preneseš v celoti, na primer za tisk ali za sodelavce.
