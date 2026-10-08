@@ -299,6 +299,25 @@ describe("post images from the design", () => {
     await runImages(jobs, claude2, fal.client);
     expect(claude2.calls[0].user).not.toContain("<persona");
     expect(fal.calls.map((c) => c.model)).toEqual(["fal-ai/ideogram/v3"]);
+
+    // Per post (TASK-031): with the brand default off, one post is made with the persona; the choice is remembered.
+    const id3 = await post();
+    ({ q, jobs } = memoryQueue());
+    await requestImages(db, q, editorA, id3, "new", undefined, { withPersona: true });
+    fal = fakeImages();
+    await runImages(jobs, fakeClaude(), fal.client);
+    expect(fal.calls.map((c) => c.model)).toEqual(["fal-ai/nano-banana-pro/edit"]);
+    expect((await sql`select images_with_persona from posts where id = ${id3}`)[0].images_with_persona).toBe(true);
+    // …and with the default on again, another post is made without it.
+    await setPersonaInPosts(db, A, personaId, true);
+    const id4 = await post();
+    ({ q, jobs } = memoryQueue());
+    await requestImages(db, q, A, id4, "new", undefined, { withPersona: false });
+    fal = fakeImages();
+    const claude4 = fakeClaude();
+    await runImages(jobs, claude4, fal.client);
+    expect(claude4.calls[0].user).not.toContain("<persona");
+    expect(fal.calls.map((c) => c.model)).toEqual(["fal-ai/ideogram/v3"]);
   });
 
   it("the words follow the brand's language even when the channel was left on another one", async () => {

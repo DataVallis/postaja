@@ -39,6 +39,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-028 | **Team and plan limits**: owners invite/cancel/change role/remove members (Ekipa in paket, audited, last owner kept); limits for brands, members, AI generations per month set in /admin and enforced (ADR-058) | TASK-003b | Done |
 | TASK-029 | **No-repeat for posts + published URL**: written posts checked against the brand's posts of the window (warning; close repeats need review, approve = override); "Označi kot objavljeno" with the post's link (ADR-059) | TASK-019 | Done |
 | TASK-030 | **Production backups**: nightly `pg_dump` (+ S3 objects) of **production only** to `postaja-backup` (fsn1.your-objectstorage.com), retention, restore drill; owner sets the keys | prod env | Planned (needs prod) |
+| TASK-031 | **Persona optional per post**: "S persono" checkbox on the images form, stored per post; the Persona tab sets the default (ADR-060) | TASK-027 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

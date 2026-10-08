@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ADD COLUMN "images_with_persona" boolean;

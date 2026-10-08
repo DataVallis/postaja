@@ -41,7 +41,7 @@ Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
 
 Za LinkedIn karusel je na voljo **Prenesi PDF karusel**.
 
-Pri brandu s persono ilustracije prikazujejo persono. Glej [Persona](/app/help/persona#persona-na-slikah-objav).
+Pri brandu s persono ob gumbu **Ustvari slike** izbereš, ali naj ilustracije prikazujejo persono (**S persono …**) ali ne. Glej [Persona](/app/help/persona#persona-na-slikah-objav).
 
 ## Animacija
 

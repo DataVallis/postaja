@@ -28,11 +28,11 @@ Obvezna so Gender, Age, Ethnicity / Skin Tone in Hair Colour. V **Extra Notes** 
 
 ## Persona na slikah objav
 
-Ko ima persona vsaj eno potno sliko, ilustracije slik objav tega branda prikazujejo persono. Claude opiše prizor (kje je, kaj počne, kadriranje, prostor za besedilo), slika nastane iz potnih slik, zato je vedno ista oseba. Besedila in logotip še vedno nariše Postaja po vizualni podobi branda.
+Ko ima persona vsaj eno potno sliko, lahko ilustracije slik objav prikazujejo persono. Claude opiše prizor, slika nastane iz potnih slik, zato je vedno ista oseba. Besedila in logotip še vedno nariše Postaja po vizualni podobi branda.
 
-- Na objavi v razdelku **Slike** piše, katero persono ilustracije prikazujejo.
-- Ilustracija s persono stane 0,15 € (Nano Banana Pro); pregled stroškov pri množičnem ustvarjanju to upošteva.
-- V zavihku **Persona** lastnik to izklopi z **Izklopi** v razdelku **Persona na slikah objav**; ilustracije so nato spet v slogu vizualne podobe.
+- Pri vsaki objavi ob gumbu **Ustvari slike** (ali **Nove slike**) izbereš **S persono …**. Če izbiro odkljukaš, so ilustracije v slogu vizualne podobe kot prej. Izbira se zapomni za to objavo.
+- Privzeto izbiro za nove objave (tudi pri množičnem ustvarjanju) nastaviš v zavihku **Persona**, razdelek **Persona na slikah objav (privzeto)**, z **Vklopi** ali **Izklopi**.
+- Ilustracija s persono stane 0,15 € (Nano Banana Pro); pregled stroškov pri množičnem ustvarjanju upošteva privzeto izbiro.
 
 ## Video s persono
 

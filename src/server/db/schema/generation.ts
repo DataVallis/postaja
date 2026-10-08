@@ -93,6 +93,8 @@ export const posts = pgTable(
     repeatOf: jsonb("repeat_of").$type<RepeatMatch>(),
     /** TASK-029: where the post was published (set with "Označi kot objavljeno"). */
     publishedUrl: text("published_url"),
+    /** TASK-031: this post's images with (true) or without (false) the brand's persona; null = the brand's default. */
+    imagesWithPersona: boolean("images_with_persona"),
     ruleFailures: jsonb("rule_failures").$type<{ code: string; actual: number | string; limit: number | string; part?: number }[]>().notNull().default([]),
     fixAttempts: integer("fix_attempts").notNull().default(0),
     model: text("model"),

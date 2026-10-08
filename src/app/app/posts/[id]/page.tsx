@@ -142,7 +142,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         requestError={imageError}
         designHref={`/app/brands/${post.brandId}?tab=design`}
         pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
-        personaName={persona?.persona.useInPosts && persona.images.length ? persona.persona.name : null}
+        persona={persona?.images.length ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
       />
       {persona && personaVideo ? (
         <PersonaVideoSection

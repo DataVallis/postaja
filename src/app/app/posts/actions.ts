@@ -117,6 +117,9 @@ export async function writePlannedPostAction(f: FormData): Promise<void> {
 }
 
 /** "Ustvari slike" / "Nova ozadja" / "Osveži tekst" (TASK-015): queued for the worker; the page refreshes until done. */
+/** TASK-031: the "S persono" checkbox, when the form shows it (`personaChoice` marks that it was shown). */
+const personaChoice = (f: FormData): { withPersona?: boolean } => (f.get("personaChoice") ? { withPersona: f.get("withPersona") === "1" } : {});
+
 export async function requestImagesAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();
   if (!ctx) return;
@@ -124,7 +127,7 @@ export async function requestImagesAction(f: FormData): Promise<void> {
   const mode = f.get("mode") === "text" ? "text" : "new";
   let error: string | null = null;
   try {
-    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, mode);
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, mode, undefined, personaChoice(f));
   } catch (e) {
     error = e instanceof ImageJobError ? e.code : "FAILED";
   }
@@ -139,7 +142,7 @@ export async function reviseImagesAction(f: FormData): Promise<void> {
   const id = String(f.get("postId") ?? "");
   let error: string | null = null;
   try {
-    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""));
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), personaChoice(f));
   } catch (e) {
     error = e instanceof ImageJobError ? e.code : "FAILED";
   }

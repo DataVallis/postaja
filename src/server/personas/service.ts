@@ -142,10 +142,19 @@ export async function setPersonaInPosts(db: Db, ctx: OrgContext, personaId: stri
   await forOrg(db, ctx).update(personas, { useInPosts: on, updatedAt: new Date() }, eq(personas.id, p.id));
 }
 
-/** The persona that post illustrations of the brand show, or null (none, switched off, or no pictures yet). */
-export async function postPersona(db: Db, ctx: OrgContext, brandId: string) {
+/** The brand's persona when it has passport pictures (so it can be drawn), whatever the default; else null. */
+export async function drawablePersona(db: Db, ctx: OrgContext, brandId: string) {
   const data = await getBrandPersona(db, ctx, brandId);
-  return data && data.persona.useInPosts && data.images.length ? data.persona : null;
+  return data && data.images.length ? data.persona : null;
+}
+
+/**
+ * The persona that a post's illustrations show, or null. `choice` is the post's own choice (TASK-031: with or without
+ * the persona); null follows the brand's default ("Persona na slikah objav").
+ */
+export async function postPersona(db: Db, ctx: OrgContext, brandId: string, choice: boolean | null = null) {
+  const p = await drawablePersona(db, ctx, brandId);
+  return p && (choice ?? p.useInPosts) ? p : null;
 }
 
 /** Owner deletes the persona and its passport (rows first; the pictures afterwards, best effort). */

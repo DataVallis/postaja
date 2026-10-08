@@ -25,8 +25,8 @@ export async function ImagesSection(props: {
   templates: TemplateInfo[] | null;
   aiConfigured: boolean;
   requestError?: string;
-  /** TASK-027: the persona the illustrations show, if any. */
-  personaName?: string | null;
+  /** TASK-027/031: the brand's persona (with pictures) and whether this post's next images show it. */
+  persona?: { name: string; checked: boolean } | null;
   designHref: string;
   /** LinkedIn carousel: offer the images as one PDF (a document post). */
   pdf?: boolean;
@@ -62,7 +62,6 @@ export async function ImagesSection(props: {
       {props.requestError ? <p role="alert" className="text-sm text-danger">{t(`errors.${props.requestError}`)}</p> : null}
       {props.templates && !props.aiConfigured ? <p className="text-sm text-muted">{t("noKey")}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
-      {props.personaName ? <p className="text-sm text-muted" data-testid="images-persona">{t("personaNote", { name: props.personaName })}</p> : null}
 
       {props.media.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="image-list">
@@ -87,12 +86,19 @@ export async function ImagesSection(props: {
       ) : null}
 
       {props.templates ? (
-        <form action={requestImagesAction}>
+        <form key={`new-${version}-${props.persona?.checked ? 1 : 0}`} action={requestImagesAction} className="flex flex-wrap items-center gap-4">
           <input type="hidden" name="postId" value={props.postId} />
           <input type="hidden" name="mode" value="new" />
           <button type="submit" disabled={working} className={buttonClass(props.media.length ? "secondary" : "primary")}>
             <ImageIcon aria-hidden className="size-4" />{props.media.length ? t("regenerate") : t("generate")}
           </button>
+          {props.persona ? (
+            <label className="flex items-center gap-2 text-sm" data-testid="images-persona">
+              <input type="hidden" name="personaChoice" value="1" />
+              <input type="checkbox" name="withPersona" value="1" defaultChecked={props.persona.checked} className="size-4 accent-signal" />
+              {t("withPersona", { name: props.persona.name })}
+            </label>
+          ) : null}
         </form>
       ) : null}
 
