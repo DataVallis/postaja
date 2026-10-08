@@ -17,3 +17,4 @@ export * from "./schema/ads";
 export * from "./schema/personas";
 export * from "./schema/competitors";
 export * from "./schema/reviews";
+export * from "./schema/demos";

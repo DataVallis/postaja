@@ -180,6 +180,21 @@ http
           gaps: [{ topic: "Primerjava cen tečajev", why: "Vsi jo imajo.", competitors: names.slice(0, 1) }],
         });
       }
+      // Demo from a website (TASK-040): a bakery named after the site's text, three posts (one carousel), a Meta ad.
+      if (tool === "submit_demo_brand") {
+        const name = user.match(/<website [^>]*name="([^"]+)"/)?.[1] ?? "Demo";
+        return reply(tool, {
+          name, language: "sl", cgp: `## Kdo smo\n${name} peče domač kruh v Kranju.\n\n## Ton\nTopel in domač.`,
+          pillars: [{ name: "Kruh", description: "Peka", share: 60 }, { name: "Prazniki", description: "Potice", share: 40 }],
+          colors: { primary: "#e85d04" }, imageStyle: "Warm bread photography",
+          posts: [
+            { topic: "Jutranja peka ob šestih", format: "image", category: "Kruh", overlayText: "Ob šestih že diši", slides: [], cta: "Pridite po kruh" },
+            { topic: "Kako nastane potica", format: "carousel", category: "Prazniki", overlayText: "Potica v treh korakih", slides: ["Testo", "Nadev", "Peka"], cta: "" },
+            { topic: "Ogenj v krušni peči", format: "image", category: "Kruh", overlayText: "Ogenj, ki ga okusiš", slides: [], cta: "" },
+          ],
+          ad: { objective: "traffic", offer: "Praznične potice po naročilu", brief: "Kupci v Kranju" },
+        });
+      }
       // Post ideas (TASK-019): N numbered ideas in the first allowed format, named after the owner's wish when given.
       // Ad copy (TASK-021): fill every field of every network the tool asks for, within its limits; variant n's Meta
       // headline is "Naslov n" so the E2E can find it.

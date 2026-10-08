@@ -184,6 +184,68 @@
       "file": "Datoteka",
       "size": "Velikost",
       "none": "Še ni kopij."
+    },
+    "demos": {
+      "title": "Demo iz spletne strani",
+      "intro": "Vpiši spletno stran potencialne stranke. Postaja iz nje v organizaciji »{org}« (s svojo omejitvijo stroškov) pripravi demo brand z logotipom, slikami in besedilom s strani, 3 objave s slikami in 1 oglasni set ter javno povezavo za ogled, ki poteče v 14 dneh. Priprava traja nekaj minut.",
+      "url": "Spletna stran",
+      "name": "Ime branda (neobvezno)",
+      "pasteSummary": "Strani ni mogoče prebrati? Prilepi besedilo",
+      "text": "Besedilo s spletne strani",
+      "textHint": "Nekatere strani se naložijo šele v brskalniku. Takrat prilepi besedilo s strani (o podjetju, ponudba); uporabi se kot podatek, ne kot navodilo.",
+      "create": "Ustvari demo",
+      "creating": "Ustvarjam …",
+      "newLink": "Povezava za ogled (pokaže se samo zdaj)",
+      "newLinkHint": "Kopiraj jo zdaj: shranjen je le njen odtis. Novo lahko narediš kadar koli; stara takrat preneha delovati.",
+      "copy": "Kopiraj",
+      "copied": "Kopirano",
+      "none": "Še ni demov.",
+      "statuses": {
+        "queued": "V vrsti",
+        "running": "V pripravi",
+        "ready": "Pripravljen",
+        "failed": "Ni uspel"
+      },
+      "steps": {
+        "site": "branje strani",
+        "brand": "brand",
+        "design": "dizajn",
+        "posts": "objave",
+        "images": "slike",
+        "ad": "oglas",
+        "done": "končano"
+      },
+      "failures": {
+        "NO_TEXT": "Na strani ni dovolj besedila. Prilepi besedilo s strani in poskusi znova.",
+        "BLOCKED": "Strani ni mogoče prebrati (naslov ni javen).",
+        "BAD_URL": "Naslov strani ni veljaven.",
+        "HTTP": "Stran je vrnila napako. Prilepi besedilo s strani in poskusi znova.",
+        "TIMEOUT": "Stran se ni odzvala pravočasno. Prilepi besedilo in poskusi znova.",
+        "NETWORK": "Do strani ni bilo mogoče priti. Prilepi besedilo in poskusi znova.",
+        "NOT_HTML": "Naslov ne vodi na spletno stran.",
+        "TOO_LARGE": "Stran je prevelika.",
+        "SPEND_CAP": "Dosežena je mesečna omejitev stroškov prodajne organizacije.",
+        "INVALID_OUTPUT": "Claude ni vrnil uporabnega predloga. Poskusi znova.",
+        "PROVIDER": "Storitev AI trenutno ni dosegljiva. Poskusi znova.",
+        "NOT_CONFIGURED": "Storitev AI ni nastavljena.",
+        "NO_ACCESS": "Avtor dema ni več član prodajne organizacije.",
+        "FAILED": "Priprava ni uspela ({code})."
+      },
+      "warnings": "Ni uspelo: {list}",
+      "created": "Ustvarjen {at}",
+      "linkUntil": "povezava velja do {at}",
+      "linkRevoked": "povezava preklicana",
+      "linkExpired": "povezava je potekla",
+      "viewed": "nazadnje ogledan {at}",
+      "openBrand": "Odpri brand",
+      "newLinkButton": "Nova povezava",
+      "revoke": "Prekliči povezavo",
+      "errors": {
+        "INVALID": "Vpiši veljaven spletni naslov (http/https).",
+        "TOO_MANY": "Danes je bilo ustvarjenih že 20 demov. Poskusi jutri.",
+        "NOT_FOUND": "Demo ne obstaja.",
+        "FAILED": "Ni uspelo. Poskusi znova."
+      }
     }
   },
   "Brands": {
@@ -627,7 +689,8 @@
     "help": "Navodila za uporabo",
     "orgSection": "Organizacija",
     "team": "Ekipa in paket",
-    "backups": "Varnostne kopije"
+    "backups": "Varnostne kopije",
+    "demos": "Demo iz spletne strani"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -1650,5 +1713,31 @@
       "GONE": "Povezava ne velja več.",
       "FAILED": "Ni uspelo, poskusi znova."
     }
+  },
+  "Demo": {
+    "title": "{brand} na Postaji",
+    "intro": "Iz vaše spletne strani ({url}) je Postaja pripravila primer: tri objave za Instagram s slikami in oglas za Meta — v vašem tonu in barvah. Vse lahko v Postaji uredite, popravite z besedami in prenesete.",
+    "logoAlt": "Logotip {brand}",
+    "postsTitle": "Objave za naslednji teden",
+    "formats": {
+      "image": "Slika",
+      "carousel": "Karusel"
+    },
+    "imageAlt": "Slika {n}",
+    "adTitle": "Oglas za Facebook in Instagram",
+    "creativeAlt": "Oglasna slika, različica {n}",
+    "variant": "Različica {n}",
+    "cta": "Gumb: {cta}",
+    "footer": "Pripravila Postaja (Data Vallis) iz javne spletne strani. Predogled samo za ogled.",
+    "aiNote": "Besedila in slike je ustvarila umetna inteligenca.",
+    "until": "Povezava velja do {until}.",
+    "pendingTitle": "Primer je v pripravi",
+    "pendingBody": "Postaja še pripravlja objave in slike. Stran se osveži sama.",
+    "goneTitle": "Povezava ne velja več",
+    "goneBody": "Povezava je potekla ali je bila preklicana. Za nov primer se obrnite na pošiljatelja.",
+    "failedTitle": "Primera ni bilo mogoče pripraviti",
+    "failedBody": "Za nov primer se obrnite na pošiljatelja.",
+    "imagesLabel": "Slike: {topic}",
+    "creativesLabel": "Oglasne slike"
   }
 }
