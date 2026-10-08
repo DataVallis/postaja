@@ -33,7 +33,12 @@
       "trial": "trial",
       "starter": "starter",
       "pro": "pro",
-      "comped": "free"
+      "comped": "free",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agency",
+      "partner": "Partner",
+      "pilot": "agency pilot"
     },
     "adminLink": "Admin",
     "nav": "Main navigation",
@@ -70,7 +75,12 @@
       "trial": "trial",
       "starter": "starter",
       "pro": "pro",
-      "comped": "free (comped)"
+      "comped": "free (comped)",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agency",
+      "partner": "Partner",
+      "pilot": "agency pilot"
     },
     "statuses": {
       "active": "active",
@@ -296,6 +306,32 @@
       "manage": "Manage credits",
       "pendingBanner": "Open credit purchase requests: {n}.",
       "open": "Open"
+    },
+    "billing": {
+      "title": "Payments",
+      "intro": "Subscriptions, the agency pilot and credit packs go through Stripe Checkout; invoices, cards and cancelling are handled by Stripe (customer portal). Postaja learns the state only from signed webhooks.",
+      "setup": "Setup",
+      "webhookHint": "Stripe webhook: /api/stripe/webhook, events checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.created/updated/deleted. In the customer portal enable plan changes and cancelling.",
+      "present": "present",
+      "missing": "missing",
+      "ensure": "Create prices in Stripe",
+      "created": "Prices created: {n}.",
+      "subscriptions": "Subscriptions",
+      "events": "Latest Stripe events",
+      "none": "Nothing yet.",
+      "until": "until {date}",
+      "cancels": "cancels at period end",
+      "pilotUntil": "pilot until {date}",
+      "intervals": {
+        "month": "monthly",
+        "year": "yearly"
+      },
+      "yes": "set",
+      "no": "not set",
+      "errors": {
+        "NOT_CONFIGURED": "Stripe is not configured (STRIPE_SECRET_KEY).",
+        "STRIPE": "Stripe did not answer or refused. Check the key."
+      }
     }
   },
   "Brands": {
@@ -741,7 +777,8 @@
     "team": "Team and plan",
     "backups": "Backups",
     "demos": "Demo from a website",
-    "credits": "Credits"
+    "credits": "Credits",
+    "billing": "Payments"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -1547,7 +1584,12 @@
       "trial": "trial",
       "starter": "starter",
       "pro": "pro",
-      "comped": "comped"
+      "comped": "comped",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agency",
+      "partner": "Partner",
+      "pilot": "agency pilot"
     },
     "brands": "Brands",
     "members": "Members",
@@ -1595,7 +1637,12 @@
       "ALREADY_MEMBER": "This person is already a member.",
       "LIMIT_REACHED": "The plan allows no more members. Contact the Postaja administrator for more.",
       "LAST_OWNER": "The organization must keep at least one owner.",
-      "TOO_MANY": "3 credit requests are already open. Please wait until they are confirmed."
+      "TOO_MANY": "3 credit requests are already open. Please wait until they are confirmed.",
+      "NOT_CONFIGURED": "Online payment is not switched on yet.",
+      "HAS_SUBSCRIPTION": "You already have a subscription; change the plan under Manage subscription.",
+      "PILOT_USED": "The pilot is available once, before the first subscription.",
+      "NO_CUSTOMER": "There is no payment for this organization yet.",
+      "NO_PRICE": "This price is not set up in Stripe yet. Please let us know."
     },
     "credits": {
       "title": "Credits",
@@ -1618,6 +1665,33 @@
       "bannerWarn": "More than 80 % of this month's credits are used ({available} left).",
       "bannerOut": "This month's credits are used up.",
       "bannerLink": "Buy credits"
+    },
+    "billing": {
+      "title": "Plan and payment",
+      "notConfigured": "Online payment is not switched on yet. Write to us for a plan; credits can be bought below.",
+      "renewsOn": "Subscription active ({interval}), next payment {date}.",
+      "endsOn": "Subscription cancelled; it runs until {date}.",
+      "pastDue": "The subscription payment failed. Update the card under Manage subscription.",
+      "pilotUntil": "The agency pilot runs until {date}. Choose a plan any time; the pilot then ends.",
+      "ended": "The subscription or pilot has ended. Everything made stays viewable and downloadable; choose a plan to create new posts, images and videos.",
+      "manage": "Manage subscription (card, invoices, change plan, cancel)",
+      "limits": "{brands} brands · {members} members · {credits} credits a month",
+      "buyMonth": "€{price} / month",
+      "buyYear": "€{price} / year",
+      "buyMonthLabel": "{plan} monthly, €{price}",
+      "buyYearLabel": "{plan} yearly, €{price}",
+      "pilot": "Agency pilot €{price}",
+      "pilotHint": "{days} days of Studio for {brands} brands, paid once.",
+      "vatHint": "Prices exclude VAT. Stripe handles payment, invoice and cancelling; companies enter their VAT number.",
+      "intervals": {
+        "month": "monthly",
+        "year": "yearly"
+      },
+      "success": "Thank you! Payment received; the plan or credits appear in a few seconds.",
+      "bannerPastDue": "The subscription payment failed. Everything works until {until}, then creating stops.",
+      "bannerBlocked": "The subscription payment failed; creating is stopped.",
+      "bannerEnded": "The subscription has ended: you can view and download what was made; creating is stopped.",
+      "bannerLink": "Plan and payment"
     }
   },
   "Videos": {

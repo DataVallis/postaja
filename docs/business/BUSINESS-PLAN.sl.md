@@ -395,8 +395,8 @@ Prvi pilot plača do 15. 11. 2026; 10 plačljivih strank do 31. 12. 2026.
 ## 15. Odločitve lastnika (odprte)
 
 - [ ] Prvi segment: agencije (priporočeno) ali solo founderji prek AI Builders?
-- [ ] Cene iz §4 potrdi ali popravi — po meritvi dejanskega stroška besedila.
-- [ ] Plačilni ponudnik: MoR (Paddle / Lemon Squeezy) ali Stripe (spec §12 je navajal Stripe).
+- [x] Cene iz §4 — potrjene (lastnik, 8. 10. 2026).
+- [x] Plačilni ponudnik: **Stripe** (lastnik, 8. 10. 2026). DDV in račune ureja Stripe Tax / Stripe računi; računovodja naj potrdi OSS, obrnjeno davčno obveznost in davčno potrjevanje plačil s kartico.
 - [ ] Domena za Postajo.
 - [ ] Garancija 80 %: po meritvi na lastnih brandih?
 - [ ] Done-for-you: prodajamo storitev (do 5 brandov) ali samo orodje?

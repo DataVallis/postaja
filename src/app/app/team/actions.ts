@@ -5,6 +5,8 @@ import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { createMailerFromEnv } from "@/server/email/mailer";
 import { CreditError, requestCredits } from "@/server/credits/service";
+import { BillingError, checkoutUrl, portalUrl, type CheckoutItem } from "@/server/billing/service";
+import { getStripe } from "@/server/billing/stripe";
 import { cancelInvitation, inviteToTeam, removeMember, setMemberRole, TeamError } from "@/server/orgs/team";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -53,4 +55,35 @@ export async function requestCreditsAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");
   await run(() => requestCredits(getDb(), ctx, str(f, "pack")), "creditsRequested");
+}
+
+const appUrl = () => new URL(process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000").origin;
+
+/** Plan, pilot or credit pack (TASK-036): to Stripe Checkout; errors come back to the team page. */
+export async function checkoutAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const kind = str(f, "kind");
+  const item: CheckoutItem = kind === "pilot" ? { kind: "pilot" } : kind === "pack" ? { kind: "pack", pack: str(f, "pack") as "small" } : { kind: "plan", plan: str(f, "plan") as "solo", interval: str(f, "interval") === "year" ? "year" : "month" };
+  let url: string;
+  try {
+    url = await checkoutUrl(getDb(), getStripe(), ctx, item, appUrl());
+  } catch (e) {
+    if (!(e instanceof BillingError)) console.error("checkout failed", e instanceof Error ? e.message.slice(0, 200) : "error");
+    redirect(back(`?error=${e instanceof BillingError ? e.code : "FAILED"}#billing-h`));
+  }
+  redirect(url);
+}
+
+/** "Upravljaj naročnino": Stripe's customer portal (card, invoices, plan change, cancel). */
+export async function portalAction() {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  let url: string;
+  try {
+    url = await portalUrl(getDb(), getStripe(), ctx, appUrl());
+  } catch (e) {
+    redirect(back(`?error=${e instanceof BillingError ? e.code : "FAILED"}#billing-h`));
+  }
+  redirect(url);
 }

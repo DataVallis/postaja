@@ -3,7 +3,8 @@
 // After the call the reservation is settled to the real cost, or released if the call failed.
 import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
 import type { Db } from "../db/client";
-import { creditPacks, creditPrices, orgSettings, usageLedger, type CreditAction } from "../db/schema";
+import { creditPacks, creditPrices, orgBilling, orgSettings, usageLedger, type CreditAction } from "../db/schema";
+import { billingBlock } from "../billing/block";
 
 export class SpendCapError extends Error {
   constructor(public readonly usedMicroUsd: bigint, public readonly capMicroUsd: bigint) {
@@ -30,6 +31,14 @@ export class CreditLimitError extends SpendCapError {
   constructor(public readonly needed: number, public readonly available: number) {
     super(0n, 0n);
     this.message = "CREDITS";
+  }
+}
+
+/** The organization's Stripe subscription is unpaid past the grace period, cancelled, or its pilot ended (TASK-036). */
+export class BillingBlockedError extends SpendCapError {
+  constructor(public readonly reason: "PAST_DUE" | "ENDED") {
+    super(0n, 0n);
+    this.message = "BILLING";
   }
 }
 
@@ -68,6 +77,9 @@ export async function reserve(
   await db.transaction(async (tx) => {
     const [s] = await tx.select({ cap: orgSettings.spendCapMicroUsd, limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, a.orgId)).for("update");
     if (!s) throw new Error("ORG_NOT_FOUND");
+    const [bill] = await tx.select({ status: orgBilling.status, pastDueSince: orgBilling.pastDueSince, pilotEndsAt: orgBilling.pilotEndsAt }).from(orgBilling).where(eq(orgBilling.orgId, a.orgId));
+    const blocked = billingBlock(bill, a.now ?? new Date());
+    if (blocked) throw new BillingBlockedError(blocked);
     const max = s.limits?.generationsPerMonth;
     if (max !== undefined) {
       const n = await generationsThisMonth(tx as unknown as Db, a.orgId, a.now);

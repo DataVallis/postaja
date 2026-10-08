@@ -7,16 +7,21 @@ import { getDb } from "@/server/db/client";
 import { listTeam, orgUsage } from "@/server/orgs/team";
 import { creditStatus, orgCreditRequests } from "@/server/credits/service";
 import { CREDIT_PACKS } from "@/server/db/schema";
-import { cancelInvitationAction, inviteAction, removeMemberAction, requestCreditsAction, setRoleAction } from "./actions";
+import { billingFor } from "@/server/billing/service";
+import { getStripe } from "@/server/billing/stripe";
+import { BillingSection } from "./billing-section";
+import { cancelInvitationAction, checkoutAction, inviteAction, removeMemberAction, requestCreditsAction, setRoleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 /** Team and plan (TASK-028): members, invitations, the plan's limits and this month's use. Owners change the team. */
-export default async function TeamPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function TeamPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; billing?: string }> }) {
   const { org, user } = await requireOrgPage();
   const sp = await searchParams;
   const db = getDb();
-  const [{ members, invites }, usage, credits, requests] = await Promise.all([listTeam(db, org), orgUsage(db, org), creditStatus(db, org.orgId), orgCreditRequests(db, org)]);
+  const [{ members, invites }, usage, credits, requests, billing] = await Promise.all([listTeam(db, org), orgUsage(db, org), creditStatus(db, org.orgId), orgCreditRequests(db, org), billingFor(db, org.orgId)]);
+  const stripeOn = !!getStripe();
+  const now = new Date();
   const t = await getTranslations("Team");
   const f = await getFormatter();
   const isOwner = org.role === "owner";
@@ -38,6 +43,9 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
         <p className="text-xs text-muted">{t("limitsHint")}</p>
       </section>
 
+      {sp.billing === "success" ? <p role="status" className="mb-4 text-sm text-signal">{t("billing.success")}</p> : null}
+      <BillingSection billing={billing} isOwner={isOwner} configured={stripeOn} now={now} />
+
       <section aria-labelledby="credits-h" className="mb-8 grid gap-3" data-testid="team-credits">
         <h2 id="credits-h" className="text-base font-semibold">{t("credits.title")}</h2>
         {credits.allowance === null ? <p className="text-sm text-muted">{t("credits.unlimited", { used: credits.usedThisMonth })}</p> : (
@@ -51,7 +59,18 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           </>
         )}
         <p className="text-xs text-muted">{t("credits.hint")}</p>
-        {isOwner ? (
+        {isOwner && stripeOn ? (
+          <form action={checkoutAction} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="kind" value="pack" />
+            <span className="text-sm font-medium">{t("credits.buy")}</span>
+            {(Object.keys(CREDIT_PACKS) as (keyof typeof CREDIT_PACKS)[]).map((k) => (
+              <button key={k} type="submit" name="pack" value={k} className={buttonClass("secondary", "sm")}>
+                {t("credits.packButton", { credits: CREDIT_PACKS[k].credits.toLocaleString("sl-SI"), price: CREDIT_PACKS[k].priceEur })}
+              </button>
+            ))}
+          </form>
+        ) : null}
+        {isOwner && !stripeOn ? (
           <form action={requestCreditsAction} className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium">{t("credits.buy")}</span>
             {(Object.keys(CREDIT_PACKS) as (keyof typeof CREDIT_PACKS)[]).map((k) => (

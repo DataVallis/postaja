@@ -87,6 +87,14 @@ export async function creditStatus(db: Db, orgId: string, now = new Date()): Pro
 
 const grantInput = z.object({ credits: z.number().int().min(1).max(1_000_000), months: z.number().int().min(1).max(36).default(PACK_MONTHS), note: z.string().trim().max(200).default("") });
 
+/** A pack, without permission checks: for a super admin's grant and for a paid Stripe checkout (TASK-036). */
+export async function insertPack(db: Db, p: { orgId: string; credits: number; months?: number; source: "grant" | "purchase"; note?: string; createdBy: string | null; now?: Date }) {
+  const now = p.now ?? new Date();
+  const id = crypto.randomUUID();
+  await db.insert(creditPacks).values({ id, orgId: p.orgId, credits: p.credits, remaining: p.credits, expiresAt: addMonths(now, p.months ?? PACK_MONTHS), source: p.source, note: p.note ?? "", createdBy: p.createdBy, createdAt: now });
+  return id;
+}
+
 /** Super admin: a pack for an organization (a gift, a correction, or a paid pack). Audited. */
 export async function grantCredits(db: Db, actor: Actor, orgId: string, input: z.input<typeof grantInput>, opts: { source?: "grant" | "purchase"; now?: Date } = {}) {
   superadmin(actor);
@@ -94,9 +102,7 @@ export async function grantCredits(db: Db, actor: Actor, orgId: string, input: z
   if (!r.success) throw new CreditError("INVALID");
   const [org] = await db.select({ id: organization.id }).from(organization).where(eq(organization.id, orgId));
   if (!org) throw new CreditError("NOT_FOUND");
-  const now = opts.now ?? new Date();
-  const id = crypto.randomUUID();
-  await db.insert(creditPacks).values({ id, orgId, credits: r.data.credits, remaining: r.data.credits, expiresAt: addMonths(now, r.data.months), source: opts.source ?? "grant", note: r.data.note, createdBy: actor.userId, createdAt: now });
+  const id = await insertPack(db, { orgId, credits: r.data.credits, months: r.data.months, source: opts.source ?? "grant", note: r.data.note, createdBy: actor.userId, now: opts.now });
   await audit(db, actor.userId, orgId, "credits.grant", id, { credits: r.data.credits, months: r.data.months, source: opts.source ?? "grant", note: r.data.note });
   return id;
 }
