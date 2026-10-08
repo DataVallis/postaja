@@ -556,7 +556,12 @@
       "x": "X nima stikala za oznako AI; opomba na koncu besedila to pove bralcem.",
       "other": "Če ima omrežje stikalo za oznako AI, ga vklopi; opomba na koncu besedila to pove bralcem."
     },
-    "aiLabelExport": "Zakon EU o umetni inteligenci (člen 50) zahteva, da je umetno ustvarjena realistična oseba označena. Izvoz (ZIP) zato doda opombo na konec besedila, slike in videi pa imajo oznako AI v podatkih datoteke."
+    "aiLabelExport": "Zakon EU o umetni inteligenci (člen 50) zahteva, da je umetno ustvarjena realistična oseba označena. Izvoz (ZIP) zato doda opombo na konec besedila, slike in videi pa imajo oznako AI v podatkih datoteke.",
+    "clientReviews": "Odziv stranke",
+    "clientApproved": "Stranka je odobrila",
+    "clientChanges": "Stranka prosi za popravke",
+    "clientApprovedShort": "stranka: odobreno",
+    "clientChangesShort": "stranka: popravki"
   },
   "Connect": {
     "title": "Claude",
@@ -1590,5 +1595,60 @@
     },
     "olderReports": "Prejšnje analize:",
     "screenshotN": "posnetek {n}"
+  },
+  "ApprovalLinks": {
+    "title": "Povezava za stranko",
+    "intro": "Stranka agencije si po povezavi ogleda objave tega branda za izbrane dni (besedila, slike, videe) in vsako odobri ali prosi za popravke s komentarjem – brez računa v Postaji. Odobritev objavo označi kot odobreno; prošnja za popravke odobreno objavo vrne v stanje pripravljena. Povezava velja še 14 dni po zadnjem dnevu in jo lahko kadar koli prekličeš.",
+    "label": "Za koga",
+    "labelPlaceholder": "npr. Polygon – Ana",
+    "from": "Od",
+    "to": "Do",
+    "create": "Ustvari povezavo",
+    "creating": "Ustvarjam …",
+    "newLink": "Povezava za stranko",
+    "copy": "Kopiraj",
+    "copied": "Kopirano",
+    "newLinkHint": "Povezavo kopiraj in pošlji stranki zdaj; zaradi varnosti je Postaja ne pokaže znova. Kdor ima povezavo, vidi te objave.",
+    "viewed": "nazadnje odprta {when}",
+    "notViewed": "še ni odprta",
+    "active": "velja do {until}",
+    "expired": "potekla",
+    "revoked": "preklicana",
+    "revoke": "Prekliči",
+    "revokeName": "Prekliči povezavo za {name}",
+    "errors": {
+      "INVALID": "Preveri vnos: obdobje je lahko dolgo največ 31 dni in se ne sme končati v preteklosti.",
+      "ARCHIVED": "Brand je arhiviran.",
+      "NOT_FOUND": "Ni najdeno.",
+      "FAILED": "Ni uspelo, poskusi znova."
+    }
+  },
+  "ClientReview": {
+    "title": "Objave za {brand}",
+    "range": "{from} – {to}",
+    "intro": "Preglej objave. Če je objava v redu, klikni Odobri; če želiš spremembo, napiši komentar in klikni Potrebni popravki.",
+    "none": "V tem obdobju ni objav.",
+    "noDate": "brez datuma",
+    "imageAlt": "Slika {n}",
+    "video": "Video",
+    "notWritten": "Še v pripravi: {topic}",
+    "approved": "Odobreno",
+    "changesAsked": "Potrebni popravki",
+    "thanks": "Hvala, zabeleženo.",
+    "comment": "Komentar",
+    "reviewer": "Ime (neobvezno)",
+    "approve": "Odobri",
+    "askChanges": "Potrebni popravki",
+    "footer": "Povezava velja do {until}. Ustvarjeno s Postajo.",
+    "goneTitle": "Povezava ne velja več",
+    "goneBody": "Povezava je potekla ali jo je agencija preklicala. Za novo se obrni na agencijo.",
+    "errors": {
+      "INVALID": "Pri prošnji za popravke napiši komentar.",
+      "BAD_STATE": "Te objave zdaj ni mogoče pregledati.",
+      "NOT_FOUND": "Objava ni več na tem seznamu.",
+      "TOO_MANY": "Preveč odgovorov v kratkem času; poskusi čez nekaj minut.",
+      "GONE": "Povezava ne velja več.",
+      "FAILED": "Ni uspelo, poskusi znova."
+    }
   }
 }

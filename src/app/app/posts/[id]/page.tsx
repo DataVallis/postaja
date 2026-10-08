@@ -13,6 +13,7 @@ import { PostEditor } from "../editor";
 import { listImageVersions, listPostMedia } from "@/server/images/service";
 import { currentDesign, listPartnerLogos } from "@/server/design/service";
 import { aiPersonPosts } from "@/server/download/service";
+import { postReviewsFor } from "@/server/reviews/service";
 import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
@@ -52,6 +53,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const imageVersions = await listImageVersions(db, org, post.id);
   const partnerLogos = await listPartnerLogos(db, org, post.brandId);
   const aiPerson = (await aiPersonPosts(db, org, [post.id])).has(post.id);
+  const clientReviews = await postReviewsFor(db, org, post.id);
   const [animatable, allVideos, animCost] = await Promise.all([animatablePositions(db, org, post), listPostVideos(db, org, post.id), animationEstimate(db, post.brandId)]);
   const tv = await getTranslations("Animation");
   const tpv = await getTranslations("PersonaVideo");
@@ -147,6 +149,22 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         <Card className="p-5"><PostEditor key={post.content ? "text" : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
+      {clientReviews.length ? (
+        <Card className="grid gap-2 p-4 text-sm" data-testid="client-reviews">
+          <p className="font-semibold">{t("clientReviews")}</p>
+          <ul className="grid gap-2">
+            {clientReviews.map((r) => (
+              <li key={r.id} className="grid gap-0.5">
+                <span>
+                  <Badge tone={r.decision === "approved" ? "ok" : "warn"} dot>{r.decision === "approved" ? t("clientApproved") : t("clientChanges")}</Badge>
+                  <span className="ml-2 text-xs text-muted">{[r.reviewer, f.dateTime(r.createdAt, { dateStyle: "medium", timeStyle: "short" })].filter(Boolean).join(" · ")}</span>
+                </span>
+                {r.comment ? <span className="whitespace-pre-wrap">{r.comment}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
       {aiPerson ? (
         <Card className="grid gap-1 border-signal/50 p-4 text-sm" data-testid="ai-label">
           <p className="font-semibold">{t("aiLabelTitle")}</p>

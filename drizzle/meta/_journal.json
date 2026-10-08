@@ -288,6 +288,13 @@
       "when": 1791466224989,
       "tag": "0040_ai_person",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791474166114,
+      "tag": "0041_approval_links",
+      "breakpoints": true
     }
   ]
 }
