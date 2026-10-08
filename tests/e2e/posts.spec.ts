@@ -93,8 +93,17 @@ test("owner asks for a post, gets it checked against the rules, edits, approves 
   await expect(p.getByTestId("published-link")).toHaveAttribute("href", "https://www.instagram.com/p/e2e/");
   await expect(p.getByTestId("published-url-form").getByLabel("Povezava do objave")).toHaveValue("https://www.instagram.com/p/e2e/");
 
-  // A draft that keeps breaking the rules ends in "za pregled" with the reason listed.
+  // The link is right in the brand's table and in Objave too (TASK-048), opening in a new tab.
   await p.getByRole("link", { name: "← Inženirji" }).click();
+  const inTable = p.getByTestId("posts").getByTestId("published-link");
+  await expect(inTable).toHaveAttribute("href", "https://www.instagram.com/p/e2e/");
+  await expect(inTable).toHaveAttribute("target", "_blank");
+  const back = p.url();
+  await p.goto("/app/posts");
+  await expect(p.getByTestId("posts-table").getByTestId("published-link")).toHaveAttribute("href", "https://www.instagram.com/p/e2e/");
+  await p.goto(back);
+
+  // A draft that keeps breaking the rules ends in "za pregled" with the reason listed.
   await p.getByLabel("Kaj objavimo?").fill("POCENI akcija");
   await p.getByRole("button", { name: "Ustvari objavo" }).click();
   await expect(p.getByTestId("status")).toHaveText("za pregled");

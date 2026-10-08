@@ -29,7 +29,7 @@ approved/published = ok, needs review = warn, failed = danger) · `Stat` · `Tab
 | Route | What |
 |---|---|
 | `/app` | Dashboard: posts by status (links to filtered list), published this month, AI spend vs cap, recent posts, brands. Empty org → first step. |
-| `/app/posts` | All posts of the org: search (caption + brief), brand, status, platform; GET form → shareable URL; 50 per page. `listOrgPosts` in `src/server/posts/overview.ts`. |
+| `/app/posts` | All posts of the org: search (caption + brief), brand, status, platform; GET form → shareable URL; 50 per page. `listOrgPosts` in `src/server/posts/overview.ts`. A published post with a link shows "odpri objavo" next to its status (TASK-048, also in the brand's post table). |
 | `/app/brands` | Brands table: languages, channels, posts, waiting (ready + needs review), last post (`brandStats`). |
 | `/app/brands/[id]?tab=` | Tabs: posts (new post + table) · files · profile (CGP) · channels · versions. A pending Claude CGP shows a notice on every tab. |
 

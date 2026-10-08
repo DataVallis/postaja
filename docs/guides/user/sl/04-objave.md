@@ -25,7 +25,7 @@ Postaja vsako napisano objavo primerja z objavami branda zadnjih 180 dni (pripra
 - **v planu**: termin brez besedila. Klikni **Napiši besedilo z AI** ali ga napiši sam.
 - **pripravljena** ali **za pregled**: besedilo je napisano.
 - **odobrena**: pripravljena za objavo.
-- **objavljena**: označiš jo z **Označi kot objavljeno**, ko jo objaviš. V polje ob gumbu lahko prilepiš **povezavo do objave**; povezavo kasneje dodaš ali popraviš na strani objave (**Shrani povezavo**). Objavljene s povezavo vidiš v planu, zavihek **Zgodovina**.
+- **objavljena**: označiš jo z **Označi kot objavljeno**, ko jo objaviš. V polje ob gumbu lahko prilepiš **povezavo do objave**; povezavo kasneje dodaš ali popraviš na strani objave (**Shrani povezavo**). Povezava **odpri objavo** je tudi ob stanju v tabeli objav branda, v **Objave** in v planu (zavihek **Zgodovina**); odpre se v novem zavihku.
 - **preskočena**: ne bo objavljena.
 
 Termin (dan in uro) spremeniš v razdelku **Iz plana**.

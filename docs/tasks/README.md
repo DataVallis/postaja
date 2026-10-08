@@ -43,6 +43,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-032 | **Keep every video**: animations and persona videos accumulate per post (`post_videos`), delete on purpose, all in the ZIP; images no longer remove videos (ADR-061) | TASK-023, TASK-025 | Done |
 | TASK-046 | **Partner logos**: named partner logos on the brand, chosen per post or ad, drawn next to the brand logo; changing it redraws for free (ADR-064) | TASK-034 | Done |
 | TASK-047 | **Partner logos, follow-up** (owner): dropzone with several files or a ZIP, name from the file, rename in place; the partner logo replaces the partner's name where a template writes it (ADR-065) | TASK-046 | Done |
+| TASK-048 | **Published link in post tables** (owner): "odpri objavo" next to the status in the brand's posts and in Objave, new tab | TASK-029 | Done |
 | TASK-033 | **Keep image versions + passport pictures**: image runs are versions (restore / delete), re-import archives, a new passport picture is added (ADR-062) | TASK-032 | Done |
 | TASK-034 | **Keep ad copy and creative versions**: replaced copy and creatives are versions (restore / delete); versions remember reused illustrations, also for post images (ADR-062) | TASK-033 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
