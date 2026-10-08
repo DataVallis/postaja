@@ -57,7 +57,10 @@ it. `listImageVersions`, `restoreImageVersion` (archives the current images, un-
 illustrations it reused in `post_image_runs.kept` (TASK-034), so restoring a word redraw brings its illustration back. UI: "Prejšnje verzije slik" in `images-section.tsx`.
 
 ## Partner logos (TASK-046, ADR-064)
-`RenderInput.partnerLogo`: in the template's logo box the brand logo and the partner's logo share the space (side by
+`RenderInput.partnerLogo` + `partnerName`. TASK-047: when a text element of the template says just the partner's name
+(`partnerTextIndex`: optional "×", "&", "+", "with", "feat.", "s", "z", "in" before it; diacritics, case and `*` ignored), the
+logo is drawn in that text's box instead (as large as fits, aligned like the text) and the brand logo stays alone.
+Otherwise, in the template's logo box the brand logo and the partner's logo share the space (side by
 side in a wide box, stacked in a tall one, a gap of a quarter of the short side; the partner alone when the brand has no
 logo). A template without a logo box gets it in the bottom-right corner of the safe box. Post images, animations and ad
 creatives pass the chosen logo (`partnerLogoBytes`). `setPostPartnerLogo` / `setAdPartnerLogo` save the choice; when

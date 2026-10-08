@@ -46,6 +46,22 @@ export function partnerName(raw: string): string {
   return raw.normalize("NFC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) || "Partner";
 }
 
+/** A partner's name from its logo file (TASK-047): "logos/Polygon_logo-white.png" → "Polygon white". */
+export function partnerNameFromFile(filename: string): string {
+  const base = (filename.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
+  const words = base.replace(/[-_.]+/g, " ").split(/\s+/).filter((w) => w && !/^(logo|logotip|logotype)$/i.test(w));
+  const name = (words.length ? words : [base]).join(" ");
+  return partnerName(name === name.toLowerCase() ? name.charAt(0).toUpperCase() + name.slice(1) : name);
+}
+
+/** Owner only (TASK-047): renames a partner logo; the brand's own logo and fonts have no name. */
+export async function renamePartnerLogo(db: Db, ctx: OrgContext, id: string, name: string) {
+  requireOwner(ctx);
+  const [row] = (await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.id, id), eq(brandAssets.kind, "partner"))!)) as (typeof brandAssets.$inferSelect)[];
+  if (!row) throw new FileError("NOT_FOUND");
+  await forOrg(db, ctx).update(brandAssets, { meta: { ...row.meta, name: partnerName(name) } }, eq(brandAssets.id, id));
+}
+
 /** Display name only: no path, no control characters, NFC, ≤ 200 chars. Never used for the storage key. */
 export function cleanFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "";
@@ -142,7 +158,7 @@ export async function uploadBrandFile(
   const filename = cleanFilename(file.filename);
   const p = await prepare(slot, filename, file.bytes, brand.languages);
   // A partner logo carries the partner's name ("Polygon"), shown when choosing it; the file name by default.
-  if (slot === "partner") p.meta.name = partnerName(file.name ?? filename.replace(/\.[^.]+$/, ""));
+  if (slot === "partner") p.meta.name = file.name ? partnerName(file.name) : partnerNameFromFile(filename);
   const sha256 = createHash("sha256").update(file.bytes).digest("hex"); // of the original upload: same file twice = duplicate
   const table = p.table === "source" ? brandSources : brandAssets;
   const scoped = forOrg(db, ctx);
@@ -286,7 +302,8 @@ export async function uploadAuto(
   const brand = await brandOf(db, ctx, brandId);
   if (brand.archivedAt) throw new FileError("ARCHIVED");
   const name = cleanFilename(file.filename);
-  if (slot || sniff(file.bytes) !== "zip") return [await one(db, storage, ctx, brandId, name, file.bytes, slot, file.name)];
+  // A ZIP is unpacked when Postaja sorts the files, and for partner logos (several partners at once, TASK-047).
+  if ((slot && slot !== "partner") || sniff(file.bytes) !== "zip") return [await one(db, storage, ctx, brandId, name, file.bytes, slot, file.name)];
   if (file.bytes.byteLength > MAX_ZIP_BYTES) return [{ name, ok: false, error: "TOO_LARGE" }];
   let entries: ZipEntry[];
   try {
@@ -300,7 +317,7 @@ export async function uploadAuto(
     const entryName = cleanFilename(entry.name);
     if (!entry.ok) { out.push({ name: entry.name, ok: false, error: entry.reason }); continue; }
     if (sniff(entry.bytes) === "zip") { out.push({ name: entry.name, ok: false, error: "UNSUPPORTED_TYPE", detail: "zip" }); continue; }
-    const r = await one(db, storage, ctx, brandId, entryName, entry.bytes);
+    const r = await one(db, storage, ctx, brandId, entryName, entry.bytes, slot);
     out.push({ ...r, name: entry.name }); // show the path inside the archive
   }
   return out;

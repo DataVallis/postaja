@@ -3,11 +3,11 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
-import { image, pdf } from "../../../tests/fixtures/files";
+import { image, makeZipEntries, pdf } from "../../../tests/fixtures/files";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
-import { listBrandFiles, MAX_BYTES } from "./files";
+import { listBrandFiles, MAX_BYTES, renamePartnerLogo } from "./files";
 import { handleDownload, handleUpload, MULTIPART_OVERHEAD, type HttpDeps } from "./files-http";
 import { createBrand } from "./service";
 
@@ -82,6 +82,25 @@ describe("POST /api/brands/<id>/files", () => {
     const other = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#14dc14" } }).png().toBuffer());
     expect((await post(brandA, "partner", other, { name: "Acme.png" })).status).toBe(201);
     expect((await listBrandFiles(db, A, brandA)).partners.map((p) => p.meta.name)).toEqual(["Acme", "Polygon"]);
+  });
+
+  it("partner logos in a ZIP (TASK-047): every image becomes a partner named after its file; other files are refused", async () => {
+    const png = async (c: string) => new Uint8Array(await sharp({ create: { width: 120, height: 60, channels: 4, background: c } }).png().toBuffer());
+    const zip = makeZipEntries([["logos/polygon_logo.png", await png("#8247e5")], ["logos/Data-Vallis-logotip.png", await png("#1428dc")], ["cenik.pdf", pdf()], ["__MACOSX/._x.png", new Uint8Array([1])]].map(([name, bytes]) => ({ name: name as string, bytes: bytes as Uint8Array })));
+    const res = await post(brandA, "partner", zip, { name: "partnerji.zip" });
+    expect(res.status).toBe(200);
+    const { results } = (await res.json()) as { results: { name: string; ok: boolean; kind?: string; error?: string }[] };
+    expect(results.map((r) => [r.name, r.ok, r.ok ? r.kind : r.error])).toEqual([
+      ["logos/polygon_logo.png", true, "partner"], ["logos/Data-Vallis-logotip.png", true, "partner"], ["cenik.pdf", false, "UNSUPPORTED_TYPE"],
+    ]);
+    const files = await listBrandFiles(db, A, brandA);
+    expect(files.partners.map((p) => p.meta.name)).toEqual(["Data Vallis", "Polygon"]);
+    expect(files.sources).toEqual([]);
+    // The owner corrects a name; members cannot.
+    await renamePartnerLogo(db, A, files.partners[1].id, "  Polygon Labs ");
+    expect((await listBrandFiles(db, A, brandA)).partners.map((p) => p.meta.name)).toEqual(["Data Vallis", "Polygon Labs"]);
+    await expect(renamePartnerLogo(db, { ...A, role: "editor" }, files.partners[1].id, "X")).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(renamePartnerLogo(db, B, files.partners[1].id, "X")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("cross-site or missing Origin → 403 before anything else; anonymous → 401", async () => {

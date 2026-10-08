@@ -77,12 +77,13 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
     { name: "objava-2.png", mimeType: "image/png", buffer: await past("#0a122a") },
   ]);
   await expect(p.getByText("objava-2.png").first()).toBeVisible();
-  // A partner's logo (TASK-046): named, kept apart from the brand logo.
-  const partner = p.getByTestId("add-partner");
-  await partner.getByLabel("Ime partnerja").fill("Polygon");
-  await partner.getByLabel("Logotip (PNG, JPG ali WebP)").setInputFiles({ name: "polygon.png", mimeType: "image/png", buffer: await sharp({ create: { width: 600, height: 200, channels: 4, background: "#8247e5" } }).png().toBuffer() });
-  await partner.getByRole("button", { name: "Dodaj partnerski logotip" }).click();
-  await expect(p.getByTestId("partners")).toContainText("Polygon");
+  // Partner logos (TASK-046/047): dropped like other files (also as a ZIP), named after the file, renamed in place.
+  await p.getByLabel("Izberi logotipe").setInputFiles({ name: "polygon_logo.png", mimeType: "image/png", buffer: await sharp({ create: { width: 600, height: 200, channels: 4, background: "#8247e5" } }).png().toBuffer() });
+  const partnerName = p.getByTestId("partners").getByLabel("Ime partnerja");
+  await expect(partnerName).toHaveValue("Polygon");
+  await partnerName.fill("Polygon Labs");
+  await p.getByRole("button", { name: "Shrani ime za Polygon" }).click();
+  await expect(p.getByTestId("partners").getByLabel("Ime partnerja")).toHaveValue("Polygon Labs");
   await expect(p.getByTestId("logo-frame")).toHaveCount(1);
 
   // Visual identity: Claude designs it from the description and the examples; the owner corrects it in words.
@@ -151,7 +152,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
 
   // The partner's logo on this post: chosen and saved, the image is redrawn for free next to the brand logo.
   const beforePartner = await images.getByTestId("image-list").getByRole("img").getAttribute("src");
-  await images.getByTestId("partner-logo").getByLabel("Logotip partnerja").selectOption({ label: "Polygon" });
+  await images.getByTestId("partner-logo").getByLabel("Logotip partnerja").selectOption({ label: "Polygon Labs" });
   await images.getByTestId("partner-logo").getByRole("button", { name: "Shrani logotip" }).click();
   await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
   await expect.poll(() => images.getByTestId("image-list").getByRole("img").getAttribute("src")).not.toBe(beforePartner);

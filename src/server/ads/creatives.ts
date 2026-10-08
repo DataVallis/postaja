@@ -114,7 +114,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
   } else visual = a.visual!;
 
   const assets = await brandAssetBytes(db, deps.storage, ctx, a.brandId);
-  const partnerLogo = await partnerLogoBytes(db, deps.storage, ctx, a.brandId, a.partnerLogoId);
+  const partner = await partnerLogoBytes(db, deps.storage, ctx, a.brandId, a.partnerLogoId);
   // The current creatives (earlier versions are archived and stay — TASK-034).
   const old = (await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), isNull(adMedia.archivedAt))!)) as (typeof adMedia.$inferSelect)[];
   const oldIllustrations = new Map(old.filter((m) => m.kind === "illustration").map((m) => [m.variant, m]));
@@ -140,7 +140,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
       }
     }
     for (const p of presets) {
-      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, partnerLogo, brandFont: assets.font, safe: p.safeZone });
+      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font, safe: p.safeZone });
       const k = key(ctx.orgId, id, "png");
       await deps.storage.put(k, png, "image/png");
       rows.push({ id: crypto.randomUUID(), adSetId: id, kind: "creative", variant: i, placement: p.key, storageKey: k, contentType: "image/png", width: p.width, height: p.height, sizeBytes: png.byteLength });

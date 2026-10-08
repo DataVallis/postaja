@@ -53,7 +53,11 @@ function ResultLine({ r }: { r: Result }) {
  * The owner drops anything — single files, many files, a ZIP of a whole brand folder. Each file is uploaded in turn and
  * sorted by the server (fonts, logos, sources); the log shows where every file went.
  */
-export function Dropzone({ brandId, needsDiacritics }: { brandId: string; needsDiacritics: boolean }) {
+/**
+ * Drop files or a ZIP. Without `slot` Postaja sorts each file; with slot "partner" (TASK-047) every image — also inside
+ * a ZIP — becomes a partner logo named after its file ("Polygon-logo.png" → "Polygon").
+ */
+export function Dropzone({ brandId, needsDiacritics = false, slot }: { brandId: string; needsDiacritics?: boolean; slot?: "partner" }) {
   const t = useTranslations("Brands.files");
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
@@ -68,7 +72,7 @@ export function Dropzone({ brandId, needsDiacritics }: { brandId: string; needsD
     for (const [i, file] of files.entries()) {
       const key = fresh[i].key;
       setRows((prev) => prev.map((r) => (r.key === key ? { ...r, state: "uploading" } : r)));
-      const results = await send(brandId, file);
+      const results = await send(brandId, file, slot);
       setRows((prev) => prev.map((r) => (r.key === key ? { ...r, state: "done", results } : r)));
     }
     router.refresh();
@@ -77,31 +81,32 @@ export function Dropzone({ brandId, needsDiacritics }: { brandId: string; needsD
   return (
     <div className="grid gap-3">
       <div
-        data-testid="dropzone"
+        data-testid={slot ? `dropzone-${slot}` : "dropzone"}
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); void upload([...e.dataTransfer.files]); }}
         onClick={(e) => { if (e.target === e.currentTarget) input.current?.click(); }}
-        className={`grid cursor-pointer justify-items-start gap-4 rounded-2xl border-2 border-dashed px-6 py-8 transition-colors sm:px-8 ${
+        className={`grid cursor-pointer justify-items-start rounded-2xl border-2 border-dashed transition-colors ${slot ? "gap-3 px-5 py-5" : "gap-4 px-6 py-8 sm:px-8"} ${
           over ? "border-signal bg-signal/10" : "border-line bg-raised/40 hover:border-muted"
         }`}
       >
         <div className="pointer-events-none flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-full bg-ink text-paper dark:bg-paper dark:text-ink"><Icon d={UP} /></span>
-          <p className="text-lg font-semibold">{over ? t("dropNow") : t("dropTitle")}</p>
+          <p className={slot ? "font-semibold" : "text-lg font-semibold"}>{over ? t("dropNow") : slot ? t("partnerDropTitle") : t("dropTitle")}</p>
         </div>
         <p className="pointer-events-none max-w-xl text-sm text-muted">
-          {t("dropBody")} {needsDiacritics ? t("dropFontsSl") : null}
+          {slot ? t("partnerDropBody") : <>{t("dropBody")} {needsDiacritics ? t("dropFontsSl") : null}</>}
         </p>
         <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-lg bg-signal px-4 py-2 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-60">
-          {busy ? t("uploading") : t("chooseFiles")}
+          {busy ? t("uploading") : slot ? t("partnerChoose") : t("chooseFiles")}
         </button>
         <input
           ref={input}
           type="file"
           multiple
           hidden
-          aria-label={t("chooseFiles")}
+          {...(slot ? { accept: "image/png,image/jpeg,image/webp,.zip,application/zip" } : {})}
+          aria-label={slot ? t("partnerChoose") : t("chooseFiles")}
           onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ""; void upload(f); }}
         />
       </div>
@@ -167,46 +172,5 @@ export function FontSample({ id, sample }: { id: string; sample: string }) {
     <p className="truncate text-2xl leading-tight" style={{ fontFamily: ready ? `"${name}", var(--font-sans)` : undefined }}>
       {sample}
     </p>
-  );
-}
-
-/** Partner logos (TASK-046): the partner's name and its logo; chosen later per post or ad, never the brand's own logo. */
-export function AddPartnerLogo({ brandId }: { brandId: string }) {
-  const t = useTranslations("Brands.files");
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<Result[]>([]);
-  return (
-    <form
-      className="grid gap-2 rounded-xl border border-line p-3"
-      data-testid="add-partner"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        const data = new FormData(form);
-        const file = data.get("file");
-        const name = String(data.get("name") ?? "").trim();
-        if (!(file instanceof File) || !file.size || !name) return;
-        setBusy(true);
-        const r = await send(brandId, file, "partner", name);
-        setErrors(r.filter((x) => !x.ok));
-        setBusy(false);
-        if (r.every((x) => x.ok)) form.reset();
-        router.refresh();
-      }}
-    >
-      <label className="grid gap-1 text-sm">
-        <span>{t("partnerName")}</span>
-        <input name="name" required maxLength={60} placeholder={t("partnerNamePlaceholder")} className="rounded-lg border border-line bg-surface px-3 py-2" />
-      </label>
-      <label className="grid gap-1 text-sm">
-        <span>{t("partnerFile")}</span>
-        <input name="file" type="file" required accept="image/png,image/jpeg,image/webp" className="text-sm" />
-      </label>
-      <button type="submit" disabled={busy} className="justify-self-start rounded-lg border border-fg/25 px-3 py-1.5 text-sm font-medium hover:border-fg/60 disabled:opacity-60">
-        {busy ? t("uploading") : t("addPartner")}
-      </button>
-      {errors.map((r, i) => <p key={i} className="text-sm"><ResultLine r={r} /></p>)}
-    </form>
   );
 }

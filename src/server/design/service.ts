@@ -107,11 +107,12 @@ export async function isPartnerLogo(db: Db, ctx: OrgContext, brandId: string, id
   return !!row;
 }
 
-/** The chosen partner logo's bytes, or null (none chosen, or deleted since). */
-export async function partnerLogoBytes(db: Db, storage: Storage, ctx: OrgContext, brandId: string, id: string | null): Promise<Uint8Array | null> {
-  if (!id) return null;
+/** The chosen partner logo as render input (bytes and name), or empty (none chosen, or deleted since). */
+export async function partnerLogoBytes(db: Db, storage: Storage, ctx: OrgContext, brandId: string, id: string | null): Promise<{ partnerLogo: Uint8Array | null; partnerName: string | null }> {
+  const none = { partnerLogo: null, partnerName: null };
+  if (!id) return none;
   const [row] = (await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.id, id), eq(brandAssets.brandId, brandId), eq(brandAssets.kind, "partner"))!)) as (typeof brandAssets.$inferSelect)[];
-  return row ? storage.get(row.storageKey) : null;
+  return row ? { partnerLogo: await storage.get(row.storageKey), partnerName: row.meta.name ?? null } : none;
 }
 
 /** The brand's example images (uploaded past posts), newest first, small JPEGs. */

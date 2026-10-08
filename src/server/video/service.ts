@@ -102,12 +102,12 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
 
   // Frame by frame with the still's own renderer; pictures are fitted once and reused.
   const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
-  const partnerLogo = await partnerLogoBytes(db, deps.storage, ctx, p.brandId, p.partnerLogoId);
+  const partner = await partnerLogoBytes(db, deps.storage, ctx, p.brandId, p.partnerLogoId);
   const illustration = bg ? await deps.storage.get(bg.storageKey) : null;
   const cache = new Map<string, string>();
   const count = Math.round(Math.min(motion.durationS, MAX_S) * FPS);
   const { bytes, probe } = await encodeFrames(count, (i) => renderTemplate(spec, t, size, {
-    slots: slide.slots, illustration, logo: assets.logo, partnerLogo, brandFont: assets.font, motion: { spec: motion!, t: i / FPS }, cache,
+    slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font, motion: { spec: motion!, t: i / FPS }, cache,
   }), { ...size, fps: FPS });
 
   const k = key(ctx.orgId, postId);
