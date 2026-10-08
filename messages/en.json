@@ -364,12 +364,13 @@
       },
       "knowledgeHint": "Document text is the knowledge base: for every post Postaja takes the parts that match the request.",
       "partners": "Partner logos",
-      "partnersHint": "Logos of partners (e.g. Polygon) for joint posts. They are not the brand's logo: on each post or ad you choose whether one of them goes on the images, and Postaja draws it next to the brand logo.",
+      "partnersHint": "Logos of partners (e.g. Polygon) for joint posts. They are not the brand's logo: on each post or ad you choose whether one of them goes on the images, and Postaja draws it next to the brand logo. The name comes from the file name; you can correct it below.",
       "noPartners": "No partner logos yet.",
       "partnerName": "Partner name",
-      "partnerNamePlaceholder": "e.g. Polygon",
-      "partnerFile": "Logo (PNG, JPG or WebP)",
-      "addPartner": "Add partner logo"
+      "partnerDropTitle": "Drop partner logos here",
+      "partnerDropBody": "PNG, JPG or WebP, several at once or in a ZIP. The partner's name is the file name (\"Polygon-logo.png\" → Polygon).",
+      "partnerChoose": "Choose logos",
+      "partnerRename": "Save name for {name}"
     },
     "cgpImport": {
       "fromComputer": "Import from a document",

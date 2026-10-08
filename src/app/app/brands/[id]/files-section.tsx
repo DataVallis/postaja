@@ -1,7 +1,7 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { listBrandFiles } from "@/server/brands/files";
-import { deleteBrandFileAction } from "../actions";
-import { AddLogoButton, AddPartnerLogo, Dropzone, FontSample } from "../file-uploads";
+import { deleteBrandFileAction, renamePartnerLogoAction } from "../actions";
+import { AddLogoButton, Dropzone, FontSample } from "../file-uploads";
 
 type Files = Awaited<ReturnType<typeof listBrandFiles>>;
 const size = (b: number) => (b >= 1024 * 1024 ? `${(b / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
@@ -96,14 +96,21 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
                 {/* eslint-disable-next-line @next/next/no-img-element -- private presigned redirect, not optimisable */}
                 <img src={href("asset", l.id)} alt={t("logoAlt", { name: l.meta.name ?? l.filename })} className="absolute inset-0 h-full w-full object-contain p-3" />
               </a>
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <strong className="truncate font-medium">{l.meta.name ?? l.filename}</strong>
-                {isOwner ? <Delete brandId={brandId} table="asset" id={l.id} label={t("delete", { name: l.meta.name ?? l.filename })} /> : null}
-              </div>
+              {isOwner ? (
+                <div className="flex items-center gap-1 text-xs">
+                  <form key={l.meta.name ?? l.filename} action={renamePartnerLogoAction} className="flex min-w-0 flex-1 items-center gap-1">
+                    <input type="hidden" name="brandId" value={brandId} />
+                    <input type="hidden" name="fileId" value={l.id} />
+                    <input name="name" defaultValue={l.meta.name ?? l.filename} maxLength={60} required aria-label={t("partnerName")} className="min-w-0 flex-1 rounded-md border border-line bg-transparent px-2 py-1 text-xs" />
+                    <button type="submit" className="rounded-md px-1.5 py-1 text-muted hover:bg-signal/15 hover:text-fg" aria-label={t("partnerRename", { name: l.meta.name ?? l.filename })} title={t("partnerRename", { name: l.meta.name ?? l.filename })}>✓</button>
+                  </form>
+                  <Delete brandId={brandId} table="asset" id={l.id} label={t("delete", { name: l.meta.name ?? l.filename })} />
+                </div>
+              ) : <strong className="truncate text-xs font-medium">{l.meta.name ?? l.filename}</strong>}
             </li>
           ))}
         </ul>
-        {canUpload ? <AddPartnerLogo brandId={brandId} /> : null}
+        {canUpload ? <Dropzone brandId={brandId} slot="partner" /> : null}
       </div>
 
       <div className="grid gap-3">

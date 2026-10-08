@@ -201,7 +201,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const channel = chans.find((c) => c.id === p.channelId) ?? null;
   const size = await slideSize(db, channel?.platform ?? null, channel?.defaultPresetKey ?? null);
   const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
-  const partnerLogo = await partnerLogoBytes(db, deps.storage, ctx, p.brandId, p.partnerLogoId);
+  const partner = await partnerLogoBytes(db, deps.storage, ctx, p.brandId, p.partnerLogoId);
 
   // The post's current images (earlier versions are archived and not touched here — TASK-033).
   const old = (await forOrg(db, ctx).select(postMedia, and(eq(postMedia.postId, postId), isNull(postMedia.archivedAt))!)) as (typeof postMedia.$inferSelect)[];
@@ -268,7 +268,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt });
       }
     }
-    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, partnerLogo, brandFont: assets.font }));
+    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font }));
   }
   for (const [i, png] of pngs.entries()) {
     const k = key(ctx.orgId, postId, "png");

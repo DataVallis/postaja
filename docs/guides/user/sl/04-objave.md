@@ -43,7 +43,7 @@ Nič se ne izgubi: vsaka nova izdelava, popravek ali osvežitev besed shrani pre
 
 Za LinkedIn karusel je na voljo **Prenesi PDF karusel**.
 
-**Logotip partnerja**: če ima brand [partnerske logotipe](/app/help/brand#datoteke), na objavi izbereš partnerja (ali **Brez**) in klikneš **Shrani logotip**. Partnerjev logotip se nariše poleg logotipa branda. Če slike že obstajajo, se brezplačno narišejo znova z istimi ilustracijami; prejšnje ostanejo kot verzija.
+**Logotip partnerja**: če ima brand [partnerske logotipe](/app/help/brand#datoteke), na objavi izbereš partnerja (ali **Brez**) in klikneš **Shrani logotip**. Partnerjev logotip se nariše namesto imena partnerja na sliki ali, če ga slika ne vsebuje, poleg logotipa branda. Če slike že obstajajo, se brezplačno narišejo znova z istimi ilustracijami; prejšnje ostanejo kot verzija.
 
 Pri brandu s persono ob gumbu **Ustvari slike** izbereš, ali naj ilustracije prikazujejo persono (**S persono …**) ali ne. Glej [Persona](/app/help/persona#persona-na-slikah-objav).
 

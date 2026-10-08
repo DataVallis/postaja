@@ -7,7 +7,7 @@ import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
 import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived, setBrandTextModel, updateChannel } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
-import { deleteBrandFile } from "@/server/brands/files";
+import { deleteBrandFile, renamePartnerLogo } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
 import { discardDraft } from "@/server/mcp/service";
 import { DesignError, requestDesign, activateDesign } from "@/server/design/service";
@@ -158,6 +158,14 @@ export async function deleteBrandFileAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const table = str(f, "table") === "asset" ? "asset" : "source";
   await deleteBrandFile(getDb(), getStorage(), ctx, table, str(f, "fileId")).catch(() => undefined);
+  revalidatePath(`/app/brands/${str(f, "brandId")}`);
+}
+
+/** Owner only (checked in the service): a partner logo's name (TASK-047). */
+export async function renamePartnerLogoAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  await renamePartnerLogo(getDb(), ctx, str(f, "fileId"), str(f, "name")).catch(() => undefined);
   revalidatePath(`/app/brands/${str(f, "brandId")}`);
 }
 

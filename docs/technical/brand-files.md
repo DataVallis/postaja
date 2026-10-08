@@ -48,7 +48,9 @@ UI: section "Datoteke branda" on `/app/brands/<id>` (`files-section.tsx`): logos
 
 ## Partner logos (TASK-046, ADR-064)
 `brand_assets.kind = 'partner'` with `meta.name` (the partner's name, one line, ≤ 60 chars; the file name by default).
-Upload slot `partner` (`?slot=partner`, form field `name`), re-encoded like logos, up to 30 per brand; never picked as
+Upload slot `partner` (`?slot=partner`, optional form field `name`; TASK-047: a ZIP is unpacked and every image becomes
+a partner, the name comes from the file via `partnerNameFromFile` — "polygon_logo.png" → "Polygon"; owners rename with
+`renamePartnerLogo`), re-encoded like logos, up to 30 per brand; UI: a second Dropzone (`slot="partner"`); never picked as
 the brand logo (`brandAssetBytes` reads only `logo`). Listed under *Partnerski logotipi* on the Datoteke tab. Chosen
 per post (`posts.partner_logo_id`) and per ad set (`ad_sets.partner_logo_id`), both `on delete set null`;
 `isPartnerLogo` refuses another brand's file or the brand logo. Rendering: see [images.md](images.md).

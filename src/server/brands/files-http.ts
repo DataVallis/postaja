@@ -30,7 +30,8 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   const raw = new URL(req.url).searchParams.get("slot") ?? "auto";
   if (raw !== "auto" && raw !== "logo" && raw !== "partner" && raw !== "font" && raw !== "source") return json({ error: "BAD_SLOT" }, 400);
   const slot = raw === "auto" ? undefined : (raw as Slot);
-  const max = slot ? MAX_BYTES[slot] : Math.max(MAX_ZIP_BYTES, MAX_BYTES.source);
+  // Sorting and partner logos accept a ZIP; a forced logo/font/source slot takes one file.
+  const max = slot && slot !== "partner" ? MAX_BYTES[slot] : Math.max(MAX_ZIP_BYTES, MAX_BYTES.source);
   // Refuse oversized bodies before buffering them; a missing length (chunked upload) is refused too.
   const length = Number(req.headers.get("content-length") ?? NaN);
   if (!Number.isFinite(length)) return json({ error: "LENGTH_REQUIRED" }, 411);

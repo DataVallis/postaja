@@ -364,12 +364,13 @@
       },
       "knowledgeHint": "Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo.",
       "partners": "Partnerski logotipi",
-      "partnersHint": "Logotipi partnerjev (npr. Polygon) za skupne objave. Niso logotip branda: pri vsaki objavi ali oglasu izbereš, ali naj bo na slikah kateri od njih, in Postaja ga nariše poleg logotipa branda.",
+      "partnersHint": "Logotipi partnerjev (npr. Polygon) za skupne objave. Niso logotip branda: pri vsaki objavi ali oglasu izbereš, ali naj bo na slikah kateri od njih, in Postaja ga nariše poleg logotipa branda. Ime se vzame iz imena datoteke; popraviš ga lahko spodaj.",
       "noPartners": "Še ni partnerskih logotipov.",
       "partnerName": "Ime partnerja",
-      "partnerNamePlaceholder": "npr. Polygon",
-      "partnerFile": "Logotip (PNG, JPG ali WebP)",
-      "addPartner": "Dodaj partnerski logotip"
+      "partnerDropTitle": "Spusti partnerske logotipe sem",
+      "partnerDropBody": "PNG, JPG ali WebP, več naenkrat ali v ZIP-u. Ime partnerja je ime datoteke (»Polygon-logo.png« → Polygon).",
+      "partnerChoose": "Izberi logotipe",
+      "partnerRename": "Shrani ime za {name}"
     },
     "cgpImport": {
       "fromComputer": "Uvozi iz dokumenta",

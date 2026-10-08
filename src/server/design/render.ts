@@ -46,6 +46,11 @@ export type RenderInput = {
    * box; templates without a logo box get it in the bottom-right corner of the safe box.
    */
   partnerLogo?: Uint8Array | null;
+  /**
+   * The partner's name (TASK-047). A template that writes it as its own text — e.g. a co-branded footer "CHERR.IO |
+   * Polygon" — gets the partner's logo in that text's place instead, and the brand logo stays alone.
+   */
+  partnerName?: string | null;
   /** TTF/OTF of the brand font (used where the design says "brand"). */
   brandFont?: Uint8Array | null;
   /**
@@ -160,6 +165,32 @@ async function fittedUncached(bytes: Uint8Array, w: number, h: number, fit: "cov
   return png ? dataUri(await img.png().toBuffer(), "image/png") : dataUri(await img.jpeg({ quality: 88 }).toBuffer(), "image/jpeg");
 }
 
+const fold = (s: string) => s.replace(/\*/g, "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * The text element that writes just the partner's name (optionally after "×", "&", "+", "with", "feat.", "s", "z",
+ * "in"), or -1. Headlines that merely mention the partner never match.
+ */
+export function partnerTextIndex(t: Template, slots: Partial<Record<Slot, string>>, name: string): number {
+  const n = fold(name);
+  if (!n) return -1;
+  const esc = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`^(?:(?:×|&|\\+)\\s*|(?:x|with|feat\\.?|ft\\.?|s|z|in)\\s+)?${esc}[.!]?$`, "u");
+  return t.elements.findIndex((e) => e.type === "text" && re.test(fold(e.slot === "static" ? e.text ?? "" : slots[e.slot] ?? "")));
+}
+
+/** A logo drawn where a line of text would be: as large as the box allows, aligned like the text. */
+async function logoInText(bytes: Uint8Array, box: { x: number; y: number; w: number; h: number }, align: "left" | "center" | "right", valign: "top" | "middle" | "bottom", cache?: Map<string, string>): Promise<Node> {
+  const meta = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+  const scale = Math.min(box.w / (meta.width ?? 1), box.h / (meta.height ?? 1));
+  const dw = Math.max(1, Math.round((meta.width ?? 1) * scale)), dh = Math.max(1, Math.round((meta.height ?? 1) * scale));
+  return el("div", {
+    position: "absolute", left: box.x, top: box.y, width: box.w, height: box.h, display: "flex",
+    justifyContent: align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center",
+    alignItems: valign === "top" ? "flex-start" : valign === "bottom" ? "flex-end" : "center",
+  }, [el("img", { width: dw, height: dh }, undefined, { src: await fitted(bytes, dw, dh, "contain", true, cache), width: dw, height: dh })]);
+}
+
 /**
  * The brand logo and a partner's logo in one box (TASK-046): side by side in a wide box, stacked in a tall one, each
  * scaled to fit its half with a gap between; the partner alone fills the box when the brand has no logo.
@@ -210,6 +241,7 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
   }
   // Elements live in the safe box (the whole canvas when no insets are given); sizes in % of the box.
   const ox = input.safe?.left ?? 0, oy = input.safe?.top ?? 0;
+  const partnerSpot = input.partnerLogo && input.partnerName ? partnerTextIndex(t, input.slots, input.partnerName) : -1;
   const BW = W - ox - (input.safe?.right ?? 0), BH = H - oy - (input.safe?.bottom ?? 0);
   for (const [index, e] of t.elements.entries()) {
     const x = ox + (e.x / 100) * BW, y = oy + (e.y / 100) * BH, w = (e.w / 100) * BW, h = (e.h / 100) * BH;
@@ -220,7 +252,9 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
         position: "absolute", left: x, top: y, width: w, height: h, backgroundColor: color(s, e.color), opacity: e.opacity,
         borderRadius: (e.radius / 100) * BW, ...(e.borderColor && e.borderWidth ? { border: `${(e.borderWidth * BW) / 1080}px solid ${color(s, e.borderColor)}` } : {}),
       });
-    } else if (e.type === "image" && e.source === "logo" && input.partnerLogo) {
+    } else if (index === partnerSpot && e.type === "text") {
+      node = await logoInText(input.partnerLogo!, { x, y, w, h }, e.align, e.valign, input.cache);
+    } else if (e.type === "image" && e.source === "logo" && input.partnerLogo && partnerSpot < 0) {
       node = await logoPair(input.logo ?? null, input.partnerLogo, { x, y, w, h, opacity: e.opacity }, input.cache);
     } else if (e.type === "image") {
       const src = e.source === "logo" ? input.logo : picture;
@@ -242,7 +276,7 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
     }
     children.push(node);
   }
-  if (input.partnerLogo && !t.elements.some((e) => e.type === "image" && e.source === "logo")) {
+  if (input.partnerLogo && partnerSpot < 0 && !t.elements.some((e) => e.type === "image" && e.source === "logo")) {
     children.push(await logoPair(null, input.partnerLogo, { x: ox + BW * 0.72, y: oy + BH * 0.88, w: BW * 0.24, h: BH * 0.08, opacity: 1 }, input.cache));
   }
   const svg = await satori(el("div", base, children.filter(Boolean)) as unknown as Parameters<typeof satori>[0], { width: W, height: H, fonts });
