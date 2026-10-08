@@ -26,3 +26,15 @@ Status: **Live on dev** (TASK-003b, PR #7).
 
 ## Cross-tenant tests (mandatory for every tenant resource)
 `tests/tenancy/harness.ts` → `crossTenantSuite({ name, scopes, seedInA, read, update, remove, raw })` generates three tests: B cannot read, update (0 rows, raw row unchanged) or delete (row still exists) A's row. Used today for `org_settings` and `invitation`; every new tenant table (brands, posts, …) adds one call.
+
+## Team (TASK-028, ADR-058)
+`src/server/orgs/team.ts`, page `src/app/app/team/**`. Owners: `inviteToTeam` (pending invitation + mail; members
+limit counts members + pending invitations; settings row locked), `cancelInvitation`, `setMemberRole`, `removeMember`
+(both keep at least one owner; member and owner rows locked). Every change writes `audit_log` (`team.*`) with the owner
+as actor. Invitations are accepted on sign-in (`acceptPendingInvitations`). `orgUsage` gives plan, limits and this
+month's use for the page. Tests: `src/server/orgs/team.int.test.ts`, `tests/e2e/team.spec.ts`.
+
+## Plan limits
+`org_settings.limits` `{ brands?, members?, generationsPerMonth? }`, edited in /admin (empty = unlimited, audited).
+Brands: `assertBrandRoom` in `createBrand` and on un-archive. Generations: `reserve()` in `src/server/llm/spend.ts`
+counts this month's ledger rows under the settings lock and throws `GenerationLimitError` (a `SpendCapError`).

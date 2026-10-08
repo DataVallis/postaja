@@ -166,7 +166,12 @@
       "body": "Podatki so bili nazadnje preverjeni pred 90 dnevi ali več. Preveri jih pri viru in posodobi datum.",
       "open": "Odpri platforme →",
       "badge": "preveri"
-    }
+    },
+    "limits": "Omejitve paketa",
+    "limitsHint": "Prazno = brez omejitve. Generacija je en plačljiv klic AI (besedilo, slika, video).",
+    "limitBrands": "Največ brandov (nearhiviranih)",
+    "limitMembers": "Največ članov (z vabili)",
+    "limitGenerations": "Največ AI generacij na mesec"
   },
   "Brands": {
     "title": "Brandi",
@@ -474,7 +479,7 @@
       "too_many_slides": "Preveč slajdov: {actual}, največ {limit}."
     },
     "errors": {
-      "SPEND_CAP": "Mesečni limit porabe organizacije je dosežen. Super admin ga lahko poviša.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "PROVIDER": "AI storitev trenutno ne odgovarja. Poskusi znova čez minuto.",
       "NOT_CONFIGURED": "AI ključ na strežniku ni nastavljen.",
       "INVALID_OUTPUT": "AI je dvakrat vrnil neveljaven odgovor. Poskusi znova ali preoblikuj naročilo.",
@@ -568,7 +573,9 @@
     "import": "Uvoz planov",
     "plan": "Plan",
     "helpSection": "Pomoč",
-    "help": "Navodila za uporabo"
+    "help": "Navodila za uporabo",
+    "orgSection": "Organizacija",
+    "team": "Ekipa in paket"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -670,7 +677,7 @@
         "INVALID_FILE": "Datoteke ni bilo mogoče prebrati.",
         "NO_POSTS": "V datoteki nisem našel objav.",
         "AI_FAILED": "AI dokumenta ni prebral ({detail}). Poskusi znova ali naloži tabelo.",
-        "SPEND_CAP": "Mesečni limit porabe AI je dosežen.",
+        "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
         "NO_MODEL": "AI model ni nastavljen.",
         "BAD_ORIGIN": "Zahteva ni prišla iz Postaje.",
         "failed": "Nalaganje ni uspelo. Poskusi znova."
@@ -949,7 +956,7 @@
       "IMAGE_TIMEOUT": "Ponudnik slik je predolgo delal. Poskusi znova.",
       "IMAGE_BLOCKED": "Ponudnik je opis slike zavrnil. Spremeni opis slike v planu in poskusi znova.",
       "IMAGE_INVALID": "Ponudnik je vrnil neveljavno sliko. Poskusi znova.",
-      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov organizacije.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "NO_ACCESS": "Član, ki je zahteval slike, nima več dostopa.",
       "NOT_FOUND": "Objave ni več.",
       "BAD_STATE": "Slike se že delajo ali objava je preskočena.",
@@ -1040,7 +1047,7 @@
       "NO_DESIGN": "Najprej ustvari vizualno podobo.",
       "INVALID": "Opis je predolg ali prekratek.",
       "INVALID_OUTPUT": "Claude ni vrnil veljavne podobe. Poskusi znova ali dopolni opis.",
-      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "PROVIDER": "Claude se ni odzval. Poskusi znova.",
       "NO_TOOL_CALL": "Claude ni vrnil podobe. Poskusi znova.",
@@ -1073,7 +1080,7 @@
     "toPlan": "Odpri plan",
     "errors": {
       "FAILED": "Idej ni bilo mogoče pripraviti. Poskusi znova.",
-      "SPEND_CAP": "Mesečni limit porabe je dosežen.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "AI_FAILED": "Claude ni vrnil uporabnih idej. Poskusi znova ali dodaj željo.",
       "NO_MODEL": "AI model ni nastavljen.",
       "NO_CHANNEL": "Kanal ne obstaja več.",
@@ -1162,7 +1169,7 @@
       "BAD_STATE": "Brand je arhiviran.",
       "NO_PLACEMENT": "Izberi vsaj eno umestitev izbranega omrežja.",
       "LANGUAGE": "Jezik ni med jeziki branda.",
-      "SPEND_CAP": "Mesečni limit porabe je dosežen.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "NO_MODEL": "Model Claude ni nastavljen.",
       "AI_FAILED": "Claude ni vrnil uporabnih besedil. Poskusi znova."
     },
@@ -1283,7 +1290,7 @@
       "IMAGE_TIMEOUT": "Ponudnik slik je predolgo delal. Poskusi znova.",
       "IMAGE_BLOCKED": "Ponudnik je zahtevo zavrnil. Spremeni DNK in poskusi znova.",
       "IMAGE_INVALID": "Ponudnik je vrnil neveljavno sliko. Poskusi znova.",
-      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov organizacije.",
+      "SPEND_CAP": "Dosežen je mesečni limit organizacije (poraba ali število AI generacij).",
       "NO_ACCESS": "Član, ki je zahteval slike, nima več dostopa.",
       "LLM_PROVIDER": "Claude se ni odzval. Poskusi znova.",
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
@@ -1343,5 +1350,63 @@
     "onThisPage": "Na tej strani",
     "empty": "Navodila še niso na voljo.",
     "slOnly": ""
+  },
+  "Team": {
+    "title": "Ekipa in paket",
+    "introOwner": "Člani organizacije, vabila in poraba paketa. Kot lastnik vabiš in odstranjuješ člane ter jim menjaš vloge.",
+    "introEditor": "Člani organizacije in poraba paketa. Člane vabi lastnik.",
+    "planTitle": "Paket: {plan}",
+    "plans": {
+      "trial": "preizkus",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "brezplačno"
+    },
+    "brands": "Brandi",
+    "members": "Člani",
+    "generations": "AI generacije",
+    "spend": "Poraba AI",
+    "thisMonth": "ta mesec",
+    "ofCap": "od {cap} ta mesec",
+    "withInvites": "od tega {n} vabil",
+    "of": "{n} / {max}",
+    "unlimited": "{n} (brez omejitve)",
+    "limitsHint": "Generacija je en plačljiv klic AI (besedilo, slika, video). Omejitve paketa nastavi skrbnik Postaje.",
+    "membersTitle": "Člani",
+    "email": "E-pošta",
+    "role": "Vloga",
+    "since": "Član od",
+    "actions": "Dejanja",
+    "you": "ti",
+    "roleOf": "Vloga za {email}",
+    "change": "Spremeni",
+    "remove": "Odstrani",
+    "removeConfirm": "Odstrani {email}",
+    "invitesTitle": "Vabila",
+    "validUntil": "Velja do",
+    "cancel": "Prekliči vabilo",
+    "inviteTitle": "Povabi člana",
+    "inviteHint": "Vabilo pride po e-pošti in velja 7 dni. Ob prvi prijavi s tem naslovom oseba postane član. Urednik ureja objave, lastnik tudi brande, ekipo in persono.",
+    "invite": "Povabi",
+    "inviting": "Pošiljam …",
+    "roles": {
+      "owner": "lastnik",
+      "editor": "urednik"
+    },
+    "ok": {
+      "invited": "Vabilo je poslano.",
+      "canceled": "Vabilo je preklicano.",
+      "role": "Vloga je spremenjena.",
+      "removed": "Član je odstranjen."
+    },
+    "errors": {
+      "FAILED": "Ni uspelo. Poskusi znova.",
+      "FORBIDDEN": "To lahko naredi samo lastnik.",
+      "INVALID": "Vpiši veljaven e-poštni naslov in vlogo.",
+      "NOT_FOUND": "Člana ali vabila ni več.",
+      "ALREADY_MEMBER": "Ta oseba je že član organizacije.",
+      "LIMIT_REACHED": "Paket ne dovoli več članov. Za več članov se obrni na skrbnika Postaje.",
+      "LAST_OWNER": "Organizacija mora imeti vsaj enega lastnika."
+    }
   }
 }

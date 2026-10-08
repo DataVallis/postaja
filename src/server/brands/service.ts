@@ -37,18 +37,19 @@ async function ownBrand(db: Db, ctx: OrgContext, brandId: string) {
   return b as typeof brands.$inferSelect;
 }
 
+/** The plan's brand limit counts brands that are not archived. */
+async function assertBrandRoom(db: Db, ctx: OrgContext) {
+  const [settings] = await db.select({ limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, ctx.orgId));
+  const max = settings?.limits?.brands;
+  if (max === undefined) return;
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(brands).where(and(eq(brands.orgId, ctx.orgId), isNull(brands.archivedAt)));
+  if (n >= max) throw new BrandError("LIMIT_REACHED");
+}
+
 export async function createBrand(db: Db, ctx: OrgContext, input: z.input<typeof brandInput>) {
   requireOwner(ctx);
   const data = brandInput.parse(input);
-  const [settings] = await db.select({ limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, ctx.orgId));
-  const max = settings?.limits?.brands;
-  if (max !== undefined) {
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(brands)
-      .where(and(eq(brands.orgId, ctx.orgId), isNull(brands.archivedAt)));
-    if (n >= max) throw new BrandError("LIMIT_REACHED");
-  }
+  await assertBrandRoom(db, ctx);
   const id = crypto.randomUUID();
   try {
     await db.transaction(async (tx) => {
@@ -94,7 +95,9 @@ export async function updateBrand(db: Db, ctx: OrgContext, brandId: string, inpu
 
 export async function setBrandArchived(db: Db, ctx: OrgContext, brandId: string, archived: boolean) {
   requireOwner(ctx);
-  await ownBrand(db, ctx, brandId);
+  const b = await ownBrand(db, ctx, brandId);
+  // Bringing a brand back counts against the plan's brand limit like a new one (TASK-028).
+  if (!archived && b.archivedAt) await assertBrandRoom(db, ctx);
   await forOrg(db, ctx).update(brands, { archivedAt: archived ? new Date() : null, updatedAt: new Date() }, eq(brands.id, brandId));
 }
 

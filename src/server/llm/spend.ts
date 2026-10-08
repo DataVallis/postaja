@@ -11,6 +11,23 @@ export class SpendCapError extends Error {
   }
 }
 
+/**
+ * The plan's monthly number of AI generations is used up (TASK-028, ADR-058). A generation is one paid AI call (one
+ * ledger reservation). A SpendCapError, so every caller already treats it as "the monthly limit is reached".
+ */
+export class GenerationLimitError extends SpendCapError {
+  constructor(public readonly used: number, public readonly limit: number) {
+    super(0n, 0n);
+    this.message = "GENERATION_LIMIT";
+  }
+}
+
+/** Paid AI calls of the organization this month (reserved or settled). */
+export async function generationsThisMonth(db: Db, orgId: string, now = new Date()): Promise<number> {
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(usageLedger).where(and(eq(usageLedger.orgId, orgId), gte(usageLedger.createdAt, monthStart(now))));
+  return r.n;
+}
+
 /** Start of the current calendar month in UTC. */
 export const monthStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
@@ -29,8 +46,13 @@ export async function reserve(
 ): Promise<string> {
   const id = crypto.randomUUID();
   await db.transaction(async (tx) => {
-    const [s] = await tx.select({ cap: orgSettings.spendCapMicroUsd }).from(orgSettings).where(eq(orgSettings.orgId, a.orgId)).for("update");
+    const [s] = await tx.select({ cap: orgSettings.spendCapMicroUsd, limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, a.orgId)).for("update");
     if (!s) throw new Error("ORG_NOT_FOUND");
+    const max = s.limits?.generationsPerMonth;
+    if (max !== undefined) {
+      const n = await generationsThisMonth(tx as unknown as Db, a.orgId, a.now);
+      if (n >= max) throw new GenerationLimitError(n, max);
+    }
     const used = await monthToDate(tx as unknown as Db, a.orgId, a.now);
     if (used + a.estimate > s.cap) throw new SpendCapError(used, s.cap);
     await tx.insert(usageLedger).values({

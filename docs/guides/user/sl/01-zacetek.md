@@ -12,10 +12,22 @@ Gesla ni. Prijaviš se lahko samo, če te je skrbnik Postaje dodal v organizacij
 
 ## Organizacija in vloge
 
-Vse delo poteka v **organizaciji**. Organizacijo, njene člane in mesečni limit stroškov nastavi skrbnik Postaje.
+Vse delo poteka v **organizaciji**. Organizacijo in njen paket (omejitve in mesečni limit stroškov) nastavi skrbnik Postaje; člane povabi lastnik.
 
-- **Lastnik** ustvarja brande, ureja CGP, kanale, datoteke, vizualno podobo in persono.
+- **Lastnik** ustvarja brande, ureja CGP, kanale, datoteke, vizualno podobo in persono ter vabi člane.
 - **Urednik** ustvarja in ureja objave, slike, animacije, oglase in videe. Nastavitve brandov lahko samo bere.
+
+## Ekipa in paket
+
+V meniju **Organizacija → Ekipa in paket** vidiš člane, vabila in porabo paketa: brande, člane, AI generacije in porabo AI ta mesec, vsako z omejitvijo paketa.
+
+Lastnik:
+1. V **Povabi člana** vpiše e-poštni naslov, izbere vlogo in klikne **Povabi**. Vabilo pride po e-pošti in velja 7 dni; ob prvi prijavi s tem naslovom oseba postane član.
+2. Vlogo člana spremeni z izbiro vloge in **Spremeni**.
+3. Člana odstrani z **Odstrani**. Odstranjeni član takoj izgubi dostop.
+4. Vabilo, ki še ni sprejeto, umakne s **Prekliči vabilo**.
+
+Organizacija ima vedno vsaj enega lastnika. Če paket ne dovoli več članov ali brandov, Postaja to pove; za večji paket se obrni na skrbnika.
 
 ## Osnovni potek
 

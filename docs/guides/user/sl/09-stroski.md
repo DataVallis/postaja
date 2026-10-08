@@ -10,7 +10,9 @@ Postaja plača AI storitve (Claude za besedila in oblikovanje, fal.ai za slike i
 
 ## Mesečni limit
 
-Organizacija ima mesečni limit, ki ga nastavi skrbnik. Postaja pred vsakim klicem rezervira največji možni strošek; če bi limit presegla, klic ne steče in vidiš sporočilo o limitu. Neuspeli klici se ne zaračunajo.
+Organizacija ima mesečni limit porabe in lahko tudi omejitev števila **AI generacij** na mesec (generacija je en plačljiv klic AI: besedilo, slika ali video). Oboje nastavi skrbnik, porabo vidiš v **Ekipa in paket**.
+
+Postaja pred vsakim klicem rezervira največji možni strošek; če bi limit presegla, klic ne steče in vidiš sporočilo o limitu. Neuspeli klici se ne zaračunajo.
 
 ## Okvirne cene
 
