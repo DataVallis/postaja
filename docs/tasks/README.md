@@ -45,7 +45,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-047 | **Partner logos, follow-up** (owner): dropzone with several files or a ZIP, name from the file, rename in place; the partner logo replaces the partner's name where a template writes it (ADR-065) | TASK-046 | Done |
 | TASK-048 | **Published link in post tables** (owner): "odpri objavo" next to the status in the brand's posts and in Objave, new tab | TASK-029 | Done |
 | TASK-049 | **Competitors, step 1**: brand tab Konkurenca — Claude finds competitors with web search from the CGP (suggestions), keep / remove / add own (ADR-066) | TASK-007 | Done |
-| TASK-050 | **Competitors, step 2**: collect public pages (SSRF-safe fetch) + owner screenshots per competitor; analysis; adopt / reject learnings ticked by the owner → CGP proposal; topic gaps → ideas (spec §4.3) | TASK-049 | Planned |
+| TASK-050 | **Competitors, step 2**: public websites read (SSRF-safe) + screenshots per competitor; analysis report (profiles, adopt / reject with evidence, gaps); members tick, owner sends accepted ones as a CGP draft; gaps → ideas (ADR-066) | TASK-049 | Done |
 | TASK-051 | **Competitors, step 3**: no-copy check of our posts against collected competitor posts (lexical, ADR-048); Meta Ad Library when `META_AD_LIBRARY_TOKEN` is set (owner) | TASK-050 | Planned |
 | TASK-033 | **Keep image versions + passport pictures**: image runs are versions (restore / delete), re-import archives, a new passport picture is added (ADR-062) | TASK-032 | Done |
 | TASK-034 | **Keep ad copy and creative versions**: replaced copy and creatives are versions (restore / delete); versions remember reused illustrations, also for post images (ADR-062) | TASK-033 | Done |

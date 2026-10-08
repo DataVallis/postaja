@@ -11,7 +11,7 @@ import { NewPostForm } from "../../posts/editor";
 type Post = Awaited<ReturnType<typeof listPosts>>[number];
 
 /** Creating content is the point of the brand page: the request form first, recent posts below (TASK-007). */
-export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0, ideaError }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number; ideaError?: string }) {
+export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0, ideaError, ideaHint }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number; ideaError?: string; ideaHint?: string }) {
   const t = await getTranslations("Posts");
   const ti = await getTranslations("Ideas");
   const tb = await getTranslations("Bulk");
@@ -63,7 +63,7 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
             </div>
             <div className="grid gap-1 sm:col-span-4">
               <label htmlFor="idea-hint" className="text-sm font-medium">{ti("hint")}</label>
-              <textarea id="idea-hint" name="hint" rows={2} maxLength={1000} placeholder={ti("hintPlaceholder")} className={textareaClass} />
+              <textarea id="idea-hint" name="hint" rows={2} maxLength={1000} defaultValue={ideaHint?.slice(0, 1000)} placeholder={ti("hintPlaceholder")} className={textareaClass} />
             </div>
             <div className="sm:col-span-4"><SubmitButton pending={ti("working")}>{ti("submit")}</SubmitButton></div>
           </form>

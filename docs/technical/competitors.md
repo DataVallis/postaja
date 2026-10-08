@@ -1,6 +1,6 @@
 # Competitor research
 
-Status: **Step 1 built** (TASK-049): find, keep, remove, add. Next: TASK-050 collect + analyze + learnings + gaps,
+Status: **Steps 1–2 built** (TASK-049 find, keep, remove, add; TASK-050 collect, analyze, learnings, gaps). Next:
 TASK-051 no-copy check + Meta Ad Library. Decisions: ADR-023, ADR-066. Spec §4.3.
 
 ## What the member does
@@ -25,7 +25,27 @@ konkurenta*: name, website, one profile, note. Any member; archived brands are r
   skipped). `addCompetitor`, `keepCompetitor`, `removeCompetitor`, `listCompetitors`, `findEstimate`.
 - UI: `src/app/app/brands/[id]/competitors-section.tsx`, actions `src/app/app/brands/competitor-actions.ts`.
 
+## Step 2: collect and analyze (TASK-050)
+- Screenshots: `POST /api/competitors/[id]/screenshots` (any member, same origin, ≤ 10 MB, PNG/JPG/WebP re-encoded,
+  ≤ 20 per competitor) → `competitor_items` kind `upload`, S3 `org/<org>/competitors/<competitor>/<id>.<ext>`; shown
+  via `/api/competitor-items/[id]` (302 presigned); `deleteScreenshot` on purpose.
+- *Analiziraj konkurente*: `requestAnalyze` (≥ 1 kept, one run per brand shared with "find") → queue
+  `competitors-analyze` → `runAnalyzeJob`: per kept competitor (≤ 15) the website is fetched with `fetchPublicFile`
+  (SSRF guard, ≤ 3 MB, 15 s) and read by `html.ts` `htmlToText` (title, meta description, visible text; no scripts,
+  styles, nav, footer, forms); the outcome replaces the competitor's `web_page` item (text ≤ 20k or an error code
+  `BLOCKED`/`HTTP`/`TIMEOUT`/`NETWORK`/`TOO_LARGE`/`NOT_HTML`/`NO_TEXT`). Screenshots: newest 3 per competitor, ≤ 12,
+  downscaled to 1024 px JPEG. Claude gets the CGP, the brand's 40 latest topics, ≤ 6k chars per page and the pictures
+  (tool `submit_competitor_report`: summary, profiles, adopt / reject with evidence, gaps); pages and pictures are data.
+- `competitor_reports` (every report stays): summary, profiles, learnings `{id, kind, title, why, evidence, decision}`,
+  gaps, draft_id. `decideLearning` (any member: yes / no / undecided). `sendLearningsToCgp` (owner): current CGP +
+  "## Iz analize konkurence (date)" with the accepted items → pending `cgp_drafts` row, source `competitors`
+  (replaces an earlier pending draft); the active CGP changes only when the owner saves a version (ADR-035/038).
+- Gaps link to the posts tab with `?ideaHint=<topic>#ideas`, which pre-fills the ideas wish.
+- UI: `competitors-section.tsx` (collected per competitor, analysis card), `competitor-report.tsx`,
+  `competitor-uploads.tsx`; migration 0039.
+
 ## Tests
 `competitors.int.test.ts` (prompt inputs incl. web search and wish, cleaning and dedupe, cost of searches, keep /
-remove / add, duplicates and bad links refused, other org, failures and the cap on the run), `llm/anthropic.test.ts`
-(server tool offered, paused turn continued, searches counted and billed), E2E `competitors.spec.ts`.
+remove / add, duplicates and bad links refused, other org, failures and the cap on the run; screenshots, page reading
+with a blocked site, prompt inputs incl. pictures, report, decisions, owner-only CGP draft, reports kept), `html.test.ts`, `llm/anthropic.test.ts`
+(server tool offered, paused turn continued, searches counted and billed), E2E `competitors.spec.ts` (find → keep → add → screenshot → analyse → tick → CGP draft inserted → gap opens ideas).

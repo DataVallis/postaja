@@ -168,6 +168,18 @@ http
           { name: "Globalna Platforma", website: "https://global.example", handles: [], reason: "Velika tuja platforma." },
         ] : [] });
       }
+      // Competitor analysis (TASK-050): names every competitor in the prompt, counts the screenshots it was shown.
+      if (tool === "submit_competitor_report") {
+        const names = [...user.matchAll(/<competitor name="([^"]+)"/g)].map((m) => m[1]);
+        const shots = (r.messages?.[0]?.content ?? []).filter?.((b) => b.type === "image").length ?? 0;
+        return reply(tool, {
+          summary: `Analiziranih konkurentov: ${names.length}, posnetkov: ${shots}.`,
+          competitors: names.map((name) => ({ name, positioning: "Hitri rezultati", pillars: ["Cene"], formats: ["karusel"], hooks: ["Številka 1"], ctas: ["Prijavi se"], visual: "Rumeno", tone: "Glasen", offers: [] })),
+          adopt: [{ title: "Številčni karuseli", why: "Ustreza našemu stebru.", evidence: [{ competitor: names[0], source: "screenshot 1" }] }],
+          reject: [{ title: "Clickbait naslovi", why: "Ne ustreza tonu.", evidence: [] }],
+          gaps: [{ topic: "Primerjava cen tečajev", why: "Vsi jo imajo.", competitors: names.slice(0, 1) }],
+        });
+      }
       // Post ideas (TASK-019): N numbered ideas in the first allowed format, named after the owner's wish when given.
       // Ad copy (TASK-021): fill every field of every network the tool asks for, within its limits; variant n's Meta
       // headline is "Naslov n" so the E2E can find it.
