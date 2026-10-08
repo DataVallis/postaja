@@ -232,6 +232,9 @@ S3_ENDPOINT / S3_REGION / S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY
 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / EMAIL_FROM   # ADR-028
 SUPERADMIN_EMAILS            # bootstrap only: these emails get role superadmin on first login
 SENTRY_DSN                   # optional
+STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET   # payments (TASK-036, ADR-073); empty = online payment off
+STRIPE_TAX                   # "1" when Stripe Tax is on in the Stripe account
+STRIPE_API_BASE              # tests only: the Stripe stand-in
 ```
 
 ---

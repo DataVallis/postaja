@@ -33,7 +33,12 @@
       "trial": "preizkus",
       "starter": "starter",
       "pro": "pro",
-      "comped": "brezplačno"
+      "comped": "brezplačno",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agencija",
+      "partner": "Partner",
+      "pilot": "agencijski pilot"
     },
     "adminLink": "Admin",
     "nav": "Glavna navigacija",
@@ -70,7 +75,12 @@
       "trial": "preizkus",
       "starter": "starter",
       "pro": "pro",
-      "comped": "brezplačno (comped)"
+      "comped": "brezplačno (comped)",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agencija",
+      "partner": "Partner",
+      "pilot": "agencijski pilot"
     },
     "statuses": {
       "active": "aktivna",
@@ -296,6 +306,32 @@
       "manage": "Upravljaj kredite",
       "pendingBanner": "Odprte zahteve za nakup kreditov: {n}.",
       "open": "Odpri"
+    },
+    "billing": {
+      "title": "Plačila",
+      "intro": "Naročnine, agencijski pilot in paketi kreditov gredo prek Stripe Checkout; račune, kartice in odpovedi ureja Stripe (portal za stranke). Postaja stanje izve samo iz podpisanih webhookov.",
+      "setup": "Nastavitev",
+      "webhookHint": "Webhook v Stripe: /api/stripe/webhook, dogodki checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.created/updated/deleted. V portalu za stranke vklopi menjavo paketa in odpoved.",
+      "present": "obstaja",
+      "missing": "manjka",
+      "ensure": "Pripravi cenik v Stripe",
+      "created": "Ustvarjenih cen: {n}.",
+      "subscriptions": "Naročnine",
+      "events": "Zadnji dogodki Stripe",
+      "none": "Še nič.",
+      "until": "do {date}",
+      "cancels": "odpoved ob koncu obdobja",
+      "pilotUntil": "pilot do {date}",
+      "intervals": {
+        "month": "mesečno",
+        "year": "letno"
+      },
+      "yes": "nastavljeno",
+      "no": "ni nastavljeno",
+      "errors": {
+        "NOT_CONFIGURED": "Stripe ni nastavljen (STRIPE_SECRET_KEY).",
+        "STRIPE": "Stripe ni odgovoril ali je zavrnil zahtevo. Preveri ključ."
+      }
     }
   },
   "Brands": {
@@ -741,7 +777,8 @@
     "team": "Ekipa in paket",
     "backups": "Varnostne kopije",
     "demos": "Demo iz spletne strani",
-    "credits": "Krediti"
+    "credits": "Krediti",
+    "billing": "Plačila"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -1547,7 +1584,12 @@
       "trial": "preizkus",
       "starter": "starter",
       "pro": "pro",
-      "comped": "brezplačno"
+      "comped": "brezplačno",
+      "solo": "Solo",
+      "studio": "Studio",
+      "agency": "Agencija",
+      "partner": "Partner",
+      "pilot": "agencijski pilot"
     },
     "brands": "Brandi",
     "members": "Člani",
@@ -1595,7 +1637,12 @@
       "ALREADY_MEMBER": "Ta oseba je že član organizacije.",
       "LIMIT_REACHED": "Paket ne dovoli več članov. Za več članov se obrni na skrbnika Postaje.",
       "LAST_OWNER": "Organizacija mora imeti vsaj enega lastnika.",
-      "TOO_MANY": "Odprte so že 3 zahteve za kredite. Počakaj, da jih potrdimo."
+      "TOO_MANY": "Odprte so že 3 zahteve za kredite. Počakaj, da jih potrdimo.",
+      "NOT_CONFIGURED": "Spletno plačilo še ni vklopljeno.",
+      "HAS_SUBSCRIPTION": "Naročnino že imaš; paket zamenjaš v upravljanju naročnine.",
+      "PILOT_USED": "Pilot je mogoč samo enkrat in pred prvo naročnino.",
+      "NO_CUSTOMER": "Ni še nobenega plačila za to organizacijo.",
+      "NO_PRICE": "Ta cena v Stripe še ni pripravljena. Obvesti nas."
     },
     "credits": {
       "title": "Krediti",
@@ -1618,6 +1665,33 @@
       "bannerWarn": "Porabljenih je več kot 80 % kreditov tega meseca (na voljo še {available}).",
       "bannerOut": "Krediti tega meseca so porabljeni.",
       "bannerLink": "Kupi kredite"
+    },
+    "billing": {
+      "title": "Paket in plačilo",
+      "notConfigured": "Spletno plačilo še ni vklopljeno. Za paket nam piši; krediti se dokupijo spodaj.",
+      "renewsOn": "Naročnina je aktivna ({interval}), naslednje plačilo {date}.",
+      "endsOn": "Naročnina je odpovedana in velja do {date}.",
+      "pastDue": "Plačilo naročnine ni uspelo. Posodobi kartico v upravljanju naročnine.",
+      "pilotUntil": "Agencijski pilot velja do {date}. Paket izbereš kadar koli; pilot se takrat konča.",
+      "ended": "Naročnina ali pilot je končan. Vse ustvarjeno ostane na voljo za ogled in prenos; za nove objave, slike in videe izberi paket.",
+      "manage": "Upravljaj naročnino (kartica, računi, menjava paketa, odpoved)",
+      "limits": "{brands} brandov · {members} članov · {credits} kreditov na mesec",
+      "buyMonth": "{price} € / mesec",
+      "buyYear": "{price} € / leto",
+      "buyMonthLabel": "{plan} mesečno, {price} €",
+      "buyYearLabel": "{plan} letno, {price} €",
+      "pilot": "Agencijski pilot {price} €",
+      "pilotHint": "{days} dni paketa Studio za {brands} brande, enkratno plačilo.",
+      "vatHint": "Cene so brez DDV. Plačilo, račun in odpoved ureja Stripe; podjetja vpišejo davčno številko.",
+      "intervals": {
+        "month": "mesečno",
+        "year": "letno"
+      },
+      "success": "Hvala! Plačilo je prejeto; paket ali krediti se prikažejo v nekaj sekundah.",
+      "bannerPastDue": "Plačilo naročnine ni uspelo. Do {until} vse deluje, potem se ustvarjanje ustavi.",
+      "bannerBlocked": "Plačilo naročnine ni uspelo, ustvarjanje je ustavljeno.",
+      "bannerEnded": "Naročnina je končana: ustvarjeno lahko pregleduješ in preneseš, novo ustvarjanje je ustavljeno.",
+      "bannerLink": "Paket in plačilo"
     }
   },
   "Videos": {

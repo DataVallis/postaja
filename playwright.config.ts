@@ -41,6 +41,10 @@ export default defineConfig({
       // fal.ai stand-in (same mock server) for AI image backgrounds (TASK-015).
       FAL_KEY: "e2e-not-a-real-key",
       FAL_BASE_URL: "http://127.0.0.1:3199",
+      // Stripe stand-in (same mock server) for payments (TASK-036); the E2E signs webhooks with this secret.
+      STRIPE_SECRET_KEY: "sk_test_e2e_not_real",
+      STRIPE_WEBHOOK_SECRET: "whsec_e2e_not_real",
+      STRIPE_API_BASE: "http://127.0.0.1:3199",
       // Bulk creation runs in the background (ADR-042): the E2E server runs the workers too.
       RUN_WORKER: "1",
     },

@@ -110,10 +110,37 @@ function fal(req, res) {
   send(404, { detail: "not found" });
 }
 
+// Stripe stand-in (TASK-036) via STRIPE_API_BASE: every catalogue price exists; customers, Checkout and portal
+// sessions are recorded (GET /stripe-log) and point at a local page. The E2E then sends signed webhooks itself.
+const stripeLog = [];
+let stripeSeq = 0;
+function stripe(req, res) {
+  let body = "";
+  req.on("data", (c) => (body += c));
+  req.on("end", () => {
+    const send = (o) => { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
+    const u = new URL(req.url, base);
+    if (req.method === "GET" && u.pathname === "/v1/prices") {
+      const keys = [...u.searchParams.entries()].filter(([k]) => k.startsWith("lookup_keys")).map(([, v]) => v);
+      return send({ object: "list", data: keys.map((k) => ({ id: `price_${k}`, object: "price", lookup_key: k, active: true })), has_more: false });
+    }
+    const form = Object.fromEntries(new URLSearchParams(body));
+    stripeLog.push({ path: u.pathname, form });
+    const id = `${Date.now().toString(36)}${++stripeSeq}`; // unique across runs: the E2E database outlives the mock
+    if (u.pathname === "/v1/customers") return send({ id: `cus_e2e_${id}`, object: "customer" });
+    if (u.pathname === "/v1/checkout/sessions") return send({ id: `cs_e2e_${id}`, object: "checkout.session", url: `${base}/stripe-page/checkout-${id}` });
+    if (u.pathname === "/v1/billing_portal/sessions") return send({ id: `bps_${id}`, object: "billing_portal.session", url: `${base}/stripe-page/portal-${id}` });
+    res.writeHead(404, { "content-type": "application/json" }); res.end(JSON.stringify({ error: { message: "not mocked" } }));
+  });
+}
+
 http
   .createServer((req, res) => {
     if (req.url === "/fal-log") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(falLog)); return; }
     if (req.url?.startsWith("/fal-")) return fal(req, res);
+    if (req.url === "/stripe-log") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(stripeLog)); return; }
+    if (req.url?.startsWith("/stripe-page/")) { res.writeHead(200, { "content-type": "text/html" }); res.end("<!doctype html><title>Stripe test</title><h1>Stripe test checkout</h1>"); return; }
+    if (/^\/v1\/(prices|customers|checkout|billing_portal)/.test(req.url ?? "")) return stripe(req, res);
     if (req.method !== "POST" || !req.url?.startsWith("/v1/messages")) { res.writeHead(404).end(); return; }
     let body = "";
     req.on("data", (c) => (body += c));

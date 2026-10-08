@@ -51,7 +51,9 @@ export const invitation = pgTable(
   (t) => [index("invitation_email_idx").on(t.email), index("invitation_org_idx").on(t.organizationId)],
 );
 
-export const PLANS = ["trial", "starter", "pro", "comped"] as const;
+// starter/pro: plans before the business plan's packages (kept for existing organizations); solo/studio/agency are sold
+// through Stripe (TASK-036), pilot is the 30-day agency pilot, partner is agreed by hand.
+export const PLANS = ["trial", "starter", "pro", "comped", "solo", "studio", "agency", "partner", "pilot"] as const;
 export type Plan = (typeof PLANS)[number];
 export const ORG_STATUSES = ["active", "suspended"] as const;
 
@@ -73,7 +75,7 @@ export const orgSettings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    check("org_settings_plan_ck", sql`${t.plan} in ('trial','starter','pro','comped')`),
+    check("org_settings_plan_ck", sql`${t.plan} in ('trial','starter','pro','comped','solo','studio','agency','partner','pilot')`),
     check("org_settings_status_ck", sql`${t.status} in ('active','suspended')`),
     check("org_settings_cap_ck", sql`${t.spendCapMicroUsd} >= 0`),
   ],

@@ -8,6 +8,20 @@ Postaja pays for AI services (Claude for texts and design, fal.ai for images and
 - **Post**: the post's cost at the bottom of the page.
 - **Buttons**: for more expensive actions (bulk creation, animation, passport picture, video with the persona) the button shows the **maximum price** before you start.
 
+## Plan and payment
+
+In **Team and plan** → **Plan and payment** the owner picks a plan (prices excl. VAT):
+
+| Plan | Monthly | Yearly | Brands | Members | Credits a month |
+| --- | --- | --- | --- | --- | --- |
+| Solo | €39 | €390 | 2 | 1 | 400 |
+| Studio | €99 | €990 | 6 | 3 | 1500 |
+| Agency | €249 | €2490 | 20 | 10 | 5000 |
+
+Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT number and the invoice arrives by email. Card, invoices, plan changes and cancelling are under **Manage subscription**.
+
+If a payment fails, Postaja keeps working for 7 days; after that, or when the subscription or pilot ends, creating new content stops. Everything already made stays viewable and downloadable.
+
 ## Credits
 
 If your plan has monthly credits, every paid AI action uses credits:
@@ -25,7 +39,7 @@ The automatic text fix and helper calls (image plan, design, ideas, plan import)
 
 **Monthly credits** are used first (renewed every month), then **bought packs**, valid for 12 months. You see the balance in **Team and plan** → **Credits**. At 80 % Postaja shows a notice at the top of the page; when credits run out, no new texts, images or videos are made until the next month or a top-up.
 
-**Top-up:** the owner clicks a pack in **Team and plan** (500 credits for €25 or 2,000 for €80). The request comes to us; once the payment is confirmed, the credits appear on the same page.
+**Top-up:** the owner clicks a pack in **Team and plan** (500 credits for €25 or 2,000 for €80) and pays through Stripe; the credits appear within seconds.
 
 ## Monthly cap
 

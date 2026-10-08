@@ -36,6 +36,8 @@ jobs:
       S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       FAL_KEY: ${{ secrets.FAL_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       SUPERADMIN_EMAILS: ${{ vars.SUPERADMIN_EMAILS }}
     steps:
       - uses: actions/checkout@v4

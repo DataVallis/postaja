@@ -8,6 +8,7 @@
 | [reviews.md](reviews.md) | `src/server/reviews/**`, `src/app/r/**`, `src/app/app/brands/approval-*.ts(x)`, `src/app/app/brands/[id]/approval-section.tsx`, `src/server/db/schema/reviews.ts` | Built |
 | [demos.md](demos.md) | `src/server/demos/**`, `src/app/admin/demos/**`, `src/app/d/**`, `src/server/db/schema/demos.ts` | Built |
 | [credits.md](credits.md) | `src/server/credits/**`, `src/server/llm/spend.ts`, `src/app/admin/credits/**`, `src/app/app/team/**`, `src/app/app/credit-banner.tsx`, `src/server/db/schema/credits.ts` | Built |
+| [billing.md](billing.md) | `src/server/billing/**`, `src/app/api/stripe/**`, `src/app/admin/billing/**`, `src/app/app/team/billing-section.tsx`, `src/server/db/schema/billing.ts` | Built |
 | [auth.md](auth.md) | `src/server/auth/**`, `src/server/email/**`, `src/server/db/schema/auth.ts`, `src/app/api/auth/**`, `src/app/login/**`, `src/app/app/**` | Built |
 | [tenancy.md](tenancy.md) | `src/server/tenancy/**`, `src/server/orgs/**`, `src/server/db/schema/org.ts`, `src/server/auth/permissions.ts`, `tests/tenancy/**` | Live on dev |
 | [admin.md](admin.md) | `src/app/admin/**`, `src/server/admin/**`, `src/server/db/schema/audit.ts`, `src/lib/money/**` | Live on dev |
