@@ -510,7 +510,19 @@
     "slotSave": "Shrani termin",
     "slotInvalid": "Termin ni veljaven.",
     "writeWithAi": "Napiši besedilo z AI",
-    "downloadZip": "Prenesi ZIP"
+    "downloadZip": "Prenesi ZIP",
+    "repeatWarns": "Podobno kot prejšnja objava – preveri, ali ne ponavljaš iste teme:",
+    "repeatBlocks": "Ta objava ponavlja prejšnjo objavo, zato je za pregled:",
+    "repeatScore": "podobnost {n} %",
+    "repeatOverride": "Če je tako prav (npr. nadaljevanje teme), jo vseeno odobri.",
+    "publishedUrl": "Povezava do objave",
+    "publishedUrlPlaceholder": "https://… (neobvezno)",
+    "savePublishedUrl": "Shrani povezavo",
+    "openPublished": "odpri objavo",
+    "statusErrors": {
+      "BAD_URL": "Povezava mora biti spletni naslov (https://…).",
+      "FAILED": "Spremembe ni bilo mogoče shraniti."
+    }
   },
   "Connect": {
     "title": "Claude",
@@ -855,7 +867,8 @@
     "pageOf": "Stran {page} od {pages}",
     "downloadDay": "Prenesi dan (ZIP, {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}})",
     "show": "Prikaži:",
-    "showDefault": "Privzeto (brez objavljenih)"
+    "showDefault": "Privzeto (brez objavljenih)",
+    "openPublished": "odpri"
   },
   "Bulk": {
     "scope": "Obseg",
@@ -1303,7 +1316,11 @@
     "inPostsOff": "izklopljeno",
     "inPostsHint": "Ko je vklopljeno, ilustracije slik objav tega branda prikazujejo persono: Claude opiše prizor, slika nastane iz potnih slik (ista oseba, Nano Banana Pro edit, 0,15 € na ilustracijo). Besedila in logotip še vedno nariše Postaja po vizualni podobi.",
     "inPostsEnable": "Vklopi",
-    "inPostsDisable": "Izklopi"
+    "inPostsDisable": "Izklopi",
+    "videosTitle": "Video s persono",
+    "videosHint": "Video s persono nastane na objavi: odpri objavo tega branda in v razdelku »Video s persono« izberi dolžino in klikni »Ustvari video s persono«. Zadnje objave branda:",
+    "hasVideo": "ima video",
+    "noPostsYet": "Brand še nima objav. Ustvari objavo v zavihku Objave, nato na njej video."
   },
   "PersonaVideo": {
     "title": "Video s persono ({name})",

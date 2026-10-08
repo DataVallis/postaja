@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sparkles, Star, Trash2, UserRound } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
@@ -49,6 +50,8 @@ export async function PersonaSection(props: {
   data: { persona: Persona; images: Img[] } | null;
   sources: { id: string; filename: string }[];
   dnaCost: bigint | null; passport: { replaces: boolean; maxCost: bigint | null } | null;
+  /** Recent posts of the brand: the persona video is made on a post (TASK-025), so the tab links to them. */
+  posts?: { id: string; label: string; date: string | null; hasVideo: boolean }[];
 }) {
   const t = await getTranslations("Persona");
   const canEdit = props.isOwner && !props.archived;
@@ -176,6 +179,24 @@ export async function PersonaSection(props: {
         ) : null}
       </Card>
 
+      {images.length ? (
+        <Card className="grid gap-3 p-5" data-testid="persona-videos">
+          <h3 className="font-semibold">{t("videosTitle")}</h3>
+          <p className="max-w-2xl text-sm text-muted">{t("videosHint")}</p>
+          {props.posts?.length ? (
+            <ul className="grid gap-1.5 text-sm">
+              {props.posts.map((x) => (
+                <li key={x.id} className="flex flex-wrap items-center gap-2">
+                  <Link href={`/app/posts/${x.id}#persona-video`} className="underline underline-offset-4 hover:text-signal">{x.label}</Link>
+                  {x.date ? <span className="text-xs text-muted">{x.date}</span> : null}
+                  {x.hasVideo ? <Badge tone="ok">{t("hasVideo")}</Badge> : null}
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-sm text-muted">{t("noPostsYet")}</p>}
+        </Card>
+      ) : null}
+
       <Card className="grid gap-3 p-5" data-testid="persona-in-posts">
         <h3 className="flex items-center gap-3 font-semibold">
           {t("inPostsTitle")}
@@ -195,7 +216,7 @@ export async function PersonaSection(props: {
         <h3 className="font-semibold">{t("dnaTitle")}</h3>
         {props.saved ? <p role="status" className="text-sm text-signal">{t("saved")}</p> : null}
         {canEdit ? (
-          <form action={updatePersonaAction} className="grid gap-4">
+          <form key={persona.updatedAt.toISOString()} action={updatePersonaAction} className="grid gap-4">
             <input type="hidden" name="brandId" value={props.brandId} /><input type="hidden" name="personaId" value={persona.id} />
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1">

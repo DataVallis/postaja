@@ -44,6 +44,9 @@ export const modelRegistry = pgTable(
   ],
 );
 
+/** A post's closest earlier post of the brand: `blocks` = at or above the repeat threshold (needs review). */
+export type RepeatMatch = { postId: string; label: string; date: string | null; score: number; blocks: boolean };
+
 export const POST_STATUSES = ["planned", "generating", "ready", "needs_review", "failed", "approved", "published", "skipped"] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
 export type PostContent = { caption: string; hashtags: string[]; parts?: string[] };
@@ -86,6 +89,10 @@ export const posts = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     content: jsonb("content").$type<PostContent>(),
     topicSummary: text("topic_summary"),
+    /** TASK-029: the brand's earlier post this one repeats most (lexical no-repeat, ADR-048), when close enough to show. */
+    repeatOf: jsonb("repeat_of").$type<RepeatMatch>(),
+    /** TASK-029: where the post was published (set with "Označi kot objavljeno"). */
+    publishedUrl: text("published_url"),
     ruleFailures: jsonb("rule_failures").$type<{ code: string; actual: number | string; limit: number | string; part?: number }[]>().notNull().default([]),
     fixAttempts: integer("fix_attempts").notNull().default(0),
     model: text("model"),

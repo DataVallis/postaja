@@ -8,7 +8,7 @@ import { POST_STATUSES } from "@/server/db/schema";
 import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
-import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus } from "@/server/posts/generate";
+import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
 import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
@@ -72,8 +72,21 @@ export async function setPostStatusAction(f: FormData): Promise<void> {
   const postId = String(f.get("postId") ?? "");
   const to = z.enum(POST_STATUSES).safeParse(f.get("to"));
   if (!to.success) return;
-  await setPostStatus(getDb(), ctx, postId, to.data).catch(() => undefined);
+  let error: string | null = null;
+  await setPostStatus(getDb(), ctx, postId, to.data, { url: String(f.get("url") ?? "") }).catch((e) => { error = e instanceof PostError ? e.code : "FAILED"; });
   revalidatePath(`/app/posts/${postId}`);
+  if (error) redirect(`/app/posts/${postId}?statusError=${error}`);
+}
+
+/** The link of a published post, added or corrected later (TASK-029). */
+export async function setPublishedUrlAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const postId = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  await setPublishedUrl(getDb(), ctx, postId, String(f.get("url") ?? "")).catch((e) => { error = e instanceof PostError ? e.code : "FAILED"; });
+  revalidatePath(`/app/posts/${postId}`);
+  redirect(`/app/posts/${postId}${error ? `?statusError=${error}` : ""}`);
 }
 
 /** New slot from the post page (TASK-013): empty date = off the plan. */

@@ -16,7 +16,7 @@ import { LlmError } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
-import { editPost, generatePost, getPost, listPosts, setPostStatus } from "./generate";
+import { editPost, generatePost, getPost, listPosts, setPostStatus, setPublishedUrl } from "./generate";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -55,6 +55,65 @@ beforeEach(async () => {
   brandB = (await createBrand(db, B, { name: "Cherr", slug: "cherr", languages: ["en"] })).id;
 });
 afterAll(async () => { await sql.end({ timeout: 5 }); });
+
+describe("no-repeat for posts (TASK-029)", () => {
+  const gen = (topic: string, brief = "Napovej tečaj") => generatePost(db, { llm: createFakeLlm([{ input: { ...goodIg, topic_summary: topic } }]).client, storage }, A, { brandId: brandA, channelId: igA, brief });
+
+  it("a repeat of an earlier written post goes to review with the match; a different topic stays ready", async () => {
+    const first = await gen("Launch of the autumn electrical engineering course with early registration.");
+    expect((await getPost(db, A, first)).repeatOf).toBeNull();
+    const again = await gen("Launch of the autumn electrical engineering course with early registration discount.");
+    const p = await getPost(db, A, again);
+    expect(p.status).toBe("needs_review");
+    expect(p.repeatOf).toMatchObject({ postId: first, label: "Launch of the autumn electrical engineering course with early registration.", blocks: true });
+    expect(p.repeatOf!.score).toBeGreaterThanOrEqual(0.6);
+    const other = await gen("Interview with a site manager about safety helmets on construction sites.");
+    expect(await getPost(db, A, other)).toMatchObject({ status: "ready", repeatOf: null });
+    // Approving is the override.
+    await setPostStatus(db, A, again, "approved");
+    expect((await getPost(db, A, again)).status).toBe("approved");
+  });
+
+  it("skipped posts, other brands and posts outside the window do not count", async () => {
+    const first = await gen("Launch of the autumn electrical engineering course with early registration.");
+    await setPostStatus(db, A, first, "skipped");
+    expect((await getPost(db, A, await gen("Launch of the autumn electrical engineering course with early registration."))).repeatOf).toBeNull();
+    await sql`update posts set status = 'ready', created_at = now() - interval '200 days', scheduled_on = null`;
+    expect((await getPost(db, A, await gen("Launch of the autumn electrical engineering course with early registration."))).repeatOf).toBeNull();
+  });
+
+  it("a hand-written text of a planned post is checked by its plan topic", async () => {
+    const first = await gen("Safety helmets on construction sites: why they matter.");
+    const [v] = await sql`select current_profile_version_id v from brands where id = ${brandA}`;
+    const planned = crypto.randomUUID();
+    await db.insert(posts).values({ id: planned, orgId: A.orgId, brandId: brandA, channelId: igA, profileVersionId: v.v, brief: "b", status: "planned", plan: { topic: "Safety helmets on construction sites: why they matter so much" }, createdBy: A.userId });
+    await editPost(db, A, planned, { caption: "Čelade na gradbišču rešujejo življenja. Link v bio" });
+    expect(await getPost(db, A, planned)).toMatchObject({ status: "needs_review", repeatOf: { postId: first, blocks: true } });
+    // A later edit keeps the match and the review.
+    await editPost(db, A, planned, { caption: "Čelade so obvezne. Link v bio" });
+    expect((await getPost(db, A, planned)).status).toBe("needs_review");
+  });
+});
+
+describe("published link (TASK-029)", () => {
+  it("marking published stores the link; it can be corrected; going back clears it; only http(s)", async () => {
+    const id = await generatePost(db, { llm: createFakeLlm([{ input: goodIg }]).client, storage }, A, { brandId: brandA, channelId: igA, brief: "Napovej tečaj" });
+    await setPostStatus(db, A, id, "approved");
+    await expect(setPostStatus(db, A, id, "published", { url: "javascript:alert(1)" })).rejects.toMatchObject({ code: "BAD_URL" });
+    expect((await getPost(db, A, id)).status).toBe("approved");
+    await setPostStatus(db, editorA, id, "published", { url: " https://www.instagram.com/p/abc123/ " });
+    expect(await getPost(db, A, id)).toMatchObject({ status: "published", publishedUrl: "https://www.instagram.com/p/abc123/" });
+    await setPublishedUrl(db, A, id, "https://www.instagram.com/p/xyz/");
+    expect((await getPost(db, A, id)).publishedUrl).toBe("https://www.instagram.com/p/xyz/");
+    await setPublishedUrl(db, A, id, "");
+    expect((await getPost(db, A, id)).publishedUrl).toBeNull();
+    await setPublishedUrl(db, A, id, "https://x.com/a");
+    await setPostStatus(db, A, id, "approved");
+    expect(await getPost(db, A, id)).toMatchObject({ publishedUrl: null, publishedAt: null });
+    await expect(setPublishedUrl(db, A, id, "https://x.com/a")).rejects.toMatchObject({ code: "BAD_STATE" });
+    await expect(setPublishedUrl(db, B, id, "https://x.com/a")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
 
 describe("generatePost", () => {
   it("valid answer passing every rule → ready; content composed; one settled ledger row with the exact cost", async () => {

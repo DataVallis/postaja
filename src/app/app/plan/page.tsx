@@ -238,7 +238,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           <DataTable testId="plan-history" head={[t("publishedOn"), tp("post"), tp("brand"), tp("channel"), t("format"), t("status")]} empty={history.total ? undefined : t("noHistory")}>
             {history.rows.map((p) => (
               <tr key={p.id}>
-                <td className={`${td} whitespace-nowrap text-muted`}>{p.publishedAt ? fmt.dateTime(p.publishedAt, { dateStyle: "medium" }) : "—"}</td>
+                <td className={`${td} whitespace-nowrap text-muted`}>{p.publishedAt ? fmt.dateTime(p.publishedAt, { dateStyle: "medium" }) : "—"}{p.publishedUrl ? <> · <a href={p.publishedUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{t("openPublished")}</a></> : null}</td>
                 <td className={`${td} min-w-56 max-w-lg`}><Link href={`/app/posts/${p.id}`} className="line-clamp-1 font-medium hover:underline">{label(p)}</Link></td>
                 <td className={td}>{p.brandName}</td>
                 <td className={`${td} whitespace-nowrap text-muted`}>{p.platform ? `${p.platform} · ${p.handle}` : "—"}</td>

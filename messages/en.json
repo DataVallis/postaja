@@ -510,7 +510,19 @@
     "slotSave": "Save slot",
     "slotInvalid": "The slot is not valid.",
     "writeWithAi": "Write text with AI",
-    "downloadZip": "Download ZIP"
+    "downloadZip": "Download ZIP",
+    "repeatWarns": "Similar to an earlier post – check that you are not repeating the same topic:",
+    "repeatBlocks": "This post repeats an earlier post, so it needs review:",
+    "repeatScore": "similarity {n} %",
+    "repeatOverride": "If that is intended (e.g. a follow-up), approve it anyway.",
+    "publishedUrl": "Link to the post",
+    "publishedUrlPlaceholder": "https://… (optional)",
+    "savePublishedUrl": "Save link",
+    "openPublished": "open post",
+    "statusErrors": {
+      "BAD_URL": "The link must be a web address (https://…).",
+      "FAILED": "The change could not be saved."
+    }
   },
   "Connect": {
     "title": "Claude",
@@ -855,7 +867,8 @@
     "pageOf": "Page {page} of {pages}",
     "downloadDay": "Download day (ZIP, {n, plural, one {# post} other {# posts}})",
     "show": "Show:",
-    "showDefault": "Default (no published)"
+    "showDefault": "Default (no published)",
+    "openPublished": "open"
   },
   "Bulk": {
     "scope": "Scope",
@@ -1303,7 +1316,11 @@
     "inPostsOff": "off",
     "inPostsHint": "When on, the illustrations of this brand's post images show the persona: Claude describes the scene, the picture is made from the passport pictures (same person, Nano Banana Pro edit, €0.15 per illustration). Words and logo are still drawn by Postaja from the visual identity.",
     "inPostsEnable": "Turn on",
-    "inPostsDisable": "Turn off"
+    "inPostsDisable": "Turn off",
+    "videosTitle": "Video with the persona",
+    "videosHint": "A persona video is made on a post: open a post of this brand and, in the \"Video with the persona\" section, pick the length and click \"Create video with the persona\". The brand's latest posts:",
+    "hasVideo": "has a video",
+    "noPostsYet": "The brand has no posts yet. Create a post on the Posts tab, then the video on it."
   },
   "PersonaVideo": {
     "title": "Video with the persona ({name})",

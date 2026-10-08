@@ -24,7 +24,7 @@ function filters(ctx: OrgContext, f: PlanFilters): SQL[] {
 
 const columns = {
   id: posts.id, status: posts.status, format: posts.format, scheduledOn: posts.scheduledOn, scheduledTime: posts.scheduledTime,
-  publishedAt: posts.publishedAt, brief: posts.brief, caption: sql<string | null>`${posts.content}->>'caption'`,
+  publishedAt: posts.publishedAt, publishedUrl: posts.publishedUrl, brief: posts.brief, caption: sql<string | null>`${posts.content}->>'caption'`,
   topic: sql<string | null>`${posts.plan}->>'topic'`, brandId: posts.brandId, brandName: brands.name,
   platform: channels.platform, handle: channels.handle, channelId: posts.channelId, createdAt: posts.createdAt,
 };
