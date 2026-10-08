@@ -36,7 +36,7 @@ Pod vsakim kanalom vidiš pravila, ki zanj **veljajo** (platforma + kanal + bran
 V zavihek **Datoteke** povleci posamezne datoteke ali cel ZIP. Postaja jih razvrsti sama:
 - **Logotipi** (slike z »logo« v imenu ali gumb **Dodaj logotip**): uporabijo se na slikah.
 - **Fonti** (TTF, OTF, WOFF, WOFF2): morajo imeti č, š, ž, ć in đ.
-- **Partnerski logotipi**: logotipi partnerjev za skupne objave (npr. Polygon). Spusti jih v polje **Spusti partnerske logotipe sem** (več naenkrat ali v ZIP-u). Ime partnerja je ime datoteke (»Polygon-logo.png« → Polygon); popraviš ga v polju pod logotipom in potrdiš s ✓. To ni logotip branda: pri vsaki objavi ali oglasu sam izbereš, ali naj bo na slikah. Če predloga na sliki napiše ime partnerja (npr. noga »CHERR.IO | Polygon«), Postaja namesto imena nariše njegov logotip; sicer ga nariše poleg logotipa branda.
+- **Partnerski logotipi**: logotipi partnerjev za skupne objave (npr. Polygon). Spusti jih v polje **Spusti partnerske logotipe sem** (več naenkrat ali v ZIP-u). Ime partnerja je ime datoteke (»Polygon-logo.png« → Polygon); popraviš ga v polju pod logotipom in ga potrdiš s kljukico ob polju. To ni logotip branda: pri vsaki objavi ali oglasu sam izbereš, ali naj bo na slikah. Če predloga na sliki napiše ime partnerja (npr. noga »CHERR.IO | Polygon«), Postaja namesto imena nariše njegov logotip; sicer ga nariše poleg logotipa branda.
 - **Viri**: dokumenti (PDF, Word, Excel, PowerPoint, CSV, TXT) in slike preteklih objav. Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo. Slike preteklih objav uporabi za slog.
 
 Nalaga in briše lastnik; vsi člani lahko datoteke prenesejo.

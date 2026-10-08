@@ -14,6 +14,15 @@
   tej strani", previous/next). Menu: "Pomoč → Navodila za uporabo" in `src/components/shell/app-shell.tsx`.
 - Tests: `src/server/guide/*.test.ts` (parser, every in-guide link resolves), `tests/e2e/help.spec.ts`.
 
+## English and PDF (TASK-044)
+English chapters live in `docs/guides/user/en/` with the **same file names** as the Slovenian ones, so chapter URLs and
+links between chapters are the same in both languages (anchors follow each language's headings). Bold UI labels use the
+exact strings of `messages/en.json`. `GET /api/help/pdf` (members) renders the guide in the member's language with
+`src/server/guide/pdf.ts` (pdf-lib + fontkit): cover, contents with page numbers, each chapter from a new page, page
+numbers; real text in Inter / JetBrains Mono subsets, symbols (→ …) from Noto Sans Symbols. The route is in
+`outputFileTracingIncludes` so the Markdown ships with it. Tests: `guide/pdf.test.ts` (text read back with unpdf),
+E2E `help.spec.ts` (PDF in both languages, English chapters).
+
 ## Keeping it current
 Every PR that changes what a customer sees updates the matching chapter (DEVELOPMENT-RULES §7). Use the exact labels of
 the UI (from `messages/sl.json`) in **bold**.

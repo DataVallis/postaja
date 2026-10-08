@@ -60,7 +60,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-041 | **Client approval link**: an agency shares a signed link per brand/week; the agency's client sees the planned posts, approves or comments per post without an account; statuses and comments flow back to the post; link revocable, audited | TASK-013 | Planned |
 | TASK-042 | **Referrals + business metrics**: referral code per org (20 % for 12 months, tracked at checkout), super-admin report: MRR, new trials/pilots, trial→paid, activation (first download ≤ 24 h), churn, credits used per org, gross margin per org | TASK-036 | Planned |
 | TASK-043 | **Direct publishing / scheduling**: publish or schedule ready posts to Instagram/Facebook (Meta Graph API) and LinkedIn, or via a unified posting API; status + URL back to the post (TASK-029); paid add-on | TASK-036 | Planned (P2) |
-| TASK-044 | **English guide + PDF export** of the user guide | TASK-026 | Planned (P2) |
+| TASK-044 | **English guide + PDF export** of the user guide: English chapters (same slugs), `/api/help/pdf` in the member's language | TASK-026 | Done |
 | TASK-045 | **AI label**: persona posts and videos carry an "AI-generated" flag in the export (caption note + file metadata) and a reminder to tick the platform's AI label (EU AI Act Art. 50, Meta/TikTok rules; ADR-067) | TASK-025 | Done |
 
 **Phase 3 — selling (TASK-035…045)** comes from the business plan `docs/business/BUSINESS-PLAN.sl.md` (§4 prices and credits, §11 automation, §12 task list). Owner's order (2026-10-08): competitor research (spec §4.3) first, then these; prices, payment provider and domain are owner decisions (plan §15) and must be confirmed before TASK-035/036 start.

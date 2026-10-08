@@ -55,6 +55,21 @@ test("help: the user guide from the menu, a chapter, its sections and the next c
   await p.getByRole("link", { name: /Naslednje: Povezava s Claude/ }).click();
   await expect(p.getByRole("heading", { name: "8. Povezava s Claude", level: 1 })).toBeVisible();
 
+  // The whole guide as a PDF (TASK-044).
+  await p.goto("/app/help");
+  const [pdf] = await Promise.all([p.waitForEvent("download"), p.getByTestId("help-pdf").click()]);
+  expect(pdf.suggestedFilename()).toBe("postaja-navodila.pdf");
+  expect(fs.readFileSync((await pdf.path())!).subarray(0, 5).toString()).toBe("%PDF-");
+  // In English the chapters are English, and the PDF too.
+  await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", domain: new URL(p.url()).hostname, path: "/" }]);
+  await p.goto("/app/help");
+  await expect(p.getByRole("link", { name: "1. Getting started" })).toBeVisible();
+  await expect(p.getByRole("link", { name: "10. Competitors" })).toBeVisible();
+  const [pdfEn] = await Promise.all([p.waitForEvent("download"), p.getByTestId("help-pdf").click()]);
+  expect(pdfEn.suggestedFilename()).toBe("postaja-user-guide.pdf");
+  expect(await serious(p)).toEqual([]);
+  await ctx.addCookies([{ name: "NEXT_LOCALE", value: "sl", domain: new URL(p.url()).hostname, path: "/" }]);
+
   // A link inside a chapter leads to another chapter.
   await p.goto("/app/help/zacetek");
   await p.getByTestId("help-chapter").getByRole("link", { name: "Brand" }).first().click();
