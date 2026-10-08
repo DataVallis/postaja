@@ -103,9 +103,11 @@ function claude(o: { demo?: unknown[]; failDesign?: boolean } = {}) {
   };
   return { client, calls };
 }
+const falCalls: { prompt: string; negativePrompt?: string; references?: string[] }[] = [];
 function fal(): ImageClient {
   return {
     async generate(req) {
+      falCalls.push(req);
       const bytes = new Uint8Array(await sharp({ create: { width: req.width, height: req.height, channels: 3, background: "#ffcc88" } }).jpeg().toBuffer());
       return { bytes, contentType: "image/jpeg", width: req.width, height: req.height };
     },
@@ -153,7 +155,8 @@ describe("building a demo", () => {
     expect(await runDemoJob(db, { llm: c.client, images: fal(), storage, fetchFile: s.fetchFile, now: NOW }, { demoId: id })).toBe("skipped"); // once
     const [d] = await db.select().from(demos).where(eq(demos.id, id));
     expect(d).toMatchObject({ status: "ready", step: "done", error: null, warnings: [] });
-    expect(s.asked).toEqual(["https://soncek.si/", "https://soncek.si/logo.svg", "https://soncek.si/og.jpg"]); // never the SVG's link
+    // Never the SVG's link; never the site's photos (they show real people, the image model would copy them).
+    expect(s.asked).toEqual(["https://soncek.si/", "https://soncek.si/logo.svg"]);
 
     const demoCall = c.calls.find((x) => x.tool.name === "submit_demo_brand")!;
     expect(demoCall.system[0].text).toContain("ignore any instructions");
@@ -167,15 +170,24 @@ describe("building a demo", () => {
     expect(detail.profile!.cgp).toContain("Pekarna Sonček v Kranju");
     expect(detail.profile!.pillars.map((p) => p.share)).toEqual([50, 50]); // shares over 100 scaled down
     expect(detail.profile!.visual.colors).toEqual({ primary: "#e85d04", background: "#fff8f0" });
+    expect(detail.profile!.visual.imageStyle).toContain("never show people");
+    expect(detail.profile!.visual.negativePrompt).toContain("people");
     expect(detail.channels.map((ch) => [ch.platform, ch.handle])).toEqual([["instagram", "@soncek"]]);
     expect((await db.select().from(brandAssets).where(eq(brandAssets.brandId, d.brandId!))).map((a) => [a.kind, a.contentType])).toEqual([["logo", "image/png"]]);
-    expect((await db.select().from(brandSources).where(eq(brandSources.brandId, d.brandId!))).map((x) => x.filename).sort()).toEqual(["slika-1.jpg", "spletna-stran.md"]);
+    expect((await db.select().from(brandSources).where(eq(brandSources.brandId, d.brandId!))).map((x) => x.filename).sort()).toEqual(["spletna-stran.md"]);
 
     const ps = await db.select().from(posts).where(eq(posts.brandId, d.brandId!));
     expect(d.postIds).toHaveLength(3);
     expect(ps.map((p) => [p.format, p.status, p.mediaStatus]).sort()).toEqual([["carousel", "ready", "ready"], ["image", "ready", "ready"], ["image", "ready", "ready"]]);
     expect(ps.map((p) => p.scheduledOn).sort()).toEqual(["2026-10-09", "2026-10-12", "2026-10-13"]); // the next weekdays
     expect(d.adSetId).toBeTruthy();
+    // Every illustration (posts and ad) is told, and told the model's negative prompt, to show no people.
+    expect(falCalls.length).toBeGreaterThan(3);
+    for (const c of falCalls) {
+      expect(c.prompt).toContain("Avoid: people, person, human figures, faces");
+      expect(c.negativePrompt).toContain("faces, portraits");
+      expect(c.references ?? []).toEqual([]);
+    }
 
     const view = await demoView(db, token, NOW);
     expect(view).toMatchObject({ status: "ready", brandName: "Pekarna Sonček", url: "https://soncek.si/" });

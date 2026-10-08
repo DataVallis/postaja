@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { postLanguage } from "@/lib/language";
 import type { Db } from "../db/client";
-import { brands, formatPresets, modelRegistry, postImageRuns, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
+import { brandProfileVersions, brands, formatPresets, modelRegistry, postImageRuns, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
 import { postVisualRequest, postVisualSchema, issues, type VisualRevision } from "../design/ai";
 import { renderTemplate } from "../design/render";
@@ -190,8 +190,15 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
  * One illustration: the brand's style-reference model when it has past posts, else the default image model. `who` is
  * what the cost is booked on (a post, or only the brand for an ad set).
  */
-export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[]) {
+export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], opts: { verbatim?: boolean } = {}) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
+  // The brand's "avoid" list (profile → visual → negativePrompt): sent as the model's negative prompt and, unless the
+  // owner's prompt is used word for word (TASK-052), also said in the prompt (not every model reads negative prompts).
+  const [prof] = await db.select({ visual: brandProfileVersions.visual }).from(brands)
+    .innerJoin(brandProfileVersions, eq(brandProfileVersions.id, brands.currentProfileVersionId))
+    .where(and(eq(brands.id, who.brandId), eq(brands.orgId, ctx.orgId)));
+  const avoid = prof?.visual.negativePrompt.trim() ?? "";
+  if (avoid && !opts.verbatim) prompt = `${prompt}\nAvoid: ${avoid}.`;
   const pick = async (kind: "image" | "image_style") =>
     (await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true))))[0];
   const model = (references.length ? await pick("image_style") : undefined) ?? (await pick("image"));
@@ -201,7 +208,7 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action: "illustration" });
   let out;
   try {
-    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: "text, letters, words, watermark, logo" });
+    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: ["text, letters, words, watermark, logo", avoid].filter(Boolean).join(", ") });
   } catch (e) {
     await release(db, ledgerId);
     throw e;
@@ -287,7 +294,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
           references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
           // The owner's image prompt goes to the model as written (TASK-052); otherwise the brand's style is added.
           prompt = slide.verbatim && slide.illustration ? slide.illustration : illustrationPrompt(slide.illustration ?? p.brief, spec);
-          out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
+          out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references, { verbatim: !!(slide.verbatim && slide.illustration) });
         }
         illustration = out.bytes;
         const k = key(ctx.orgId, postId, "jpg");

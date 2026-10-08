@@ -19,6 +19,9 @@ text, the Meta ad (creatives + 3 copy variants), a note that texts and images ar
 - `src/server/demos/site.ts` `readSite`: text (`htmlToText`), logo (an `<img>` named logo, else the touch icon), up to
   4 pictures (og:image + large content images), colours (theme-color + most used non-grey CSS hex). Only http(s).
 - `src/server/demos/ai.ts`: `submit_demo_brand` tool; the page sits in `<website>`, instructions in it are ignored.
+- No people in demo pictures (ADR-072): the site's photos are not stored (they would be style references and get copied);
+  the profile's image style forbids people and `NO_PEOPLE` is its negative prompt, which `generateIllustration` sends to
+  the image model and appends as "Avoid: …".
 - `src/server/demos/service.ts`: `ensureSalesOrg` ("Data Vallis – prodaja", comped, cap 30 USD), `startDemo`
   (≤ 20/day, audited), `listDemos`, `demoBrandFor`, `newDemoLink`, `revokeDemoLink`, `runDemoJob` (one job drives
   `requestDesign`/`runDesignJob`, `generateForPost`, `requestImages`/`runImageJob`, `createAdSet`,
