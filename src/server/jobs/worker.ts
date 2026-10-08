@@ -10,6 +10,7 @@ import { DESIGN_QUEUE, runDesignJob, type DesignJob } from "../design/service";
 import { AD_IMAGE_QUEUE, runAdImageJob, type AdImageJob } from "../ads/creatives";
 import { POST_VIDEO_QUEUE, runVideoJob, type PostVideoJob } from "../video/service";
 import { PERSONA_PASSPORT_QUEUE, runPassportJob, type PassportJob } from "../personas/service";
+import { COMPETITOR_FIND_QUEUE, runFindJob, type CompetitorFindJob } from "../competitors/service";
 import { BACKUP_QUEUE, backupConfigFromEnv, runBackup } from "../backup/service";
 import { getBoss } from "./boss";
 
@@ -35,6 +36,9 @@ export async function startWorkers() {
   });
   await boss.work<PassportJob>(PERSONA_PASSPORT_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
     await runPassportJob(getDb(), deps, job.data);
+  });
+  await boss.work<CompetitorFindJob>(COMPETITOR_FIND_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
+    await runFindJob(getDb(), deps, job.data);
   });
   // Database backups (TASK-030, ADR-063): production only — the config exists only where BACKUP_ENABLED=1.
   const backup = backupConfigFromEnv();

@@ -9,8 +9,12 @@ const part = (tokens: number, perMtok: bigint) => {
   return (n + 999_999n) / 1_000_000n; // ceil
 };
 
+/** Anthropic web search: $10 per 1,000 searches (TASK-049). */
+export const WEB_SEARCH_MICRO_USD = 10_000n;
+
 export function costMicroUsd(u: Usage, p: Prices): bigint {
-  return part(u.inputTokens, p.inputPerMtok) + part(u.outputTokens, p.outputPerMtok) + part(u.cacheWriteTokens, p.cacheWritePerMtok) + part(u.cacheReadTokens, p.cacheReadPerMtok);
+  return part(u.inputTokens, p.inputPerMtok) + part(u.outputTokens, p.outputPerMtok) + part(u.cacheWriteTokens, p.cacheWritePerMtok) + part(u.cacheReadTokens, p.cacheReadPerMtok)
+    + BigInt(u.webSearches ?? 0) * WEB_SEARCH_MICRO_USD;
 }
 
 /** Rough token count for a budget estimate: 1 token per 3 characters (conservative for Slovenian), never below 1. */

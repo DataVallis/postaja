@@ -15,3 +15,4 @@ export * from "./schema/design";
 export * from "./schema/ideas";
 export * from "./schema/ads";
 export * from "./schema/personas";
+export * from "./schema/competitors";

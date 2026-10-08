@@ -25,14 +25,17 @@ import { ModelSection } from "./model-section";
 import { listTextModels } from "@/server/brands/service";
 import { dnaEstimate, getBrandPersona, passportEstimate } from "@/server/personas/service";
 import { PersonaSection } from "./persona-section";
+import { CompetitorsSection } from "./competitors-section";
+import { findEstimate, listCompetitors } from "@/server/competitors/service";
+import { microToUsd } from "@/lib/money/usd";
 import { postsWithVideo } from "@/server/video/media";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["posts", "ads", "persona", "files", "design", "profile", "channels", "versions"] as const;
+const TABS = ["posts", "ads", "persona", "competitors", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string; competitorError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -45,7 +48,8 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   });
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
-  const [adNets, adSetList, personaData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id)]);
+  const [adNets, adSetList, personaData, competitorData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id), listCompetitors(db, org, id)]);
+  const findCost = tab === "competitors" ? await findEstimate(db, org, id).catch(() => null) : null;
   const withPersonaVideo = tab === "persona" ? await postsWithVideo(db, org, recentPosts.map((x) => x.id), "persona") : new Set<string>();
   const [dnaCost, passport] = tab === "persona"
     ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
@@ -98,6 +102,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
           { key: "posts", label: t("tabs.posts"), href: href("posts"), count: recentPosts.length },
           { key: "ads", label: t("tabs.ads"), href: href("ads"), count: adSetList.length },
           { key: "persona", label: t("tabs.persona"), href: href("persona"), count: personaData ? personaData.images.length : undefined },
+          { key: "competitors", label: t("tabs.competitors"), href: href("competitors"), count: competitorData.competitors.filter((c) => c.status === "kept").length },
           { key: "files", label: t("tabs.files"), href: href("files"), count: files.sources.length + files.logos.length + files.fonts.length },
           { key: "design", label: t("tabs.design"), href: href("design"), count: designs.filter((d) => d.status === "ready").length },
           { key: "profile", label: t("tabs.profile"), href: href("profile") },
@@ -115,6 +120,9 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
           data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport}
           posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: withPersonaVideo.has(x.id) }))} />
+      ) : null}
+      {tab === "competitors" ? (
+        <CompetitorsSection brandId={brand.id} list={competitorData.competitors} run={competitorData.run} archived={brand.archivedAt !== null} error={sp.competitorError} maxCost={findCost === null ? "—" : `${microToUsd(findCost)} €`} />
       ) : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 

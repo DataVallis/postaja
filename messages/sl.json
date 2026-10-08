@@ -413,7 +413,8 @@
       "channels": "Kanali",
       "versions": "Verzije",
       "ads": "Oglasi",
-      "persona": "Persona"
+      "persona": "Persona",
+      "competitors": "Konkurenca"
     },
     "table": {
       "brand": "Brand",
@@ -1476,5 +1477,44 @@
     "delete": "Izbriši verzijo",
     "deleteWarning": "Ta verzija bo trajno izbrisana.",
     "deleteConfirm": "Izbriši verzijo"
+  },
+  "Competitors": {
+    "title": "Konkurenca",
+    "intro": "Claude iz CGP-ja in s spletnim iskanjem predlaga konkurente branda: spletna stran, javni profili in zakaj je konkurent. Predloge obdržiš ali odstraniš, dodaš lahko svoje. Iz obdržanih kasneje nastane analiza (kaj prevzamemo, česa ne delamo, vrzeli v temah). Postaja bere samo javne strani.",
+    "hintLabel": "Želja za iskanje (neobvezno)",
+    "hintPlaceholder": "npr. samo slovenski; tudi agencije; brez velikih platform",
+    "find": "Najdi konkurente",
+    "finding": "Iščem …",
+    "findHint": "Claude išče po spletu, kar traja do nekaj minut. Največ {cost}.",
+    "running": "Claude išče konkurente …",
+    "lastRun": "Zadnje iskanje {when}: {n, plural, =0 {brez novih predlogov} one {# nov predlog} two {# nova predloga} few {# novi predlogi} other {# novih predlogov}}.",
+    "suggested": "Predlogi ({n})",
+    "suggestedHint": "Preveri spletno stran in razlog; obdrži tiste, ki so res konkurenti.",
+    "kept": "Konkurenti ({n})",
+    "noneKept": "Še ni konkurentov. Poišči jih s Claudom ali dodaj svoje.",
+    "keep": "Obdrži",
+    "keepName": "Obdrži {name}",
+    "remove": "Odstrani",
+    "removeName": "Odstrani {name}",
+    "addTitle": "Dodaj konkurenta",
+    "name": "Ime",
+    "website": "Spletna stran",
+    "profilePlatform": "Profil na omrežju",
+    "profileUrl": "Povezava do profila",
+    "note": "Opomba (zakaj je konkurent)",
+    "add": "Dodaj",
+    "errors": {
+      "BUSY": "Iskanje že teče.",
+      "INVALID": "Preveri vnos: povezave morajo biti spletni naslovi (https://…).",
+      "DUPLICATE": "Ta konkurent je že na seznamu.",
+      "LIMIT_REACHED": "Brand ima največje število konkurentov (40).",
+      "ARCHIVED": "Brand je arhiviran.",
+      "NOT_FOUND": "Ni najdeno.",
+      "SPEND_CAP": "Dosežena je mesečna omejitev stroškov AI.",
+      "AI_FAILED": "Claude trenutno ne odgovarja, poskusi znova.",
+      "INVALID_OUTPUT": "Claude ni vrnil uporabnega seznama, poskusi znova.",
+      "NO_ACCESS": "Član, ki je začel iskanje, nima več dostopa.",
+      "FAILED": "Ni uspelo, poskusi znova."
+    }
   }
 }
