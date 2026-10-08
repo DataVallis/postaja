@@ -15,5 +15,6 @@
 | [plan-view.md](plan-view.md) | `src/app/app/plan/**`, `src/server/posts/calendar.ts`, `src/lib/dates/**`, slot form in `src/app/app/posts/[id]/page.tsx` | Built |
 | [bulk.md](bulk.md) | `src/server/bulk/**`, `src/server/jobs/**`, `src/instrumentation*.ts`, `generateForPost`/`planBrief` in `src/server/posts/generate.ts`, `src/app/app/plan/{actions,bulk-runs,auto-refresh}.tsx`, `drizzle/0014_bulk_runs.sql` | Built |
 | [mcp.md](mcp.md) | `src/server/mcp/**`, `src/app/api/mcp/**`, `src/app/api/well-known/**`, `src/app/connect/**`, `src/app/app/connect/**`, `src/server/db/schema/{oauth,mcp}.ts`, `drizzle/0010…0012`, OAuth part of `src/server/auth/auth.ts`, `next.config.ts` rewrite | Built |
+| [help.md](help.md) | `docs/guides/user/**`, `src/server/guide/**`, `src/components/guide/**`, `src/app/app/help/**` | Built |
 
 Every PR that changes covered code updates the chapter in the same PR.

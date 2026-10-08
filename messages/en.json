@@ -566,7 +566,9 @@
     "account": "Account",
     "signOut": "Sign out",
     "import": "Plan import",
-    "plan": "Plan"
+    "plan": "Plan",
+    "helpSection": "Help",
+    "help": "User guide"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -1323,5 +1325,16 @@
       "ready": "Ready",
       "failed": "Failed"
     }
+  },
+  "Help": {
+    "title": "User guide",
+    "description": "How to work with Postaja – from a brand to a post, an ad and a persona video.",
+    "chapters": "Chapters",
+    "prev": "Previous",
+    "next": "Next",
+    "back": "All chapters",
+    "onThisPage": "On this page",
+    "empty": "The guide is not available yet.",
+    "slOnly": "The guide is in Slovenian for now."
   }
 }

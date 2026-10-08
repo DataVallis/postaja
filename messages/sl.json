@@ -566,7 +566,9 @@
     "account": "Račun",
     "signOut": "Odjava",
     "import": "Uvoz planov",
-    "plan": "Plan"
+    "plan": "Plan",
+    "helpSection": "Pomoč",
+    "help": "Navodila za uporabo"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
@@ -1323,5 +1325,16 @@
       "ready": "Pripravljen",
       "failed": "Napaka"
     }
+  },
+  "Help": {
+    "title": "Navodila za uporabo",
+    "description": "Kako delaš s Postajo – od branda do objave, oglasa in videa s persono.",
+    "chapters": "Poglavja",
+    "prev": "Prejšnje",
+    "next": "Naslednje",
+    "back": "Vsa poglavja",
+    "onThisPage": "Na tej strani",
+    "empty": "Navodila še niso na voljo.",
+    "slOnly": ""
   }
 }

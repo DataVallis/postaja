@@ -1,11 +1,11 @@
 "use client";
-import { Building2, CalendarDays, FileSpreadsheet, FileText, History, Layers, LayoutDashboard, Plug, SlidersHorizontal } from "lucide-react";
+import { BookOpen, Building2, CalendarDays, FileSpreadsheet, FileText, History, Layers, LayoutDashboard, Plug, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isActive, type NavIcon, type NavSection } from "./nav";
 
 const ICONS: Record<NavIcon, typeof FileText> = {
-  dashboard: LayoutDashboard, plan: CalendarDays, import: FileSpreadsheet, posts: FileText, brands: Layers, claude: Plug, orgs: Building2, platform: SlidersHorizontal, audit: History,
+  dashboard: LayoutDashboard, plan: CalendarDays, import: FileSpreadsheet, posts: FileText, brands: Layers, claude: Plug, help: BookOpen, orgs: Building2, platform: SlidersHorizontal, audit: History,
 };
 
 export function SidebarNav({ sections, label, onNavigate }: { sections: NavSection[]; label: string; onNavigate?: () => void }) {
