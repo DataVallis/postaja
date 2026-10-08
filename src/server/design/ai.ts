@@ -161,8 +161,12 @@ Rules:
   or caption is written in.
 - On-image words come from the plan: if the plan has text for the image (overlay text) or slide texts, use them verbatim when
   they are in the post's language, otherwise translate them faithfully (same meaning, names, numbers). You may split them over
-  the template's slots and mark the key words with *…* for emphasis. Without such text, write short words from the topic —
-  a headline is at most ~10 words. Never invent facts, prices or dates.
+  the template's slots and mark the key words with *…* for emphasis. Without such text, write a short hook from the topic —
+  a headline is at most ~8 words — that complements the caption: the image is seen right above the caption, so never
+  repeat the caption's sentences, steps or lists on the image; one idea that makes people read on. Never invent facts,
+  prices or dates.
+- Image prompt: when the plan has "imagePrompt", the owner has decided the picture. The first image uses a template that
+  shows an illustration (illustration=true), and its illustration is the plan's imagePrompt word for word.
 - Fill only the slots the template has; keep each about as long as the template's sample.
 - Carousel: one image per slide of the plan (a cover first if the plan has no cover slide); otherwise one image. At most ${MAX_SLIDES}.
 - Illustration: only for templates that show one (illustration=true), else null. Describe the subject and composition concretely

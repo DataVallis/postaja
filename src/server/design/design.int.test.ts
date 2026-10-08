@@ -116,7 +116,7 @@ async function post(extra: Partial<typeof posts.$inferInsert> = {}) {
   const id = crypto.randomUUID();
   await forOrg(db, A).insert(posts, {
     id, brandId: brandA, channelId: igA, profileVersionId: brand.currentProfileVersionId!, brief: "Brief", status: "planned", format: "image",
-    plan: { topic: "Zaklep", category: "The problem", overlayText: "Daš. *Zaklenjeno je.*", imagePrompt: "Vault" }, scheduledOn: "2026-10-06", createdBy: A.userId, ...extra,
+    plan: { topic: "Zaklep", category: "The problem", overlayText: "Daš. *Zaklenjeno je.*" }, scheduledOn: "2026-10-06", createdBy: A.userId, ...extra,
   });
   return id;
 }
@@ -465,6 +465,36 @@ describe("post images from the design", () => {
     await deleteBrandFile(db, storage, A, "asset", partner.id);
     expect((await sql`select partner_logo_id from posts where id = ${id}`)[0].partner_logo_id).toBeNull();
     expect((await media(id)).length).toBeGreaterThan(0);
+  });
+
+  it("TASK-052: the plan's image prompt is used word for word; words that repeat the caption are written again", async () => {
+    await design();
+    const imagePrompt = "A magnifying glass made of cobalt geometric shapes over navy blocks, one amber block under the lens. No text, no letters, no logos.";
+    const caption = "Engineers debug in a fixed order: evidence, root cause, smallest fix, proof. It feels slower but it is much faster.";
+    const id = await post({ plan: { topic: "Debugging", imagePrompt }, content: { caption, hashtags: [] } });
+    const { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id, "new");
+    // First answer: a text-only template that copies the caption; second: a hook on an illustrated template.
+    const claude = fakeClaude({ plans: [
+      { slides: [{ templateId: "points", slots: { number: "01", headline: "Engineers debug in a fixed order: evidence, root cause" }, illustration: null }] },
+      { slides: [{ templateId: "cover", slots: { headline: "Slower *on purpose*." }, illustration: "Claude's own idea" }] },
+    ] });
+    const fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(claude.calls).toHaveLength(2);
+    expect(claude.calls[0].system[0].text).toContain("never\n  repeat the caption");
+    expect(claude.calls[1].user).toContain("image 1 repeats the caption");
+    expect(claude.calls[1].user).toContain("the plan has an imagePrompt: the first image must use a template with illustration=true");
+    expect(fal.calls.map((c) => c.prompt)).toEqual([imagePrompt]); // no brand style added, nothing changed
+    const [{ visual }] = await sql`select visual from posts where id = ${id}`;
+    expect(visual.slides).toEqual([{ templateId: "cover", slots: { headline: "Slower *on purpose*." }, illustration: imagePrompt, verbatim: true }]);
+    // Without an image prompt the brand's style is still added to Claude's description.
+    const id2 = await post({ plan: { topic: "Vault" } });
+    const j2 = memoryQueue();
+    await requestImages(db, j2.q, A, id2, "new");
+    const fal2 = fakeImages();
+    await runImages(j2.jobs, fakeClaude(), fal2.client);
+    expect(fal2.calls[0].prompt).toContain(`Style: ${cardDesign.illustrationStyle}`);
   });
 
   it("a correction in words: Claude sees the images and the request; only changed illustrations are drawn again (owner, 2026-10-07)", async () => {

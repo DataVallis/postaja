@@ -23,6 +23,7 @@ import { forOrg } from "../tenancy/scoped";
 import { billedMegapixels, generationSize, ImageError, type ImageClient } from "./fal";
 import { passportReferences, personaPicture, postPersona } from "../personas/service";
 import { markAiPng } from "./ai-label";
+import { repeatsCaption } from "./repeat";
 import { personaIllustrationPrompt } from "../personas/scene";
 
 export const POST_IMAGE_QUEUE = "post-image";
@@ -149,14 +150,36 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
     const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now }, req);
     const parsed = schema.safeParse(out.input);
     if (parsed.success) {
-      return {
-        designId,
-        slides: parsed.data.slides.map((s) => {
-          const t = spec.templates.find((x) => x.id === s.templateId)!;
-          const slots = Object.fromEntries(Object.entries(s.slots).filter(([, v]) => typeof v === "string" && v.trim())) as Record<string, string>;
-          return { templateId: s.templateId, slots, illustration: needsIllustration(t) ? (s.illustration?.trim() || p.plan.imagePrompt || p.plan.topic || p.brief) : null };
-        }),
-      };
+      const owner = p.plan.imagePrompt?.trim() || null;
+      let promptUsed = false;
+      const slides = parsed.data.slides.map((s) => {
+        const t = spec.templates.find((x) => x.id === s.templateId)!;
+        const slots = Object.fromEntries(Object.entries(s.slots).filter(([, v]) => typeof v === "string" && v.trim())) as Record<string, string>;
+        if (!needsIllustration(t)) return { templateId: s.templateId, slots, illustration: null };
+        // TASK-052: the plan's image prompt is the owner's decision — the first illustration, unchanged (a correction
+        // in words may change it later; then it is Claude's description again).
+        if (owner && !promptUsed && !revise) {
+          promptUsed = true;
+          return { templateId: s.templateId, slots, illustration: owner, verbatim: true };
+        }
+        const illustration = s.illustration?.trim() || owner || p.plan.topic || p.brief;
+        return { templateId: s.templateId, slots, illustration, ...(owner && illustration === owner ? { verbatim: true } : {}) };
+      });
+      const problems: string[] = [];
+      if (owner && !revise && !slides.some((s) => s.illustration !== null) && spec.templates.some(needsIllustration)) {
+        problems.push("- the plan has an imagePrompt: the first image must use a template with illustration=true");
+      }
+      // TASK-052: the image complements the caption — unless the plan itself gives the words for the image.
+      const ownWords = !!(p.plan.overlayText?.trim() || p.plan.slides?.length);
+      const caption = p.content?.caption ?? "";
+      if (!ownWords && caption) {
+        slides.forEach((s, i) => {
+          if (repeatsCaption(Object.values(s.slots).join("\n"), caption)) problems.push(`- image ${i + 1} repeats the caption; write a short hook that adds to it instead`);
+        });
+      }
+      if (!problems.length || attempt === 1) return { designId, slides };
+      invalid = { draft: out.input, errors: problems.join("\n") };
+      continue;
     }
     invalid = { draft: out.input, errors: issues(parsed.error) };
   }
@@ -262,7 +285,8 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
           out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
         } else {
           references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
-          prompt = illustrationPrompt(slide.illustration ?? p.brief, spec);
+          // The owner's image prompt goes to the model as written (TASK-052); otherwise the brand's style is added.
+          prompt = slide.verbatim && slide.illustration ? slide.illustration : illustrationPrompt(slide.illustration ?? p.brief, spec);
           out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
         }
         illustration = out.bytes;
