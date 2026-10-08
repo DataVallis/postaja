@@ -20,7 +20,12 @@ export const COMPETITORS_MAX = 40;
 const STALE_MS = 15 * 60 * 1000;
 
 export class CompetitorError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "INVALID" | "BUSY" | "ARCHIVED" | "LIMIT_REACHED" | "DUPLICATE", public readonly detail?: string) {
+  constructor(
+    public readonly code:
+      | "NOT_FOUND" | "INVALID" | "BUSY" | "ARCHIVED" | "LIMIT_REACHED" | "DUPLICATE" | "FORBIDDEN"
+      | "TOO_LARGE" | "INVALID_FILE" | "NO_COMPETITORS" | "NOTHING_ACCEPTED" | "TOO_LONG",
+    public readonly detail?: string,
+  ) {
     super(code);
   }
 }

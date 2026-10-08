@@ -27,6 +27,7 @@ import { dnaEstimate, getBrandPersona, passportEstimate } from "@/server/persona
 import { PersonaSection } from "./persona-section";
 import { CompetitorsSection } from "./competitors-section";
 import { findEstimate, listCompetitors } from "@/server/competitors/service";
+import { analyzeEstimate, listItems, listReports } from "@/server/competitors/analysis";
 import { microToUsd } from "@/lib/money/usd";
 import { postsWithVideo } from "@/server/video/media";
 
@@ -35,7 +36,7 @@ export const dynamic = "force-dynamic";
 const TABS = ["posts", "ads", "persona", "competitors", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string; competitorError?: string }> }) {
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string; competitorError?: string; report?: string; ideaHint?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
@@ -49,7 +50,9 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
   const [adNets, adSetList, personaData, competitorData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id), listCompetitors(db, org, id)]);
-  const findCost = tab === "competitors" ? await findEstimate(db, org, id).catch(() => null) : null;
+  const [findCost, analyzeCost, competitorItemsMap, competitorReportList] = tab === "competitors"
+    ? await Promise.all([findEstimate(db, org, id).catch(() => null), analyzeEstimate(db, org, id).catch(() => null), listItems(db, org, id), listReports(db, org, id)])
+    : [null, null, new Map(), []];
   const withPersonaVideo = tab === "persona" ? await postsWithVideo(db, org, recentPosts.map((x) => x.id), "persona") : new Set<string>();
   const [dnaCost, passport] = tab === "persona"
     ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
@@ -112,7 +115,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       />
 
       {tab === "posts" ? (
-        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} />
+        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} ideaHint={sp.ideaHint} />
       ) : null}
 
       {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
@@ -122,7 +125,8 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
           posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: withPersonaVideo.has(x.id) }))} />
       ) : null}
       {tab === "competitors" ? (
-        <CompetitorsSection brandId={brand.id} list={competitorData.competitors} run={competitorData.run} archived={brand.archivedAt !== null} error={sp.competitorError} maxCost={findCost === null ? "—" : `${microToUsd(findCost)} €`} />
+        <CompetitorsSection brandId={brand.id} list={competitorData.competitors} run={competitorData.run} archived={brand.archivedAt !== null} error={sp.competitorError} maxCost={findCost === null ? "—" : `${microToUsd(findCost)} €`}
+          analyzeCost={analyzeCost === null ? "—" : `${microToUsd(analyzeCost)} €`} items={competitorItemsMap} reports={competitorReportList} reportId={sp.report} isOwner={isOwner} />
       ) : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 

@@ -15,7 +15,8 @@ export const cgpDrafts = pgTable(
     brandId: text("brand_id").notNull().references(() => brands.id, { onDelete: "cascade" }),
     text: text("text").notNull(),
     note: text("note"),
-    source: text("source").$type<"claude">().notNull(),
+    /** "claude" = proposed over MCP (ADR-038); "competitors" = accepted learnings of a competitor analysis (TASK-050). */
+    source: text("source").$type<"claude" | "competitors">().notNull(),
     status: text("status").$type<"pending" | "used" | "discarded">().notNull().default("pending"),
     createdBy: text("created_by").notNull().references(() => user.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -25,7 +26,7 @@ export const cgpDrafts = pgTable(
     index("cgp_drafts_brand_idx").on(t.brandId, t.createdAt),
     index("cgp_drafts_org_idx").on(t.orgId),
     check("cgp_drafts_status_ck", sql`${t.status} in ('pending','used','discarded')`),
-    check("cgp_drafts_source_ck", sql`${t.source} in ('claude')`),
+    check("cgp_drafts_source_ck", sql`${t.source} in ('claude','competitors')`),
   ],
 );
 

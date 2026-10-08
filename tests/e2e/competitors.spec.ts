@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import sharp from "sharp";
 
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
@@ -26,7 +27,7 @@ const serious = async (page: Page) =>
 // Competitor research, step 1 (TASK-049): Claude (web search) suggests competitors; the owner keeps, removes and adds.
 test("competitors: Claude suggests, the owner keeps, removes and adds their own", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one flow is enough");
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const stamp = Date.now();
   const owner = `konk-${stamp}@example.test`;
   await signIn(page, "e2e-root@example.test");
@@ -44,6 +45,11 @@ test("competitors: Claude suggests, the owner keeps, removes and adds their own"
   await p.getByLabel("Ime", { exact: true }).fill("Tečaj");
   await p.getByLabel("Kratko ime (slug)").fill("tecaj");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: "Kanali" }).click();
+  await p.getByLabel("Platforma").selectOption("linkedin");
+  await p.getByLabel("Profil (@ime)").fill("tecaj");
+  await p.getByRole("button", { name: "Dodaj kanal" }).click();
+  await expect(p.getByTestId("channels")).toContainText("tecaj");
   await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: "Konkurenca" }).click();
   const section = p.getByTestId("competitors");
   await expect(section.getByTestId("competitors-kept")).toContainText("Še ni konkurentov.");
@@ -78,5 +84,31 @@ test("competitors: Claude suggests, the owner keeps, removes and adds their own"
   await expect(p.getByTestId("competitors").getByRole("alert")).toHaveText("Ta konkurent je že na seznamu.");
   await expect(p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: /Konkurenca/ })).toContainText("2");
   expect(await serious(p)).toEqual([]);
+
+  // Step 2 (TASK-050): a screenshot of a competitor's post, then the analysis.
+  const koda = p.getByTestId("competitors-kept").getByTestId("competitor").filter({ hasText: "Koda Akademija" });
+  const shot = await sharp({ create: { width: 800, height: 1000, channels: 3, background: "#ffcc00" } }).png().toBuffer();
+  await koda.getByLabel("Dodaj posnetke zaslona za Koda Akademija").setInputFiles({ name: "objava.png", mimeType: "image/png", buffer: shot });
+  await expect(koda.getByTestId("screenshots").getByRole("img")).toHaveCount(1);
+  await expect(koda.getByTestId("page-status")).toHaveText("Spletna stran bo prebrana ob analizi.");
+  await p.getByTestId("analyze").getByRole("button", { name: "Analiziraj konkurente" }).click();
+  const rep = p.getByTestId("competitor-report");
+  await expect(rep).toContainText("Analiziranih konkurentov: 2, posnetkov: 1.", { timeout: 30_000 });
+  // The made-up domains cannot be read; that is shown, the analysis still ran.
+  await expect(p.getByTestId("competitors-kept").getByTestId("competitor").filter({ hasText: "Koda Akademija" }).getByTestId("page-status")).toContainText("Spletne strani ni bilo mogoče prebrati");
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("competitor-report.png"), fullPage: true });
+
+  await rep.getByRole("button", { name: "Da: Številčni karuseli" }).click();
+  await expect(p.getByTestId("competitor-report").getByRole("button", { name: "Da: Številčni karuseli" })).toHaveAttribute("aria-pressed", "true");
+  await p.getByTestId("competitor-report").getByRole("button", { name: "Pošlji sprejete v CGP (1)" }).click();
+  await expect(p).toHaveURL(/tab=profile/);
+  await p.getByRole("button", { name: "Vstavi v urejevalnik" }).click();
+  await expect(p.getByLabel("CGP — navodila za AI")).toHaveValue(/## Iz analize konkurence[\s\S]*Številčni karuseli: Ustreza našemu stebru\./);
+
+  // A topic gap opens the ideas form with the topic as the wish.
+  await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: /Konkurenca/ }).click();
+  await p.getByTestId("gaps").getByRole("link", { name: "Predlagaj ideje" }).click();
+  await expect(p.getByLabel("Želja (neobvezno)")).toHaveValue("Primerjava cen tečajev");
   await ctx.close();
 });
