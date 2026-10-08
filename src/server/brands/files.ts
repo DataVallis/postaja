@@ -14,7 +14,8 @@ import { unzip, type ZipEntry } from "../files/zip";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 
-export type Slot = "logo" | "font" | "source";
+/** "partner" = a partner's logo (TASK-046), named, chosen per post or ad; never the brand's own logo. */
+export type Slot = "logo" | "partner" | "font" | "source";
 
 export class FileError extends Error {
   constructor(
@@ -29,15 +30,21 @@ export class FileError extends Error {
 
 const MB = 1024 * 1024;
 /** Upload size limits per slot (bytes, inclusive). */
-export const MAX_BYTES: Record<Slot, number> = { logo: 10 * MB, font: 10 * MB, source: 50 * MB };
+export const MAX_BYTES: Record<Slot, number> = { logo: 10 * MB, partner: 10 * MB, font: 10 * MB, source: 50 * MB };
 /** Files per brand and slot. */
-export const MAX_FILES: Record<Slot, number> = { logo: 10, font: 20, source: 200 };
+export const MAX_FILES: Record<Slot, number> = { logo: 10, partner: 30, font: 20, source: 200 };
 
 const ALLOWED: Record<Slot, Sniffed[]> = {
   logo: ["png", "jpeg", "webp"],
+  partner: ["png", "jpeg", "webp"],
   font: ["ttf", "otf", "woff", "woff2"],
   source: ["pdf", "docx", "xlsx", "pptx", "text", "png", "jpeg", "webp"],
 };
+
+/** A partner's name: one line, ≤ 60 characters, never empty. */
+export function partnerName(raw: string): string {
+  return raw.normalize("NFC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60) || "Partner";
+}
 
 /** Display name only: no path, no control characters, NFC, ≤ 200 chars. Never used for the storage key. */
 export function cleanFilename(name: string): string {
@@ -77,11 +84,12 @@ async function prepare(slot: Slot, filename: string, input: Uint8Array, brandLan
   if (type === "png" || type === "jpeg" || type === "webp") {
     let img;
     try {
-      img = await reencodeImage(input, slot === "logo" ? "logo" : "image");
+      img = await reencodeImage(input, slot === "logo" || slot === "partner" ? "logo" : "image");
     } catch {
       throw new FileError("INVALID_FILE");
     }
     const meta = { width: img.width, height: img.height };
+    if (slot === "partner") return { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "asset", kind: "partner", meta };
     return slot === "logo"
       ? { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "asset", kind: "logo", meta }
       : { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "source", kind: "image", meta };
@@ -123,7 +131,7 @@ export async function uploadBrandFile(
   ctx: OrgContext,
   brandId: string,
   slot: Slot,
-  file: { filename: string; bytes: Uint8Array },
+  file: { filename: string; bytes: Uint8Array; name?: string },
 ): Promise<UploadResult> {
   requireOwner(ctx);
   const brand = await brandOf(db, ctx, brandId);
@@ -133,6 +141,8 @@ export async function uploadBrandFile(
 
   const filename = cleanFilename(file.filename);
   const p = await prepare(slot, filename, file.bytes, brand.languages);
+  // A partner logo carries the partner's name ("Polygon"), shown when choosing it; the file name by default.
+  if (slot === "partner") p.meta.name = partnerName(file.name ?? filename.replace(/\.[^.]+$/, ""));
   const sha256 = createHash("sha256").update(file.bytes).digest("hex"); // of the original upload: same file twice = duplicate
   const table = p.table === "source" ? brandSources : brandAssets;
   const scoped = forOrg(db, ctx);
@@ -205,6 +215,7 @@ export async function listBrandFiles(db: Db, ctx: OrgContext, brandId: string) {
     sources: sources.sort(byDate),
     logos: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "logo").sort(byDate),
     fonts: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "font").sort(byDate),
+    partners: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "partner").sort((a, b) => (a.meta.name ?? "").localeCompare(b.meta.name ?? "", "sl")),
   };
 }
 
@@ -248,10 +259,10 @@ export type AutoResult =
   | { name: string; ok: false; error: FileError["code"] | ZipError; detail?: string };
 type ZipError = "ZIP_INVALID" | "ZIP_TOO_MANY_ENTRIES" | "ZIP_TOO_LARGE" | "ENCRYPTED" | "UNSUPPORTED_COMPRESSION" | "CORRUPT";
 
-async function one(db: Db, storage: Storage, ctx: OrgContext, brandId: string, name: string, bytes: Uint8Array, slot?: Slot): Promise<AutoResult> {
+async function one(db: Db, storage: Storage, ctx: OrgContext, brandId: string, name: string, bytes: Uint8Array, slot?: Slot, partner?: string): Promise<AutoResult> {
   const target = slot ?? classify(name, sniff(bytes));
   try {
-    const r = await uploadBrandFile(db, storage, ctx, brandId, target, { filename: name, bytes });
+    const r = await uploadBrandFile(db, storage, ctx, brandId, target, { filename: name, bytes, name: partner });
     return { name, ok: true, slot: target, ...r };
   } catch (e) {
     if (e instanceof FileError) return { name, ok: false, error: e.code, detail: e.detail };
@@ -268,14 +279,14 @@ export async function uploadAuto(
   storage: Storage,
   ctx: OrgContext,
   brandId: string,
-  file: { filename: string; bytes: Uint8Array },
+  file: { filename: string; bytes: Uint8Array; name?: string },
   slot?: Slot,
 ): Promise<AutoResult[]> {
   requireOwner(ctx);
   const brand = await brandOf(db, ctx, brandId);
   if (brand.archivedAt) throw new FileError("ARCHIVED");
   const name = cleanFilename(file.filename);
-  if (slot || sniff(file.bytes) !== "zip") return [await one(db, storage, ctx, brandId, name, file.bytes, slot)];
+  if (slot || sniff(file.bytes) !== "zip") return [await one(db, storage, ctx, brandId, name, file.bytes, slot, file.name)];
   if (file.bytes.byteLength > MAX_ZIP_BYTES) return [{ name, ok: false, error: "TOO_LARGE" }];
   let entries: ZipEntry[];
   try {

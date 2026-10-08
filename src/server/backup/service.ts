@@ -59,7 +59,11 @@ function run(bin: string, args: string[], env: Record<string, string>, timeoutMs
     child.stderr!.on("data", (d: Buffer) => { if (err.length < 4000) err += d; });
     const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new Error(`${path.basename(bin)}: timeout`)); }, timeoutMs);
     child.on("error", (e) => { clearTimeout(timer); reject(e); });
-    child.on("close", (code) => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(`${path.basename(bin)} exited ${code}: ${err.slice(-500)}`)); });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error(`${path.basename(bin)} exited ${code}: ${err.slice(-500)}`));
+    });
   });
 }
 

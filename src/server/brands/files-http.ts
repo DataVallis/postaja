@@ -28,7 +28,7 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   if (!ctx) return json({ error: "UNAUTHORIZED" }, 401);
   // No slot (or "auto") = sort each file (and each entry of a ZIP) automatically; a slot forces e.g. "this is the logo".
   const raw = new URL(req.url).searchParams.get("slot") ?? "auto";
-  if (raw !== "auto" && raw !== "logo" && raw !== "font" && raw !== "source") return json({ error: "BAD_SLOT" }, 400);
+  if (raw !== "auto" && raw !== "logo" && raw !== "partner" && raw !== "font" && raw !== "source") return json({ error: "BAD_SLOT" }, 400);
   const slot = raw === "auto" ? undefined : (raw as Slot);
   const max = slot ? MAX_BYTES[slot] : Math.max(MAX_ZIP_BYTES, MAX_BYTES.source);
   // Refuse oversized bodies before buffering them; a missing length (chunked upload) is refused too.
@@ -37,14 +37,18 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   if (length > max + MULTIPART_OVERHEAD) return json({ error: "TOO_LARGE" }, 413);
 
   let file: FormDataEntryValue | null;
+  let partner: string | undefined;
   try {
-    file = (await req.formData()).get("file");
+    const form = await req.formData();
+    file = form.get("file");
+    const n = form.get("name");
+    partner = slot === "partner" && typeof n === "string" && n.trim() ? n : undefined;
   } catch {
     return json({ error: "BAD_FORM" }, 400);
   }
   if (!(file instanceof File)) return json({ error: "BAD_FORM" }, 400);
   try {
-    const results = await uploadAuto(deps.db, deps.storage, ctx, brandId, { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }, slot);
+    const results = await uploadAuto(deps.db, deps.storage, ctx, brandId, { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()), name: partner }, slot);
     // Always one result per file. Status: 201 all stored; a single failed file keeps its specific status (415, 422, …);
     // a ZIP with mixed outcomes is 200 and the results say which entries failed.
     if (results.every((r) => r.ok)) return json({ results }, 201);

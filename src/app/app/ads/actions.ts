@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deleteCreativeVersion, requestAdImages, restoreCreativeVersion, setAdSlides } from "@/server/ads/creatives";
+import { deleteCreativeVersion, requestAdImages, restoreCreativeVersion, setAdPartnerLogo, setAdSlides } from "@/server/ads/creatives";
 import { AdError, createAdSet, deleteCopyVersion, restoreCopyVersion, saveAdCopy, writeAdCopy } from "@/server/ads/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 import { orgContextForAction } from "@/server/auth/require";
@@ -88,6 +88,21 @@ export async function requestAdImagesAction(f: FormData) {
 }
 
 /** Corrected words on the creatives (per variant and slot), redrawn on the same illustrations for free. */
+/** "Logotip partnerja" (TASK-046): saved on the ad set; existing creatives are redrawn with it for free. */
+export async function setAdPartnerLogoAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  let error: string | null = null;
+  try {
+    await setAdPartnerLogo(getDb(), bossQueue(await getBoss()), ctx, id, String(f.get("partnerLogoId") ?? "") || null);
+  } catch (e) {
+    error = e instanceof AdError ? (e.detail ?? e.code) : "FAILED";
+  }
+  revalidatePath(`/app/ads/${id}`);
+  redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);
+}
+
 export async function saveAdSlidesAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");

@@ -12,7 +12,7 @@ import { brands, formatPresets, modelRegistry, postImageRuns, posts, postMedia, 
 import { getBrandDetail } from "../brands/service";
 import { postVisualRequest, postVisualSchema, issues, type VisualRevision } from "../design/ai";
 import { renderTemplate } from "../design/render";
-import { brandAssetBytes, brandExamples, currentDesign, toBlock } from "../design/service";
+import { brandAssetBytes, brandExamples, currentDesign, isPartnerLogo, partnerLogoBytes, toBlock } from "../design/service";
 import { needsIllustration, SLOTS, type DesignSpec, type Template } from "../design/spec";
 import type { Storage } from "../files/storage";
 import { cappedCall } from "../llm/call";
@@ -67,8 +67,24 @@ export function illustrationShape(t: Template, size: { width: number; height: nu
 
 const STALE_MS = 10 * 60 * 1000;
 
+/**
+ * Any member (TASK-046): the partner logo on this post's images (null = none). Images that exist are redrawn with it
+ * for free (same illustrations, a new version); otherwise it is used when the images are made.
+ */
+export async function setPostPartnerLogo(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, partnerLogoId: string | null): Promise<"redrawn" | "saved"> {
+  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
+  if (!p) throw new ImageJobError("NOT_FOUND");
+  if (partnerLogoId && !(await isPartnerLogo(db, ctx, p.brandId, partnerLogoId))) throw new ImageJobError("INVALID");
+  if (p.visual && (await currentDesign(db, ctx, p.brandId))) {
+    await requestImages(db, queue, ctx, postId, "text", undefined, { partnerLogoId });
+    return "redrawn";
+  }
+  await forOrg(db, ctx).update(posts, { partnerLogoId, updatedAt: new Date() }, eq(posts.id, postId));
+  return "saved";
+}
+
 /** Any member. Claims the post's images (a second request while one runs is refused) and queues the job. */
-export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean } = {}) {
+export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean; partnerLogoId?: string | null } = {}) {
   z.enum(["new", "text", "revise"]).parse(mode);
   const words = instruction?.trim() ?? "";
   if (mode === "revise" && (!words || words.length > REVISION_MAX)) throw new ImageJobError("INVALID");
@@ -77,9 +93,15 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
   if (mode === "revise" && !p.visual) throw new ImageJobError("BAD_STATE");
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
+  // TASK-046: the partner logo for this post's images (undefined = keep, null = none); only this brand's partners.
+  if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, p.brandId, opts.partnerLogoId))) throw new ImageJobError("INVALID");
   const claimed = await forOrg(db, ctx).update(
     posts,
-    { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, ...(opts.withPersona !== undefined ? { imagesWithPersona: opts.withPersona } : {}), updatedAt: new Date() },
+    {
+      mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, updatedAt: new Date(),
+      ...(opts.withPersona !== undefined ? { imagesWithPersona: opts.withPersona } : {}),
+      ...(opts.partnerLogoId !== undefined ? { partnerLogoId: opts.partnerLogoId } : {}),
+    },
     and(
       eq(posts.id, postId),
       or(inArray(posts.mediaStatus, ["none", "ready", "failed"]), and(inArray(posts.mediaStatus, ["queued", "rendering"]), lt(posts.updatedAt, new Date(Date.now() - STALE_MS))))!,
@@ -179,6 +201,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const channel = chans.find((c) => c.id === p.channelId) ?? null;
   const size = await slideSize(db, channel?.platform ?? null, channel?.defaultPresetKey ?? null);
   const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
+  const partnerLogo = await partnerLogoBytes(db, deps.storage, ctx, p.brandId, p.partnerLogoId);
 
   // The post's current images (earlier versions are archived and not touched here — TASK-033).
   const old = (await forOrg(db, ctx).select(postMedia, and(eq(postMedia.postId, postId), isNull(postMedia.archivedAt))!)) as (typeof postMedia.$inferSelect)[];
@@ -245,7 +268,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt });
       }
     }
-    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, brandFont: assets.font }));
+    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, partnerLogo, brandFont: assets.font }));
   }
   for (const [i, png] of pngs.entries()) {
     const k = key(ctx.orgId, postId, "png");

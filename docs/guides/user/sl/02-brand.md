@@ -36,6 +36,7 @@ Pod vsakim kanalom vidiš pravila, ki zanj **veljajo** (platforma + kanal + bran
 V zavihek **Datoteke** povleci posamezne datoteke ali cel ZIP. Postaja jih razvrsti sama:
 - **Logotipi** (slike z »logo« v imenu ali gumb **Dodaj logotip**): uporabijo se na slikah.
 - **Fonti** (TTF, OTF, WOFF, WOFF2): morajo imeti č, š, ž, ć in đ.
+- **Partnerski logotipi**: logotipi partnerjev za skupne objave (npr. Polygon). Vpiši ime partnerja, izberi sliko in klikni **Dodaj partnerski logotip**. To ni logotip branda: pri vsaki objavi ali oglasu sam izbereš, ali naj bo na slikah, in Postaja ga nariše poleg logotipa branda.
 - **Viri**: dokumenti (PDF, Word, Excel, PowerPoint, CSV, TXT) in slike preteklih objav. Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo. Slike preteklih objav uporabi za slog.
 
 Nalaga in briše lastnik; vsi člani lahko datoteke prenesejo.

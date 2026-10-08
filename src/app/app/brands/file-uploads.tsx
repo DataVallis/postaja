@@ -3,13 +3,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-type Slot = "logo" | "font" | "source";
+type Slot = "logo" | "partner" | "font" | "source";
 type Result = { name: string; ok: true; slot: Slot } | { name: string; ok: false; error: string; detail?: string };
 type Row = { key: string; name: string; state: "waiting" | "uploading" | "done"; results: Result[] };
 
-async function send(brandId: string, file: File, slot?: Slot): Promise<Result[]> {
+async function send(brandId: string, file: File, slot?: Slot, name?: string): Promise<Result[]> {
   const body = new FormData();
   body.append("file", file);
+  if (name) body.append("name", name);
   try {
     const res = await fetch(`/api/brands/${brandId}/files${slot ? `?slot=${slot}` : ""}`, { method: "POST", body });
     const data = (await res.json().catch(() => ({}))) as { results?: Result[]; error?: string };
@@ -166,5 +167,46 @@ export function FontSample({ id, sample }: { id: string; sample: string }) {
     <p className="truncate text-2xl leading-tight" style={{ fontFamily: ready ? `"${name}", var(--font-sans)` : undefined }}>
       {sample}
     </p>
+  );
+}
+
+/** Partner logos (TASK-046): the partner's name and its logo; chosen later per post or ad, never the brand's own logo. */
+export function AddPartnerLogo({ brandId }: { brandId: string }) {
+  const t = useTranslations("Brands.files");
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Result[]>([]);
+  return (
+    <form
+      className="grid gap-2 rounded-xl border border-line p-3"
+      data-testid="add-partner"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const data = new FormData(form);
+        const file = data.get("file");
+        const name = String(data.get("name") ?? "").trim();
+        if (!(file instanceof File) || !file.size || !name) return;
+        setBusy(true);
+        const r = await send(brandId, file, "partner", name);
+        setErrors(r.filter((x) => !x.ok));
+        setBusy(false);
+        if (r.every((x) => x.ok)) form.reset();
+        router.refresh();
+      }}
+    >
+      <label className="grid gap-1 text-sm">
+        <span>{t("partnerName")}</span>
+        <input name="name" required maxLength={60} placeholder={t("partnerNamePlaceholder")} className="rounded-lg border border-line bg-surface px-3 py-2" />
+      </label>
+      <label className="grid gap-1 text-sm">
+        <span>{t("partnerFile")}</span>
+        <input name="file" type="file" required accept="image/png,image/jpeg,image/webp" className="text-sm" />
+      </label>
+      <button type="submit" disabled={busy} className="justify-self-start rounded-lg border border-fg/25 px-3 py-1.5 text-sm font-medium hover:border-fg/60 disabled:opacity-60">
+        {busy ? t("uploading") : t("addPartner")}
+      </button>
+      {errors.map((r, i) => <p key={i} className="text-sm"><ResultLine r={r} /></p>)}
+    </form>
   );
 }

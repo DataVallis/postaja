@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Download, FileText, ImageIcon, RefreshCw, Wand2 } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
-import { Badge, buttonClass, Card, inputClass, textareaClass } from "@/components/ui";
+import { Badge, buttonClass, Card, inputClass, selectClass, textareaClass } from "@/components/ui";
 import type { MediaStatus, PostVisual } from "@/server/db/schema";
-import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, reviseImagesAction, saveSlidesAction } from "../actions";
+import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, reviseImagesAction, saveSlidesAction, setPartnerLogoAction } from "../actions";
 
 type Media = { id: string; position: number; width: number; height: number };
 type TemplateInfo = { id: string; name: string; slots: string[] };
@@ -27,6 +27,8 @@ export async function ImagesSection(props: {
   requestError?: string;
   /** TASK-027/031: the brand's persona (with pictures) and whether this post's next images show it. */
   persona?: { name: string; checked: boolean } | null;
+  /** TASK-046: the brand's partner logos and the one on this post's images. */
+  partners?: { options: { id: string; name: string }[]; selected: string | null } | null;
   designHref: string;
   /** LinkedIn carousel: offer the images as one PDF (a document post). */
   pdf?: boolean;
@@ -102,6 +104,21 @@ export async function ImagesSection(props: {
               {t("withPersona", { name: props.persona.name })}
             </label>
           ) : null}
+        </form>
+      ) : null}
+
+      {props.templates && props.partners?.options.length ? (
+        <form key={`partner-${props.partners.selected ?? ""}`} action={setPartnerLogoAction} className="flex flex-wrap items-end gap-3" data-testid="partner-logo">
+          <input type="hidden" name="postId" value={props.postId} />
+          <label className="grid gap-1 text-sm">
+            <span>{t("partnerLogo")}</span>
+            <select name="partnerLogoId" defaultValue={props.partners.selected ?? ""} className={selectClass}>
+              <option value="">{t("partnerNone")}</option>
+              {props.partners.options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          <button type="submit" disabled={working} className={buttonClass("secondary", "sm")}>{t("partnerSave")}</button>
+          <span className="basis-full text-xs text-muted">{props.media.length ? t("partnerHintRedraw") : t("partnerHint")}</span>
         </form>
       ) : null}
 

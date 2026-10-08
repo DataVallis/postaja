@@ -8,14 +8,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { cardDesign } from "../../../tests/fixtures/design";
-import { uploadBrandFile } from "../brands/files";
+import { deleteBrandFile, uploadBrandFile } from "../brands/files";
 import { addChannel, createBrand, getBrandDetail, saveProfile, setBrandTextModel } from "../brands/service";
 import { runBulkItem, startBulk, type JobQueue, type QueueJob } from "../bulk/service";
 import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
-import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
+import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
 import { postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
@@ -26,7 +26,7 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createPersonaManual, setPersonaInPosts, uploadPassportImage } from "../personas/service";
 import { estimateBulk } from "../bulk/estimate";
-import { activateDesign, currentDesign, listDesigns, requestDesign, runDesignJob, type DesignJob } from "./service";
+import { activateDesign, brandAssetBytes, currentDesign, listDesigns, listPartnerLogos, requestDesign, runDesignJob, type DesignJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -397,6 +397,53 @@ describe("post images from the design", () => {
     expect(fal2.calls).toHaveLength(0);
     expect((await media(id))[0].storage_key).toBe(before[0].storage_key);
     await expect(setSlideTexts(db, B, id, [])).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("partner logo (TASK-046): chosen per post, drawn next to the brand logo; changing it redraws for free; never the brand logo", async () => {
+    const solid = async (hex: string) => new Uint8Array(await sharp({ create: { width: 300, height: 120, channels: 4, background: hex } }).png().toBuffer());
+    // Uploaded before the brand logo: the brand logo is still the brand's own.
+    const partner = await uploadBrandFile(db, storage, A, brandA, "partner", { filename: "polygon-logo.png", bytes: await solid("#1428dc"), name: "  Polygon \n Labs " });
+    const logo = await uploadBrandFile(db, storage, A, brandA, "logo", { filename: "logo.png", bytes: await solid("#dc1414") });
+    const other = await uploadBrandFile(db, storage, B, brandB, "partner", { filename: "x.png", bytes: await solid("#14dc14") });
+    expect(await listPartnerLogos(db, A, brandA)).toEqual([{ id: partner.id, name: "Polygon Labs" }]);
+    const assets = await brandAssetBytes(db, storage, A, brandA);
+    expect(await sharp(assets.logo!).stats().then((x) => Math.round(x.channels[0].mean))).toBeGreaterThan(200); // red, not the partner
+    expect(logo.kind).toBe("logo");
+
+    const id = await post();
+    const { q, jobs } = memoryQueue();
+    await expect(setPostPartnerLogo(db, q, A, id, other.id)).rejects.toMatchObject({ code: "INVALID" }); // another org's
+    await expect(setPostPartnerLogo(db, q, A, id, logo.id)).rejects.toMatchObject({ code: "INVALID" }); // the brand logo
+    expect(await setPostPartnerLogo(db, q, editorA, id, partner.id)).toBe("saved"); // no images yet
+    expect(jobs).toEqual([]);
+
+    await design();
+    await requestImages(db, q, A, id, "new");
+    await runImages(jobs, fakeClaude(), fakeImages().client);
+    const blue = async () => {
+      const [m] = (await media(id)).filter((x) => x.kind === "slide");
+      const { data, info } = await sharp(await storage.get(m.storage_key)).raw().toBuffer({ resolveWithObject: true });
+      let n = 0;
+      for (let i = 0; i < data.length; i += info.channels) if (data[i] < 60 && data[i + 1] < 80 && data[i + 2] > 180) n++;
+      return n;
+    };
+    expect(await blue()).toBeGreaterThan(500);
+
+    // None: the existing image is redrawn on the same illustration — no fal call — and the old one stays a version.
+    jobs.length = 0;
+    expect(await setPostPartnerLogo(db, q, A, id, null)).toBe("redrawn");
+    expect(jobs.map((j) => j.data)).toEqual([{ postId: id, mode: "text" }]);
+    const fal = fakeImages();
+    await runImages(jobs, fakeClaude(), fal.client);
+    expect(fal.calls).toHaveLength(0);
+    expect(await blue()).toBe(0);
+    expect(await listImageVersions(db, A, id)).toHaveLength(1);
+
+    // Deleting the partner's file (on purpose) clears the choice; images stay.
+    await sql`update posts set partner_logo_id = ${partner.id} where id = ${id}`;
+    await deleteBrandFile(db, storage, A, "asset", partner.id);
+    expect((await sql`select partner_logo_id from posts where id = ${id}`)[0].partner_logo_id).toBeNull();
+    expect((await media(id)).length).toBeGreaterThan(0);
   });
 
   it("a correction in words: Claude sees the images and the request; only changed illustrations are drawn again (owner, 2026-10-07)", async () => {

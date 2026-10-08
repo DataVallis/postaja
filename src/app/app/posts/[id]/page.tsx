@@ -11,7 +11,7 @@ import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate"
 import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishedUrlAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
 import { listImageVersions, listPostMedia } from "@/server/images/service";
-import { currentDesign } from "@/server/design/service";
+import { currentDesign, listPartnerLogos } from "@/server/design/service";
 import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
@@ -49,6 +49,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
   const imageVersions = await listImageVersions(db, org, post.id);
+  const partnerLogos = await listPartnerLogos(db, org, post.brandId);
   const [animatable, allVideos, animCost] = await Promise.all([animatablePositions(db, org, post), listPostVideos(db, org, post.id), animationEstimate(db, post.brandId)]);
   const tv = await getTranslations("Animation");
   const tpv = await getTranslations("PersonaVideo");
@@ -157,6 +158,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
         versions={imageVersions}
         persona={persona?.images.length ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
+        partners={{ options: partnerLogos, selected: post.partnerLogoId }}
       />
       {persona && personaVideo ? (
         <PersonaVideoSection

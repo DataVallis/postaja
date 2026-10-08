@@ -46,6 +46,13 @@ UI: section "Datoteke branda" on `/app/brands/<id>` (`files-section.tsx`): logos
 ## Env
 `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` (clear, `config/deploy.dev.yml`), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (secrets: GitHub env `dev` → deploy workflow → `.kamal/secrets.dev`), `S3_FORCE_PATH_STYLE=1` only for the local/CI stand-in. The client is created on first use, so the app starts without S3.
 
+## Partner logos (TASK-046, ADR-064)
+`brand_assets.kind = 'partner'` with `meta.name` (the partner's name, one line, ≤ 60 chars; the file name by default).
+Upload slot `partner` (`?slot=partner`, form field `name`), re-encoded like logos, up to 30 per brand; never picked as
+the brand logo (`brandAssetBytes` reads only `logo`). Listed under *Partnerski logotipi* on the Datoteke tab. Chosen
+per post (`posts.partner_logo_id`) and per ad set (`ad_sets.partner_logo_id`), both `on delete set null`;
+`isPartnerLogo` refuses another brand's file or the brand logo. Rendering: see [images.md](images.md).
+
 ## Tests
 - Unit `src/server/files/files.test.ts`: every type sniffed, look-alikes refused (truncated PDF signature, ZIP without OOXML parts, legacy OLE, EXE, NUL bytes, invalid UTF-8), ZIP directory corruption, fonts (format 4/12, all-but-one diacritic, truncated, zero tables), sharp (EXIF stripped, 2048/2049 and 4096/4097 px, 40 MP limit exactly / +1 row), Content-Disposition, missing env names without values.
 - Integration `src/server/brands/files.int.test.ts` (real Postgres + S3 stand-in): key format and byte-exact download, kinds from bytes, logo re-encode, glyph rule per brand language, refusals store nothing, size limit exact/+1, duplicates, count limit, editor read-only, archived, delete + dead URL, S3 down → no row, insert fails → no orphan, presign 300/900/901 s, org B cannot list/URL/delete/upload into A (row and object verified), key prefixes per org, cross-tenant harness for both tables.

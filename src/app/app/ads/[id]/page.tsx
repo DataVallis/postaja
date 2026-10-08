@@ -15,7 +15,7 @@ import { rewriteAdCopyAction, saveAdCopyAction } from "../actions";
 import { CreativesSection } from "./creatives-section";
 import { CopyVersions, CreativeVersions } from "./versions";
 import { adImageEstimate, listAdMedia, listCreativeVersions } from "@/server/ads/creatives";
-import { currentDesign } from "@/server/design/service";
+import { currentDesign, listPartnerLogos } from "@/server/design/service";
 import { templateSlots } from "@/server/design/spec";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
   const hard = a.issues.filter((x) => x.code !== "long_visible");
   const [errCode, ...errRest] = (a.error ?? "").split(":");
   const [media, design, estimate] = await Promise.all([listAdMedia(db, org, a.id), currentDesign(db, org, a.brandId), a.copy.length ? adImageEstimate(db, org, a) : Promise.resolve(null)]);
-  const [copyVersions, creativeVersions] = await Promise.all([listCopyVersions(db, org, a.id), listCreativeVersions(db, org, a.id)]);
+  const [copyVersions, creativeVersions, partnerLogos] = await Promise.all([listCopyVersions(db, org, a.id), listCreativeVersions(db, org, a.id), listPartnerLogos(db, org, a.brandId)]);
   const templates = design?.spec ? design.spec.templates.map((x) => ({ id: x.id, name: x.name, slots: templateSlots(x) })) : null;
   const placements = networks.flatMap((n) => n.placements.filter((p) => a.placements.includes(p.key)).map((p) => ({ ...p, network: n.label })));
 
@@ -66,6 +66,7 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
 
         {a.copy.length ? (
           <CreativesSection
+            partners={{ options: partnerLogos, selected: a.partnerLogoId }}
             adSetId={a.id} status={a.mediaStatus} error={a.mediaError} requestError={imageError} media={media} visual={a.visual}
             templates={templates} variants={a.copy.length} estimate={estimate} designHref={`/app/brands/${brand.id}?tab=design`}
             placements={placements.map((p) => ({ key: p.key, label: `${p.network} · ${t(`placements.${p.placement}`)}`, width: p.width, height: p.height }))}

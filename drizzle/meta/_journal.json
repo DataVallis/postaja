@@ -260,6 +260,13 @@
       "when": 1791446288702,
       "tag": "0036_ad_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791449313210,
+      "tag": "0037_partner_logos",
+      "breakpoints": true
     }
   ]
 }

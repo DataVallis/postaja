@@ -301,7 +301,8 @@
       "went": {
         "logo": "logotip",
         "font": "font",
-        "source": "vir"
+        "source": "vir",
+        "partner": "partnerski logotip"
       },
       "addLogo": "Dodaj logotip",
       "logos": "Logotipi",
@@ -361,7 +362,14 @@
         "INVALID_FILE": "datoteke ni bilo mogoče prebrati",
         "UNSUPPORTED_TYPE": "vrsta ni podprta"
       },
-      "knowledgeHint": "Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo."
+      "knowledgeHint": "Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo.",
+      "partners": "Partnerski logotipi",
+      "partnersHint": "Logotipi partnerjev (npr. Polygon) za skupne objave. Niso logotip branda: pri vsaki objavi ali oglasu izbereš, ali naj bo na slikah kateri od njih, in Postaja ga nariše poleg logotipa branda.",
+      "noPartners": "Še ni partnerskih logotipov.",
+      "partnerName": "Ime partnerja",
+      "partnerNamePlaceholder": "npr. Polygon",
+      "partnerFile": "Logotip (PNG, JPG ali WebP)",
+      "addPartner": "Dodaj partnerski logotip"
     },
     "cgpImport": {
       "fromComputer": "Uvozi iz dokumenta",
@@ -1022,7 +1030,12 @@
     "restoreVersion": "Vrni to verzijo",
     "deleteVersion": "Izbriši verzijo",
     "deleteVersionWarning": "Slike te verzije bodo trajno izbrisane.",
-    "deleteVersionConfirm": "Izbriši verzijo"
+    "deleteVersionConfirm": "Izbriši verzijo",
+    "partnerLogo": "Logotip partnerja",
+    "partnerNone": "Brez",
+    "partnerSave": "Shrani logotip",
+    "partnerHint": "Uporabi se, ko narediš slike.",
+    "partnerHintRedraw": "Slike se brezplačno narišejo znova z izbranim logotipom (iste ilustracije); sedanje ostanejo kot prejšnja verzija."
   },
   "Design": {
     "title": "Vizualna podoba",

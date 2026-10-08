@@ -8,7 +8,7 @@ import { organization } from "./org";
 
 export const SOURCE_KINDS = ["pdf", "docx", "xlsx", "csv", "pptx", "text", "image"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
-export const ASSET_KINDS = ["logo", "font"] as const;
+export const ASSET_KINDS = ["logo", "partner", "font"] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
 const common = {
@@ -45,7 +45,7 @@ export const brandSources = pgTable(
   ],
 );
 
-export type AssetMeta = { width?: number; height?: number; family?: string | null; missingGlyphs?: string[] };
+export type AssetMeta = { width?: number; height?: number; family?: string | null; missingGlyphs?: string[]; /** Partner logos: the partner's name. */ name?: string };
 
 /** Files used when rendering: logos and fonts. */
 export const brandAssets = pgTable(
@@ -60,7 +60,7 @@ export const brandAssets = pgTable(
     index("brand_assets_brand_idx").on(t.brandId),
     uniqueIndex("brand_assets_key_uq").on(t.storageKey),
     uniqueIndex("brand_assets_brand_sha_uq").on(t.brandId, t.sha256),
-    check("brand_assets_kind_ck", sql`${t.kind} in ('logo','font')`),
+    check("brand_assets_kind_ck", sql`${t.kind} in ('logo','partner','font')`),
     check("brand_assets_size_ck", sql`${t.sizeBytes} > 0`),
   ],
 );

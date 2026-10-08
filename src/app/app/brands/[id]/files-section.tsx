@@ -1,7 +1,7 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { listBrandFiles } from "@/server/brands/files";
 import { deleteBrandFileAction } from "../actions";
-import { AddLogoButton, Dropzone, FontSample } from "../file-uploads";
+import { AddLogoButton, AddPartnerLogo, Dropzone, FontSample } from "../file-uploads";
 
 type Files = Awaited<ReturnType<typeof listBrandFiles>>;
 const size = (b: number) => (b >= 1024 * 1024 ? `${(b / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
@@ -81,6 +81,29 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
             })}
           </ul>
         </div>
+      </div>
+
+      <div className="grid content-start gap-3" data-testid="partners-section">
+        <div>
+          <h3 className="font-semibold">{t("partners")}</h3>
+          <p className="mt-1 max-w-2xl text-sm text-muted">{t("partnersHint")}</p>
+        </div>
+        {files.partners.length === 0 ? <p className="text-sm text-muted">{t("noPartners")}</p> : null}
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="partners">
+          {files.partners.map((l) => (
+            <li key={l.id} className="grid min-w-0 gap-2">
+              <a href={href("asset", l.id)} className="relative block h-24 overflow-hidden rounded-xl bg-paper ring-1 ring-line focus-visible:outline-2 focus-visible:outline-fg">
+                {/* eslint-disable-next-line @next/next/no-img-element -- private presigned redirect, not optimisable */}
+                <img src={href("asset", l.id)} alt={t("logoAlt", { name: l.meta.name ?? l.filename })} className="absolute inset-0 h-full w-full object-contain p-3" />
+              </a>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <strong className="truncate font-medium">{l.meta.name ?? l.filename}</strong>
+                {isOwner ? <Delete brandId={brandId} table="asset" id={l.id} label={t("delete", { name: l.meta.name ?? l.filename })} /> : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+        {canUpload ? <AddPartnerLogo brandId={brandId} /> : null}
       </div>
 
       <div className="grid gap-3">

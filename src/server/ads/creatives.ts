@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { Db } from "../db/client";
 import { adCreativeRuns, adMedia, adSets, brands, brandSources, formatPresets, modelRegistry, type AdVisual } from "../db/schema";
 import { renderTemplate } from "../design/render";
-import { brandAssetBytes, brandExamples, currentDesign } from "../design/service";
+import { brandAssetBytes, brandExamples, currentDesign, isPartnerLogo, partnerLogoBytes } from "../design/service";
 import { issues as zodIssues } from "../design/ai";
 import { needsIllustration, SLOTS } from "../design/spec";
 import type { Storage } from "../files/storage";
@@ -44,15 +44,29 @@ export function copyForImage(v: AdSetRow["copy"][number]) {
 }
 
 /** Any member. Claims the ad set's images (a second request while one runs is refused) and queues the job. */
-export async function requestAdImages(db: Db, queue: Queue, ctx: OrgContext, id: string, mode: AdImageMode) {
+/** Any member (TASK-046): the partner logo on the creatives; existing creatives are redrawn with it for free. */
+export async function setAdPartnerLogo(db: Db, queue: Queue, ctx: OrgContext, id: string, partnerLogoId: string | null): Promise<"redrawn" | "saved"> {
+  const a = await getAdSet(db, ctx, id);
+  if (partnerLogoId && !(await isPartnerLogo(db, ctx, a.brandId, partnerLogoId))) throw new AdError("INVALID");
+  if (a.visual && a.copy.length && (await currentDesign(db, ctx, a.brandId))) {
+    await requestAdImages(db, queue, ctx, id, "text", { partnerLogoId });
+    return "redrawn";
+  }
+  await forOrg(db, ctx).update(adSets, { partnerLogoId, updatedAt: new Date() }, eq(adSets.id, id));
+  return "saved";
+}
+
+export async function requestAdImages(db: Db, queue: Queue, ctx: OrgContext, id: string, mode: AdImageMode, opts: { partnerLogoId?: string | null } = {}) {
   z.enum(["new", "text"]).parse(mode);
   const a = await getAdSet(db, ctx, id);
   if (!a.copy.length) throw new AdError("BAD_STATE", "NO_COPY");
   if (!(await currentDesign(db, ctx, a.brandId))) throw new AdError("BAD_STATE", "NO_DESIGN");
   if (mode === "text" && !a.visual) throw new AdError("BAD_STATE");
+  // TASK-046: the partner logo on the creatives (undefined = keep, null = none); only this brand's partners.
+  if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, a.brandId, opts.partnerLogoId))) throw new AdError("INVALID");
   const claimed = await forOrg(db, ctx).update(
     adSets,
-    { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, updatedAt: new Date() },
+    { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, updatedAt: new Date(), ...(opts.partnerLogoId !== undefined ? { partnerLogoId: opts.partnerLogoId } : {}) },
     and(eq(adSets.id, id), or(inArray(adSets.mediaStatus, ["none", "ready", "failed"]), and(inArray(adSets.mediaStatus, ["queued", "rendering"]), lt(adSets.updatedAt, new Date(Date.now() - STALE_MS))))!)!,
   );
   if (!claimed.length) throw new AdError("BAD_STATE", "BUSY");
@@ -100,6 +114,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
   } else visual = a.visual!;
 
   const assets = await brandAssetBytes(db, deps.storage, ctx, a.brandId);
+  const partnerLogo = await partnerLogoBytes(db, deps.storage, ctx, a.brandId, a.partnerLogoId);
   // The current creatives (earlier versions are archived and stay — TASK-034).
   const old = (await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), isNull(adMedia.archivedAt))!)) as (typeof adMedia.$inferSelect)[];
   const oldIllustrations = new Map(old.filter((m) => m.kind === "illustration").map((m) => [m.variant, m]));
@@ -125,7 +140,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
       }
     }
     for (const p of presets) {
-      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, brandFont: assets.font, safe: p.safeZone });
+      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, partnerLogo, brandFont: assets.font, safe: p.safeZone });
       const k = key(ctx.orgId, id, "png");
       await deps.storage.put(k, png, "image/png");
       rows.push({ id: crypto.randomUUID(), adSetId: id, kind: "creative", variant: i, placement: p.key, storageKey: k, contentType: "image/png", width: p.width, height: p.height, sizeBytes: png.byteLength });
