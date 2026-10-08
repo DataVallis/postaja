@@ -10,7 +10,8 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   workers: 1,
-  reporter: [["list"]],
+  // On CI the GitHub reporter also writes failures as annotations, readable through the API when logs are not.
+  reporter: process.env.CI ? [["list"], ["github"]] : [["list"]],
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     // Optional override for environments with a preinstalled Chromium (CI installs its own).
