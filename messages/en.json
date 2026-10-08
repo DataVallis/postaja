@@ -184,6 +184,68 @@
       "file": "File",
       "size": "Size",
       "none": "No backups yet."
+    },
+    "demos": {
+      "title": "Demo from a website",
+      "intro": "Enter a prospect's website. In the organization “{org}” (with its own spend cap) Postaja builds a demo brand with the logo, images and text from the site, 3 posts with images and 1 ad set, plus a public view link that expires after 14 days. It takes a few minutes.",
+      "url": "Website",
+      "name": "Brand name (optional)",
+      "pasteSummary": "Site can't be read? Paste its text",
+      "text": "Text from the website",
+      "textHint": "Some sites only load in a browser. Then paste the site's text (about the company, the offer); it is used as data, not as instructions.",
+      "create": "Create demo",
+      "creating": "Creating …",
+      "newLink": "View link (shown only now)",
+      "newLinkHint": "Copy it now: only its fingerprint is stored. You can make a new one at any time; the old one then stops working.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "none": "No demos yet.",
+      "statuses": {
+        "queued": "Queued",
+        "running": "Being built",
+        "ready": "Ready",
+        "failed": "Failed"
+      },
+      "steps": {
+        "site": "reading the site",
+        "brand": "brand",
+        "design": "design",
+        "posts": "posts",
+        "images": "images",
+        "ad": "ad",
+        "done": "done"
+      },
+      "failures": {
+        "NO_TEXT": "The site has too little text. Paste the site's text and try again.",
+        "BLOCKED": "The site can't be read (the address is not public).",
+        "BAD_URL": "The site's address is not valid.",
+        "HTTP": "The site returned an error. Paste the site's text and try again.",
+        "TIMEOUT": "The site did not respond in time. Paste its text and try again.",
+        "NETWORK": "The site could not be reached. Paste its text and try again.",
+        "NOT_HTML": "The address does not lead to a web page.",
+        "TOO_LARGE": "The page is too large.",
+        "SPEND_CAP": "The sales organization's monthly spend cap is reached.",
+        "INVALID_OUTPUT": "Claude did not return a usable draft. Try again.",
+        "PROVIDER": "The AI service is not available right now. Try again.",
+        "NOT_CONFIGURED": "The AI service is not configured.",
+        "NO_ACCESS": "The demo's author is no longer a member of the sales organization.",
+        "FAILED": "Building failed ({code})."
+      },
+      "warnings": "Not made: {list}",
+      "created": "Created {at}",
+      "linkUntil": "link valid until {at}",
+      "linkRevoked": "link revoked",
+      "linkExpired": "link expired",
+      "viewed": "last viewed {at}",
+      "openBrand": "Open brand",
+      "newLinkButton": "New link",
+      "revoke": "Revoke link",
+      "errors": {
+        "INVALID": "Enter a valid web address (http/https).",
+        "TOO_MANY": "20 demos were already created today. Try tomorrow.",
+        "NOT_FOUND": "The demo does not exist.",
+        "FAILED": "That did not work. Try again."
+      }
     }
   },
   "Brands": {
@@ -627,7 +689,8 @@
     "help": "User guide",
     "orgSection": "Organization",
     "team": "Team and plan",
-    "backups": "Backups"
+    "backups": "Backups",
+    "demos": "Demo from a website"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -1650,5 +1713,31 @@
       "GONE": "This link no longer works.",
       "FAILED": "That did not work, try again."
     }
+  },
+  "Demo": {
+    "title": "{brand} on Postaja",
+    "intro": "From your website ({url}) Postaja prepared a sample: three Instagram posts with images and an ad for Meta — in your tone and colours. In Postaja everything can be edited, corrected in words and downloaded.",
+    "logoAlt": "{brand} logo",
+    "postsTitle": "Posts for next week",
+    "formats": {
+      "image": "Image",
+      "carousel": "Carousel"
+    },
+    "imageAlt": "Image {n}",
+    "adTitle": "Ad for Facebook and Instagram",
+    "creativeAlt": "Ad image, variant {n}",
+    "variant": "Variant {n}",
+    "cta": "Button: {cta}",
+    "footer": "Prepared by Postaja (Data Vallis) from the public website. A read-only preview.",
+    "aiNote": "Texts and images were made by artificial intelligence.",
+    "until": "The link is valid until {until}.",
+    "pendingTitle": "The sample is being prepared",
+    "pendingBody": "Postaja is still preparing the posts and images. The page refreshes by itself.",
+    "goneTitle": "This link no longer works",
+    "goneBody": "The link has expired or was revoked. Ask the sender for a new sample.",
+    "failedTitle": "The sample could not be prepared",
+    "failedBody": "Ask the sender for a new sample.",
+    "imagesLabel": "Images: {topic}",
+    "creativesLabel": "Ad images"
   }
 }

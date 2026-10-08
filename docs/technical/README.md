@@ -6,6 +6,7 @@
 | [backups.md](backups.md) | `src/server/backup/**`, `src/app/admin/backups/**` | Built (needs prod) |
 | [competitors.md](competitors.md) | `src/server/competitors/**`, `src/app/app/brands/[id]/competitors-section.tsx`, `src/app/app/brands/competitor-actions.ts`, `src/server/db/schema/competitors.ts`, web search in `src/server/llm/**` | Built (step 1) |
 | [reviews.md](reviews.md) | `src/server/reviews/**`, `src/app/r/**`, `src/app/app/brands/approval-*.ts(x)`, `src/app/app/brands/[id]/approval-section.tsx`, `src/server/db/schema/reviews.ts` | Built |
+| [demos.md](demos.md) | `src/server/demos/**`, `src/app/admin/demos/**`, `src/app/d/**`, `src/server/db/schema/demos.ts` | Built |
 | [auth.md](auth.md) | `src/server/auth/**`, `src/server/email/**`, `src/server/db/schema/auth.ts`, `src/app/api/auth/**`, `src/app/login/**`, `src/app/app/**` | Built |
 | [tenancy.md](tenancy.md) | `src/server/tenancy/**`, `src/server/orgs/**`, `src/server/db/schema/org.ts`, `src/server/auth/permissions.ts`, `tests/tenancy/**` | Live on dev |
 | [admin.md](admin.md) | `src/app/admin/**`, `src/server/admin/**`, `src/server/db/schema/audit.ts`, `src/lib/money/**` | Live on dev |
