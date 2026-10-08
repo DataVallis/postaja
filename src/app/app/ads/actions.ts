@@ -1,11 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requestAdImages, setAdSlides } from "@/server/ads/creatives";
-import { AdError, createAdSet, saveAdCopy, writeAdCopy } from "@/server/ads/service";
+import { deleteCreativeVersion, requestAdImages, restoreCreativeVersion, setAdSlides } from "@/server/ads/creatives";
+import { AdError, createAdSet, deleteCopyVersion, restoreCopyVersion, saveAdCopy, writeAdCopy } from "@/server/ads/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
+import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 
 const code = (e: unknown) => (e instanceof AdError ? e.code : "FAILED");
@@ -105,4 +106,45 @@ export async function saveAdSlidesAction(f: FormData) {
   }
   revalidatePath(`/app/ads/${id}`);
   redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);
+}
+
+const back = (id: string, hash: string, error?: string) => `/app/ads/${id}${error ? `?error=${error}` : ""}#${hash}`;
+
+/** TASK-034: earlier ad copy / creatives — restore (the current one becomes a version) or delete on purpose. */
+export async function restoreCopyVersionAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  let error: string | undefined;
+  await restoreCopyVersion(getDb(), ctx, id, String(f.get("versionId") ?? "")).catch((e) => { error = code(e); });
+  revalidatePath(`/app/ads/${id}`);
+  redirect(back(id, "ad-copy", error));
+}
+
+export async function deleteCopyVersionAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  await deleteCopyVersion(getDb(), ctx, id, String(f.get("versionId") ?? "")).catch(() => undefined);
+  revalidatePath(`/app/ads/${id}`);
+  redirect(back(id, "ad-copy"));
+}
+
+export async function restoreCreativeVersionAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  let error: string | undefined;
+  await restoreCreativeVersion(getDb(), ctx, id, String(f.get("versionId") ?? "")).catch((e) => { error = code(e); });
+  revalidatePath(`/app/ads/${id}`);
+  redirect(back(id, "creatives", error));
+}
+
+export async function deleteCreativeVersionAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const id = String(f.get("adSetId") ?? "");
+  await deleteCreativeVersion(getDb(), getStorage(), ctx, id, String(f.get("versionId") ?? "")).catch(() => undefined);
+  revalidatePath(`/app/ads/${id}`);
+  redirect(back(id, "creatives"));
 }

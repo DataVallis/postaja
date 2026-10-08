@@ -53,4 +53,5 @@ Every run of `renderPostImages` creates a `post_image_runs` row (with the words 
 rows with `run_id`; the images it replaces get `archived_at` instead of being deleted (reused illustrations stay
 current). Current = `archived_at is null` (one per post/kind/position, partial unique index) — every reader filters on
 it. `listImageVersions`, `restoreImageVersion` (archives the current images, un-archives the run, restores its words),
-`deleteImageVersion` (archived rows of the run + files). UI: "Prejšnje verzije slik" in `images-section.tsx`.
+`deleteImageVersion` (archived slides of the run + illustrations no other run draws on, + files). A run records the
+illustrations it reused in `post_image_runs.kept` (TASK-034), so restoring a word redraw brings its illustration back. UI: "Prejšnje verzije slik" in `images-section.tsx`.

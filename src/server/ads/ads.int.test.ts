@@ -14,12 +14,12 @@ import { designSpecSchema } from "../design/spec";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import type { ImageClient, ImageRequest } from "../images/fal";
 import type { LlmClient, StructuredRequest } from "../llm/types";
-import { adImageEstimate, adMediaUrl, adZip, copyForImage, listAdMedia, renderAdImages, requestAdImages, runAdImageJob, setAdSlides, type AdImageJob } from "./creatives";
+import { adImageEstimate, adMediaUrl, adZip, copyForImage, deleteCreativeVersion, listAdMedia, listCreativeVersions, renderAdImages, requestAdImages, restoreCreativeVersion, runAdImageJob, setAdSlides, type AdImageJob } from "./creatives";
 import { createFakeLlm } from "../llm/fake";
 import { LlmError } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
-import { adCopyCsv, adNetworkInfo, createAdSet, getAdSet, listAdSets, saveAdCopy, writeAdCopy } from "./service";
+import { adCopyCsv, adNetworkInfo, createAdSet, deleteCopyVersion, getAdSet, listAdSets, listCopyVersions, restoreCopyVersion, saveAdCopy, writeAdCopy } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -33,7 +33,7 @@ let A: OrgContext, B: OrgContext, editorA: OrgContext, brandA: string;
 beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
   mailer.sent.length = 0;
-  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets, ad_media, brand_designs cascade`;
+  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets, ad_media, ad_creative_runs, ad_copy_versions, brand_designs cascade`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
   const actor = { userId: s.user.id, role: "superadmin" as const };
   const d = { mailer, baseURL: "http://localhost:3000" };
@@ -151,6 +151,34 @@ describe("editing and export", () => {
     await expect(adCopyCsv(db, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await listAdSets(db, B, brandA)).toEqual([]);
   });
+
+  it("replaced copy is kept as a version (rewrite or changed save); restore and delete it; other orgs see none", async () => {
+    const id = await createAdSet(db, { llm: createFakeLlm([answer(["Prvi", "Drugi", "Tretji"])]).client }, A, { ...base, brandId: brandA });
+    expect(await listCopyVersions(db, A, id)).toEqual([]); // the first copy replaced nothing
+    const first = (await getAdSet(db, A, id)).copy;
+    await saveAdCopy(db, A, id, structuredClone(first) as never); // unchanged: no version
+    expect(await listCopyVersions(db, A, id)).toEqual([]);
+    await writeAdCopy(db, { llm: createFakeLlm([answer(["Nov", "Novejši", "Najnovejši"])]).client }, editorA, id);
+    let versions = await listCopyVersions(db, A, id);
+    expect(versions.map((v) => v.copy)).toEqual([first]);
+    const edited = structuredClone((await getAdSet(db, A, id)).copy);
+    edited[0].meta!.headline = "Ročno";
+    await saveAdCopy(db, A, id, edited as never);
+    versions = await listCopyVersions(db, A, id);
+    expect(versions.map((v) => (v.copy as typeof first)[0].meta!.headline)).toEqual(["Nov", "Prvi"]);
+
+    await restoreCopyVersion(db, editorA, id, versions[1].id);
+    expect((await getAdSet(db, A, id)).copy[0].meta!.headline).toBe("Prvi");
+    versions = await listCopyVersions(db, A, id);
+    expect(versions.map((v) => (v.copy as typeof first)[0].meta!.headline).sort()).toEqual(["Nov", "Ročno"]); // restored one left the list
+
+    await expect(restoreCopyVersion(db, B, id, versions[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(deleteCopyVersion(db, B, id, versions[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(await listCopyVersions(db, B, id)).toEqual([]);
+    await deleteCopyVersion(db, A, id, versions[0].id);
+    expect(await listCopyVersions(db, A, id)).toHaveLength(1);
+    await expect(deleteCopyVersion(db, A, id, versions[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
 });
 
 describe("creatives (TASK-021b)", () => {
@@ -246,9 +274,60 @@ describe("creatives (TASK-021b)", () => {
     const after = await db.select().from(adMedia).where(eq(adMedia.adSetId, id));
     const ill = (rows: typeof after) => rows.filter((m) => m.kind === "illustration").map((m) => m.storageKey).sort();
     expect(ill(after)).toEqual(ill(before));
+    // Nothing disappears (TASK-034): the replaced creatives are an earlier version, files kept.
     const oldCreative = before.find((m) => m.kind === "creative")!;
-    expect(after.some((m) => m.storageKey === oldCreative.storageKey)).toBe(false);
-    expect(await storage.exists(oldCreative.storageKey)).toBe(false);
+    expect((await listAdMedia(db, A, id)).some((m) => m.id === oldCreative.id)).toBe(false);
+    expect(after.find((m) => m.id === oldCreative.id)!.archivedAt).not.toBeNull();
+    expect(await storage.exists(oldCreative.storageKey)).toBe(true);
+  });
+
+  it("earlier creative versions: restore swaps them with the current ones (with the words); delete removes only that version", async () => {
+    await giveDesign();
+    const id = await adSet();
+    const deps = { llm: plans(visuals).client, images: fal().client, storage };
+    await renderAdImages(db, deps, A, id, "new");
+    const first = (await listAdMedia(db, A, id)).map((m) => m.id).sort();
+    await setAdSlides(db, A, id, [{ headline: "Nov *naslov*", label: "" }]);
+    await renderAdImages(db, deps, A, id, "text"); // same illustrations
+    const second = (await listAdMedia(db, A, id)).map((m) => m.id).sort();
+    let versions = await listCreativeVersions(db, editorA, id);
+    expect(versions).toHaveLength(1);
+    expect(versions[0].creatives.map((c) => c.id).sort()).toEqual(first);
+
+    await restoreCreativeVersion(db, editorA, id, versions[0].id);
+    expect((await listAdMedia(db, A, id)).map((m) => m.id).sort()).toEqual(first);
+    expect((await getAdSet(db, A, id)).visual!.variants[0].slots.headline).toBe("Prvi *vikend*");
+    versions = await listCreativeVersions(db, A, id);
+    expect(versions.map((v) => v.creatives.map((c) => c.id).sort())).toEqual([second]);
+    const illustrations = async () => (await db.select().from(adMedia).where(eq(adMedia.adSetId, id))).filter((m) => m.kind === "illustration" && !m.archivedAt);
+    expect(await illustrations()).toHaveLength(2);
+
+    // Back to the text redraw: it still has its illustrations (kept from the first version).
+    await restoreCreativeVersion(db, A, id, versions[0].id);
+    expect((await listAdMedia(db, A, id)).map((m) => m.id).sort()).toEqual(second);
+    expect(await illustrations()).toHaveLength(2);
+    const [older] = await listCreativeVersions(db, A, id);
+    // Deleting the first version keeps the illustrations the current one draws on.
+    const files = (await db.select().from(adMedia).where(eq(adMedia.adSetId, id))).filter((m) => first.includes(m.id));
+    await deleteCreativeVersion(db, storage, A, id, older.id);
+    expect(await listCreativeVersions(db, A, id)).toEqual([]);
+    expect(await storage.exists(files[0].storageKey)).toBe(false);
+    const ill = await illustrations();
+    expect(ill).toHaveLength(2);
+    expect(await storage.exists(ill[0].storageKey)).toBe(true);
+    // A text redraw now still reuses them — no new illustration is drawn.
+    const images = fal();
+    await renderAdImages(db, { ...deps, images: images.client }, A, id, "text");
+    expect(images.calls).toHaveLength(0);
+
+    // Not while drawing; not the current version; not another organization's.
+    const [v] = await listCreativeVersions(db, A, id);
+    await expect(deleteCreativeVersion(db, storage, A, id, (await db.select().from(adMedia).where(eq(adMedia.id, (await listAdMedia(db, A, id))[0].id)))[0].runId!)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(restoreCreativeVersion(db, B, id, v.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(deleteCreativeVersion(db, storage, B, id, v.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(await listCreativeVersions(db, B, id)).toEqual([]);
+    await requestAdImages(db, queue().q, A, id, "text");
+    await expect(restoreCreativeVersion(db, A, id, v.id)).rejects.toMatchObject({ code: "BAD_STATE" });
   });
 
   it("other organizations reach no creative, ZIP or job; an ad without images has no ZIP", async () => {

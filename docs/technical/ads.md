@@ -44,11 +44,24 @@ variant and redraws all placements on the same illustrations for free. *Prenesi 
   insets (sizes in % of that box). Rows in `ad_media` (illustration per variant; creative per placement × variant), S3
   `org/<org>/ads/<id>/…`, served by `/api/ad-media/[id]` (302 to a presigned URL) and `/api/ads/[id]/zip` (streamed).
 
+## Versions (TASK-034, ADR-062)
+Nothing disappears unless the member deletes it. Copy: `writeAdCopy` and a changed `saveAdCopy` (key-order-independent
+compare, jsonb reorders keys) first store the current copy in `ad_copy_versions`; `restoreCopyVersion` saves it again
+(checked as on save; the replaced copy becomes a version, the restored row is removed), `deleteCopyVersion`.
+Creatives: each `renderAdImages` inserts an `ad_creative_runs` row (its `visual` words and `kept` = illustration ids
+reused from earlier runs) and tags new `ad_media` rows with `run_id`; replaced rows get `archived_at`. Current =
+`archived_at is null` (partial unique index per ad set/kind/variant/placement); `listAdMedia`, the ZIP and the made-set
+filter on it. `restoreCreativeVersion` (not while drawing) archives the current rows and un-archives the run's
+creatives plus its own and kept illustrations; `deleteCreativeVersion` removes the run's archived creatives and the
+illustrations no other run uses. Migration 0036 makes existing creatives each ad set's first version. UI:
+`src/app/app/ads/[id]/versions.tsx` ("Prejšnja besedila", "Prejšnje verzije kreativ").
+
 ## Tests
 `src/server/ads/check.test.ts` (limits, graphemes, counts, banned words, CTA, warnings, tool schema),
 `ads.int.test.ts` (seeded networks, prompt inputs, fix round, needs review, provider failure + retry, spend cap,
 refusals, save re-check, copy.csv rows, other org), E2E `tests/e2e/ads.spec.ts` (create → copy → over-long headline
-caught → fixed → copy.csv → brand design → creatives per placement → words redrawn without fal → ZIP; axe).
+caught → fixed → copy.csv → brand design → creatives per placement → words redrawn without fal → ZIP → earlier
+creatives restored → earlier copy restored and one deleted; axe).
 Creatives: `ads.int.test.ts` (plan inputs, illustrations only where the template has one, exact sizes incl. 9:16,
-costs booked on the brand, copy.csv image files, ZIP layout, free word redraw keeps illustrations and deletes old
-creatives, other org refused), `design/render-safe.test.ts` (pixels: nothing under a Story's UI, background full).
+costs booked on the brand, copy.csv image files, ZIP layout, free word redraw keeps illustrations and archives old
+creatives, creative versions restore/delete incl. shared illustrations, copy versions on rewrite/changed save, other org refused), `design/render-safe.test.ts` (pixels: nothing under a Story's UI, background full).

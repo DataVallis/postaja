@@ -118,6 +118,26 @@ test("ads: Claude writes copy per network within its limits; the owner edits, th
   expect(names.filter((n) => n.endsWith(".png"))).toHaveLength(4 * 3);
   expect(names).toContain("gdn_responsive_square/tecaj_brezplacen-webinar-v-cetrtek_gdn_responsive_square_v2.png");
 
+  // Nothing disappears (TASK-034): the creatives before the redraw are an earlier version — restore it.
+  const cv = p.getByTestId("creative-versions");
+  await cv.getByText("Prejšnje verzije kreativ (1)").click();
+  await expect(cv.getByTestId("creative-version").getByRole("img")).toHaveCount(4 * 3);
+  await cv.getByRole("button", { name: "Vrni to verzijo" }).click();
+  await expect(p.getByTestId("creative-texts").getByLabel("Naslov · 1")).not.toHaveValue("Popravljen *naslov*");
+  await expect(p.getByTestId("creative-versions")).toContainText("Prejšnje verzije kreativ (1)");
+  // Earlier copy: both saves kept the copy they replaced; restore the first one, delete the other on purpose.
+  const copyVersions = p.getByTestId("copy-versions");
+  await copyVersions.getByText("Prejšnja besedila (2)").click();
+  await copyVersions.getByTestId("copy-version").last().getByRole("button", { name: "Vrni to verzijo" }).click();
+  await expect(p.getByTestId("variant-1").getByLabel("Naslov", { exact: true })).toHaveValue("Naslov 1");
+  await expect(p.getByTestId("copy-versions")).toContainText("Prejšnja besedila (2)");
+  await p.getByTestId("copy-versions").evaluate((el) => el.setAttribute("open", ""));
+  const doomed = p.getByTestId("copy-versions").getByTestId("copy-version").first();
+  await doomed.locator("summary", { hasText: "Izbriši verzijo" }).click();
+  await doomed.getByRole("button", { name: "Izbriši verzijo" }).click();
+  await expect(p.getByTestId("copy-versions")).toContainText("Prejšnja besedila (1)");
+  expect(await serious(p)).toEqual([]);
+
   // Back on the brand: the ad set in the list.
   await p.getByRole("link", { name: /Tečaj · Oglasi/ }).click();
   await expect(p.getByTestId("ad-sets")).toContainText("Brezplačen webinar v četrtek");

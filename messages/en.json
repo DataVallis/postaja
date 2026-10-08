@@ -1438,5 +1438,15 @@
     "delete": "Delete",
     "deleteWarning": "The video will be deleted for good. A new one costs again.",
     "deleteConfirm": "Delete video"
+  },
+  "AdVersions": {
+    "copyTitle": "Earlier copy ({n})",
+    "creativesTitle": "Earlier creative versions ({n})",
+    "replaced": "Replaced {when}",
+    "variants": "{n, plural, one {# variant} other {# variants}}",
+    "restore": "Restore this version",
+    "delete": "Delete version",
+    "deleteWarning": "This version will be deleted for good.",
+    "deleteConfirm": "Delete version"
   }
 }

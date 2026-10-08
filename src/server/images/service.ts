@@ -3,7 +3,7 @@
 // illustration (the brand's common thread); fal.ai makes the illustrations in the brand's style (its past posts as
 // reference); Postaja renders every image → PNGs in S3 + post_media rows. "Osveži tekst" re-renders the edited words on
 // the stored illustrations at no image cost.
-import { and, asc, desc, eq, inArray, isNull, isNotNull, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, isNotNull, lt, or, sql } from "drizzle-orm";
 import sharp from "sharp";
 import { z } from "zod";
 import { postLanguage } from "@/lib/language";
@@ -260,7 +260,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   await db.transaction(async (tx) => {
     const t = forOrg(tx as unknown as Db, ctx);
     if (replaced.length) await t.update(postMedia, { archivedAt: new Date() }, inArray(postMedia.id, replaced.map((m) => m.id)));
-    await t.insert(postImageRuns, { id: runId, postId, visual, createdBy: ctx.userId });
+    await t.insert(postImageRuns, { id: runId, postId, visual, kept: [...keptIllustrations], createdBy: ctx.userId });
     for (const r of newRows) await t.insert(postMedia, { ...r, runId });
     await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(posts.id, postId));
   });
@@ -354,22 +354,40 @@ export async function restoreImageVersion(db: Db, ctx: OrgContext, postId: strin
   if (p.mediaStatus === "queued" || p.mediaStatus === "rendering") throw new ImageJobError("BAD_STATE");
   const [run] = (await forOrg(db, ctx).select(postImageRuns, and(eq(postImageRuns.id, runId), eq(postImageRuns.postId, postId))!)) as (typeof postImageRuns.$inferSelect)[];
   if (!run) throw new ImageJobError("NOT_FOUND");
+  const illustrations = [...((await versionIllustrations(db, ctx, postId)).get(runId) ?? [])];
   await db.transaction(async (tx) => {
     const t = forOrg(tx as unknown as Db, ctx);
     const now = new Date();
     await t.update(postMedia, { archivedAt: now }, and(eq(postMedia.postId, postId), isNull(postMedia.archivedAt), inArray(postMedia.kind, ["slide", "background"]))!);
-    const back = await t.update(postMedia, { archivedAt: null }, and(eq(postMedia.postId, postId), eq(postMedia.runId, runId))!);
+    const back = await t.update(postMedia, { archivedAt: null }, and(eq(postMedia.postId, postId), eq(postMedia.runId, runId), eq(postMedia.kind, "slide"))!);
     if (!back.length) throw new ImageJobError("NOT_FOUND");
+    if (illustrations.length) await t.update(postMedia, { archivedAt: null }, and(eq(postMedia.postId, postId), inArray(postMedia.id, illustrations))!);
     await t.update(posts, { visual: run.visual, mediaStatus: "ready", mediaError: null, updatedAt: now }, eq(posts.id, postId));
   });
 }
 
-/** Any member deletes an earlier version for good (its archived images and illustrations); the current one stays. */
+/** The illustrations a version drew on: its own and the ones it reused (`kept`). */
+async function versionIllustrations(db: Db, ctx: OrgContext, postId: string) {
+  const runs = await db.select({ id: postImageRuns.id, kept: postImageRuns.kept }).from(postImageRuns)
+    .where(and(eq(postImageRuns.orgId, ctx.orgId), eq(postImageRuns.postId, postId)));
+  const own = await db.select({ id: postMedia.id, runId: postMedia.runId }).from(postMedia)
+    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "background")));
+  return new Map(runs.map((r) => [r.id, new Set([...own.filter((m) => m.runId === r.id).map((m) => m.id), ...r.kept])]));
+}
+
+/** Any member deletes an earlier version for good (its images, and illustrations no other version drew on). */
 export async function deleteImageVersion(db: Db, storage: Storage, ctx: OrgContext, postId: string, runId: string) {
-  const gone = (await forOrg(db, ctx).delete(postMedia, and(eq(postMedia.postId, postId), eq(postMedia.runId, runId), isNotNull(postMedia.archivedAt))!)) as (typeof postMedia.$inferSelect)[];
-  if (!gone.length) throw new ImageJobError("NOT_FOUND");
-  // The run row stays only while some of its images are still current (a reused illustration).
-  const left = await db.select({ id: postMedia.id }).from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.runId, runId))).limit(1);
-  if (!left.length) await forOrg(db, ctx).delete(postImageRuns, eq(postImageRuns.id, runId));
+  const byRun = await versionIllustrations(db, ctx, postId);
+  const mine = byRun.get(runId);
+  const archived = and(eq(postMedia.postId, postId), isNotNull(postMedia.archivedAt));
+  const slides = mine ? ((await forOrg(db, ctx).select(postMedia, and(archived, eq(postMedia.runId, runId), eq(postMedia.kind, "slide"))!)) as (typeof postMedia.$inferSelect)[]) : [];
+  if (!slides.length) throw new ImageJobError("NOT_FOUND"); // unknown, or the current version
+  const elsewhere = new Set([...byRun].filter(([r]) => r !== runId).flatMap(([, ids]) => [...ids]));
+  const illustrations = [...mine!].filter((x) => !elsewhere.has(x));
+  const gone = (await forOrg(db, ctx).delete(postMedia, and(archived, or(
+    and(eq(postMedia.runId, runId), eq(postMedia.kind, "slide")),
+    illustrations.length ? inArray(postMedia.id, illustrations) : sql`false`,
+  ))!)) as (typeof postMedia.$inferSelect)[];
+  await forOrg(db, ctx).delete(postImageRuns, eq(postImageRuns.id, runId));
   await Promise.all(gone.map((m) => storage.delete(m.storageKey).catch(() => undefined)));
 }

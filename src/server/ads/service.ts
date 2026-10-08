@@ -2,12 +2,12 @@
 // offer, landing page); Claude writes three copy variants with each network's fields; every field is checked against the
 // network's limits, the brand's banned words and CTA buttons, with one automatic fix round. Copy can be edited and is
 // checked again on save. Export: copy.csv, one row per network × placement × variant (images follow in part B).
-import { and, desc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
 import type { Db } from "../db/client";
 import { slugify } from "@/lib/slug";
-import { AD_NETWORKS, AD_OBJECTIVES, adMedia, adNetworks, adSets, formatPresets, posts, type AdCopyVariant, type AdNetwork } from "../db/schema";
+import { AD_NETWORKS, AD_OBJECTIVES, adCopyVersions, adMedia, adNetworks, adSets, formatPresets, posts, type AdCopyVariant, type AdNetwork } from "../db/schema";
 import { cappedCall } from "../llm/call";
 import { SpendCapError } from "../llm/spend";
 import { LlmError, type LlmClient } from "../llm/types";
@@ -162,6 +162,7 @@ export async function writeAdCopy(db: Db, deps: Deps, ctx: OrgContext, id: strin
     fix = { draft: parsed.data, issues: issues.filter(isHard) };
   }
   if (!best) return fail("AI_FAILED:INVALID_OUTPUT");
+  await keepCopyVersion(db, ctx, a);
   await forOrg(db, ctx).update(adSets, {
     copy: best.copy, issues: best.issues, status: best.issues.some(isHard) ? "needs_review" : "ready", model: best.model || null, error: null, updatedAt: new Date(),
   }, eq(adSets.id, id));
@@ -177,7 +178,37 @@ export async function saveAdCopy(db: Db, ctx: OrgContext, id: string, copy: z.in
   const specs = (await adNetworkInfo(db, a.networks)).map(({ key, fields, ctas }) => ({ key, fields, ctas }));
   const normalized = normalize(raw, specs);
   const issues = checkAdCopy(normalized, specs, profile?.rules.bannedWords ?? []);
+  if (stable(normalized) !== stable(a.copy)) await keepCopyVersion(db, ctx, a);
   await forOrg(db, ctx).update(adSets, { copy: normalized, issues, status: issues.some(isHard) ? "needs_review" : "ready", updatedAt: new Date() }, eq(adSets.id, id));
+}
+
+/** JSON with sorted keys: jsonb does not keep key order, so equal copy must compare equal. */
+const stable = (v: unknown): string =>
+  Array.isArray(v) ? `[${v.map(stable).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`).join(",")}}` : JSON.stringify(v ?? null);
+
+/** The copy that is about to be replaced is kept as a version (TASK-034, ADR-062: nothing disappears). */
+async function keepCopyVersion(db: Db, ctx: OrgContext, a: { id: string; copy: AdCopyVariant[] }) {
+  if (!a.copy?.length) return;
+  await forOrg(db, ctx).insert(adCopyVersions, { id: crypto.randomUUID(), adSetId: a.id, copy: a.copy, createdBy: ctx.userId });
+}
+
+/** Earlier copy versions of an ad set, newest first. Any member. */
+export async function listCopyVersions(db: Db, ctx: OrgContext, id: string) {
+  return (await forOrg(db, ctx).select(adCopyVersions, eq(adCopyVersions.adSetId, id)).orderBy(desc(adCopyVersions.createdAt))) as (typeof adCopyVersions.$inferSelect)[];
+}
+
+/** Any member: an earlier copy becomes current again (checked as on save); the current copy becomes a version. */
+export async function restoreCopyVersion(db: Db, ctx: OrgContext, id: string, versionId: string) {
+  const [v] = (await forOrg(db, ctx).select(adCopyVersions, and(eq(adCopyVersions.id, versionId), eq(adCopyVersions.adSetId, id))!)) as (typeof adCopyVersions.$inferSelect)[];
+  if (!v) throw new AdError("NOT_FOUND");
+  await saveAdCopy(db, ctx, id, v.copy as z.input<typeof copyInput>);
+  await forOrg(db, ctx).delete(adCopyVersions, eq(adCopyVersions.id, v.id));
+}
+
+/** Any member deletes an earlier copy version for good. */
+export async function deleteCopyVersion(db: Db, ctx: OrgContext, id: string, versionId: string) {
+  const gone = await forOrg(db, ctx).delete(adCopyVersions, and(eq(adCopyVersions.id, versionId), eq(adCopyVersions.adSetId, id))!);
+  if (!gone.length) throw new AdError("NOT_FOUND");
 }
 
 export const adSlug = (a: { id: string; name: string }) => (slugify(a.name) || a.id.slice(0, 8)).slice(0, 40);
@@ -194,7 +225,7 @@ export async function adCopyCsv(db: Db, ctx: OrgContext, id: string): Promise<{ 
   const fieldKeys = [...new Set(info.flatMap((n) => n.fields.map((f) => f.key)))];
   const { brand } = await getBrandDetail(db, ctx, a.brandId);
   // The image file of each row, once creatives exist (as named in the ZIP: <placement>/<file>).
-  const made = new Set((await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"))!) as (typeof adMedia.$inferSelect)[]).map((m) => `${m.placement}|${m.variant}`));
+  const made = new Set((await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"), isNull(adMedia.archivedAt))!) as (typeof adMedia.$inferSelect)[]).map((m) => `${m.placement}|${m.variant}`));
   const head = ["ad_set", "network", "placement", "width", "height", "variant", ...fieldKeys, "cta", "landing_url", "image_file"];
   const rows: string[][] = [];
   for (const n of info) {

@@ -6,14 +6,15 @@ import { Badge, buttonClass, Card, inputClass, PageHeader, selectClass, textarea
 import { SubmitButton } from "@/components/ui/submit-button";
 import { graphemeLength } from "@/lib/rules";
 import { textsOf } from "@/server/ads/check";
-import { AdError, adNetworkInfo, getAdSet } from "@/server/ads/service";
+import { AdError, adNetworkInfo, getAdSet, listCopyVersions } from "@/server/ads/service";
 import { requireOrgPage } from "@/server/auth/require";
 import { getBrandDetail } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
 import type { AdCopyIssue } from "@/server/db/schema";
 import { rewriteAdCopyAction, saveAdCopyAction } from "../actions";
 import { CreativesSection } from "./creatives-section";
-import { adImageEstimate, listAdMedia } from "@/server/ads/creatives";
+import { CopyVersions, CreativeVersions } from "./versions";
+import { adImageEstimate, listAdMedia, listCreativeVersions } from "@/server/ads/creatives";
 import { currentDesign } from "@/server/design/service";
 import { templateSlots } from "@/server/design/spec";
 
@@ -40,6 +41,7 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
   const hard = a.issues.filter((x) => x.code !== "long_visible");
   const [errCode, ...errRest] = (a.error ?? "").split(":");
   const [media, design, estimate] = await Promise.all([listAdMedia(db, org, a.id), currentDesign(db, org, a.brandId), a.copy.length ? adImageEstimate(db, org, a) : Promise.resolve(null)]);
+  const [copyVersions, creativeVersions] = await Promise.all([listCopyVersions(db, org, a.id), listCreativeVersions(db, org, a.id)]);
   const templates = design?.spec ? design.spec.templates.map((x) => ({ id: x.id, name: x.name, slots: templateSlots(x) })) : null;
   const placements = networks.flatMap((n) => n.placements.filter((p) => a.placements.includes(p.key)).map((p) => ({ ...p, network: n.label })));
 
@@ -69,6 +71,9 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
             placements={placements.map((p) => ({ key: p.key, label: `${p.network} · ${t(`placements.${p.placement}`)}`, width: p.width, height: p.height }))}
           />
         ) : null}
+        {creativeVersions.length ? (
+          <Card className="p-5"><CreativeVersions adSetId={a.id} versions={creativeVersions} /></Card>
+        ) : null}
 
         <Card className="grid gap-2 p-4 text-sm">
           <p className="font-medium">{t("placementsTitle")}</p>
@@ -79,7 +84,7 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
         </Card>
 
         {a.copy.length ? (
-          <form action={saveAdCopyAction} className="grid gap-6" data-testid="ad-copy">
+          <form key={String(a.updatedAt.getTime())} action={saveAdCopyAction} className="grid gap-6" id="ad-copy" data-testid="ad-copy">
             <input type="hidden" name="adSetId" value={a.id} />
             {networks.flatMap((n) => n.fields.filter((fl) => fl.max > 1).map((fl) => <input key={`${n.key}.${fl.key}`} type="hidden" name={`multi.${fl.key}`} value="1" />))}
             {a.copy.map((v, vi) => (
@@ -137,6 +142,7 @@ export default async function AdSetPage({ params, searchParams }: { params: Prom
           <SubmitButton variant={a.copy.length ? "secondary" : "primary"} pending={t("writing")}>{a.copy.length ? t("rewrite") : t("retry")}</SubmitButton>
           <span className="text-xs text-muted">{t("rewriteHint")}</span>
         </form>
+        <CopyVersions adSetId={a.id} versions={copyVersions} />
       </div>
     </>
   );

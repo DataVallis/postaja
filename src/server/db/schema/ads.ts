@@ -90,12 +90,47 @@ export const adMedia = pgTable(
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     model: text("model"),
     prompt: text("prompt"),
+    /** TASK-034: the creatives run (version) that made it; archived when a newer run replaced it. */
+    runId: text("run_id"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("ad_media_org_idx").on(t.orgId),
-    uniqueIndex("ad_media_set_kind_variant_placement_uq").on(t.adSetId, t.kind, t.variant, t.placement),
+    uniqueIndex("ad_media_set_kind_variant_placement_uq").on(t.adSetId, t.kind, t.variant, t.placement).where(sql`${t.archivedAt} is null`),
+    index("ad_media_run_idx").on(t.adSetId, t.runId),
     uniqueIndex("ad_media_key_uq").on(t.storageKey),
     check("ad_media_kind_ck", sql`${t.kind} in ('illustration','creative')`),
   ],
+);
+
+/** A version of an ad set's creatives (TASK-034, ADR-062): the words and illustrations it drew. */
+export const adCreativeRuns = pgTable(
+  "ad_creative_runs",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    adSetId: text("ad_set_id").notNull().references(() => adSets.id, { onDelete: "cascade" }),
+    visual: jsonb("visual").$type<AdVisual>(),
+    /** Illustrations this version drew on that an earlier version made (a word redraw reuses them). */
+    kept: jsonb("kept").$type<string[]>().notNull().default([]),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ad_creative_runs_set_idx").on(t.orgId, t.adSetId, t.createdAt)],
+);
+
+/** An earlier version of an ad set's copy (TASK-034, ADR-062): kept whenever new copy replaces it (AI or a save). */
+export const adCopyVersions = pgTable(
+  "ad_copy_versions",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    adSetId: text("ad_set_id").notNull().references(() => adSets.id, { onDelete: "cascade" }),
+    copy: jsonb("copy").$type<AdCopyVariant[]>().notNull(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    /** When this copy was replaced (it was current until then). */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ad_copy_versions_set_idx").on(t.orgId, t.adSetId, t.createdAt)],
 );
