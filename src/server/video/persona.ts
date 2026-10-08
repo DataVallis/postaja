@@ -20,6 +20,7 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { composeVideo, probeVideo } from "./ffmpeg";
 import { addPostVideo } from "./media";
+import { AI_VIDEO_METADATA } from "../images/ai-label";
 import { POST_VIDEO_QUEUE } from "./service";
 
 export const PERSONA_DURATIONS = [5, 10] as const;
@@ -114,7 +115,8 @@ export async function makePersonaVideo(db: Db, deps: ImageDeps, ctx: OrgContext,
 
   // 4. The clip is untrusted: probed, then fitted to 1080×1920 (cover, never stretched) with a silent track.
   await probeVideo(clip);
-  const { bytes, probe } = await composeVideo(clip, await emptyOverlay(), { ...VIDEO_SIZE, maxS: durationS });
+  // TASK-045: the video shows an AI person — said in its metadata.
+  const { bytes, probe } = await composeVideo(clip, await emptyOverlay(), { ...VIDEO_SIZE, maxS: durationS, metadata: AI_VIDEO_METADATA });
 
   const kv = key(ctx.orgId, postId, "mp4");
   const kk = key(ctx.orgId, postId, "jpg");

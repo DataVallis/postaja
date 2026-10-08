@@ -75,7 +75,7 @@ export function probeVideo(bytes: Uint8Array): Promise<ProbeResult> {
  * The finished video: `clip` scaled to cover `width`×`height` and cropped (never stretched), the transparent `overlay`
  * PNG (same size) on top, at most `maxS` seconds, 25 fps, H.264 yuv420p + silent stereo AAC, +faststart.
  */
-export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: number; height: number; maxS: number }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
+export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: number; height: number; maxS: number; metadata?: string[] }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
   return withTemp(async (dir) => {
     const input = path.join(dir, "in.bin");
     const over = path.join(dir, "overlay.png");
@@ -90,7 +90,7 @@ export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: 
       "-i", input, "-loop", "1", "-i", over, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
       "-filter_complex", filter, "-map", "[v]", "-map", "2:a",
       "-t", t.toFixed(2), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-      "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", "-y", out,
+      "-c:a", "aac", "-b:a", "64k", ...(o.metadata ?? []), "-movflags", "+faststart", "-y", out,
     ], 180_000);
     const bytes = new Uint8Array(await readFile(out));
     return { bytes, probe: await probeFile(out) };
@@ -101,7 +101,7 @@ export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: 
  * An animation from frames (TASK-023): `count` PNG frames, made one at a time by `frame(i)`, piped into ffmpeg at
  * `fps` — never all in memory — and encoded as H.264 yuv420p + silent stereo AAC, +faststart.
  */
-export function encodeFrames(count: number, frame: (i: number) => Promise<Uint8Array>, o: { width: number; height: number; fps: number }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
+export function encodeFrames(count: number, frame: (i: number) => Promise<Uint8Array>, o: { width: number; height: number; fps: number; metadata?: string[] }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
   return withTemp(async (dir) => {
     const out = path.join(dir, "out.mp4");
     const child = spawn(FFMPEG, [
@@ -110,7 +110,7 @@ export function encodeFrames(count: number, frame: (i: number) => Promise<Uint8A
       "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
       "-vf", `scale=${o.width}:${o.height},setsar=1,format=yuv420p`, "-map", "0:v", "-map", "1:a", "-shortest",
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", String(o.fps),
-      "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", "-y", out,
+      "-c:a", "aac", "-b:a", "64k", ...(o.metadata ?? []), "-movflags", "+faststart", "-y", out,
     ], { stdio: ["pipe", "ignore", "pipe"] });
     let stderr = "";
     child.stderr.on("data", (d) => { if (stderr.length < 20_000) stderr += d; });

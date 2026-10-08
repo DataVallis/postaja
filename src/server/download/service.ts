@@ -8,6 +8,8 @@ import type { Db } from "../db/client";
 import { brands, channels, postMedia, posts, postVideos } from "../db/schema";
 import sharp from "sharp";
 import { pdfFromJpegs } from "../files/pdf-writer";
+import { aiDisclosure } from "../images/ai-label";
+import { postLanguage } from "@/lib/language";
 import type { Storage } from "../files/storage";
 import type { ZipSource } from "../files/zip-writer";
 import type { OrgContext } from "../tenancy/context";
@@ -26,9 +28,24 @@ const text = (s: string) => async () => enc.encode(s);
 const columns = {
   id: posts.id, brief: posts.brief, status: posts.status, format: posts.format, content: posts.content, plan: posts.plan,
   scheduledOn: posts.scheduledOn, scheduledTime: posts.scheduledTime, brandName: brands.name, brandSlug: brands.slug,
-  platform: channels.platform, handle: channels.handle,
+  brandLanguages: brands.languages, platform: channels.platform, handle: channels.handle, channelLanguage: channels.language,
 };
-type Row = { id: string; brief: string; status: string; format: string; content: { caption: string; parts?: string[] } | null; plan: { topic?: string; firstComment?: string; link?: string } | null; scheduledOn: string | null; scheduledTime: string | null; brandName: string; brandSlug: string; platform: string | null; handle: string | null };
+type Row = { id: string; brief: string; status: string; format: string; content: { caption: string; parts?: string[] } | null; plan: { topic?: string; firstComment?: string; link?: string } | null; scheduledOn: string | null; scheduledTime: string | null; brandName: string; brandSlug: string; brandLanguages: string[]; platform: string | null; handle: string | null; channelLanguage: string | null };
+
+/**
+ * TASK-045: the posts (of `postIds`, in the caller's org) whose current images or videos show an AI-generated person —
+ * a persona illustration or a persona video. Those must be disclosed when published.
+ */
+export async function aiPersonPosts(db: Db, ctx: OrgContext, postIds: string[]): Promise<Set<string>> {
+  if (!postIds.length) return new Set();
+  const [images, videos] = await Promise.all([
+    db.selectDistinct({ id: postMedia.postId }).from(postMedia)
+      .where(and(eq(postMedia.orgId, ctx.orgId), inArray(postMedia.postId, postIds), eq(postMedia.aiPerson, true), isNull(postMedia.archivedAt))),
+    db.selectDistinct({ id: postVideos.postId }).from(postVideos)
+      .where(and(eq(postVideos.orgId, ctx.orgId), inArray(postVideos.postId, postIds), eq(postVideos.kind, "persona"))),
+  ]);
+  return new Set([...images, ...videos].map((r) => r.id));
+}
 
 const base = (db: Db, ctx: OrgContext) =>
   db.select(columns).from(posts)
@@ -82,11 +99,14 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
         .where(and(eq(postVideos.orgId, ctx.orgId), inArray(postVideos.postId, rows.map((r) => r.id))))
         .orderBy(asc(postVideos.createdAt))
     : [];
+  const aiPeople = await aiPersonPosts(db, ctx, rows.map((r) => r.id));
   const out: ZipSource[] = [];
   rows.forEach((p, i) => {
     const dir = dirs[i];
+    // TASK-045: a post showing an AI person says so at the end of its text (EU AI Act Art. 50).
     const body = postText(p);
-    if (body) out.push({ name: `${dir}/besedilo.txt`, bytes: text(`${body}\n`) });
+    const note = aiPeople.has(p.id) ? aiDisclosure(postLanguage(p.channelLanguage, p.brandLanguages)) : null;
+    if (body) out.push({ name: `${dir}/besedilo.txt`, bytes: text(`${note ? `${body}\n\n${note}` : body}\n`) });
     if (p.plan?.firstComment) out.push({ name: `${dir}/prvi-komentar.txt`, bytes: text(`${p.plan.firstComment}\n`) });
     const own = media.filter((x) => x.postId === p.id);
     for (const m of own) {
@@ -126,9 +146,10 @@ export async function dayArchive(db: Db, storage: Storage, ctx: OrgContext, date
   if (!rows.length) throw new DownloadError("EMPTY");
   const dirs = folders(rows, true);
   const entries = await entriesFor(db, storage, ctx, rows, dirs);
+  const aiPeople = await aiPersonPosts(db, ctx, rows.map((r) => r.id));
   const csv = [
-    ["Dan", "Ura", "Brand", "Kanal", "Profil", "Format", "Stanje", "Mapa", "Besedilo"].map(csvCell).join(";"),
-    ...rows.map((p, i) => [date, p.scheduledTime ?? "", p.brandName, p.platform ?? "", p.handle ?? "", p.format, p.status, dirs[i], (postText(p) ?? "").slice(0, 200)].map(csvCell).join(";")),
+    ["Dan", "Ura", "Brand", "Kanal", "Profil", "Format", "Stanje", "Mapa", "Oznaka AI", "Besedilo"].map(csvCell).join(";"),
+    ...rows.map((p, i) => [date, p.scheduledTime ?? "", p.brandName, p.platform ?? "", p.handle ?? "", p.format, p.status, dirs[i], aiPeople.has(p.id) ? "da" : "", (postText(p) ?? "").slice(0, 200)].map(csvCell).join(";")),
   ].join("\r\n");
   // BOM so Excel opens the UTF-8 file with č š ž intact; ";" is the separator Slovenian Excel expects.
   entries.unshift({ name: "pregled.csv", bytes: text(`﻿${csv}\r\n`) });

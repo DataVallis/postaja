@@ -43,3 +43,12 @@ Video nastane na **objavi**: odpri objavo branda s persono (zavihek **Objave** a
 3. Klikni **Ustvari video s persono**. Video nastaja nekaj minut, stran se osveži sama.
 
 Claude napiše prizor iz objave, prvi kader nastane iz potnih slik (ista oseba), Kling 3.0 ga oživi v navpičen video 9:16 (1080×1920). Ob videu vidiš prizor in gibanje. Vsak video ostane na objavi, nov se doda k prejšnjim; posamezen video izbrišeš z **Izbriši**. Vsi videi so tudi v ZIP-u objave.
+
+## Oznaka AI
+
+Persona je umetno ustvarjena realistična oseba, zato jo je treba ob objavi označiti (zakon EU o umetni inteligenci, člen 50; tudi pravila Mete, TikToka in YouTuba). Postaja pri tem pomaga:
+
+- Na objavi, ki prikazuje persono (na sliki ali v videu), je opozorilo z navodilom, kje na izbranem omrežju vklopiš oznako AI.
+- Izvoz (ZIP) doda na konec besedila opombo »Oseba na sliki ali videu je ustvarjena z umetno inteligenco.«
+- Slike in videi s persono imajo oznako AI v podatkih datoteke; Instagram in Facebook jo lahko prepoznata sama.
+

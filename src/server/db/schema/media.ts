@@ -2,7 +2,7 @@
 // reach them (read via forOrg). "background" is the generated picture kept for cheap re-renders; "slide" rows are
 // the finished PNGs in order.
 import { sql } from "drizzle-orm";
-import { bigint, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { posts, type PostVisual } from "./generation";
 import { organization } from "./org";
@@ -31,6 +31,8 @@ export const postMedia = pgTable(
     runId: text("run_id"),
     /** TASK-033: set when a newer version replaced it on the post; kept until the member deletes that version. */
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** TASK-045: shows an AI-generated person (a persona illustration, or a slide drawn on one) — must be disclosed. */
+    aiPerson: boolean("ai_person").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

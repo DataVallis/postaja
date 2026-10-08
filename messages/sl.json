@@ -545,7 +545,18 @@
     "statusErrors": {
       "BAD_URL": "Povezava mora biti spletni naslov (https://…).",
       "FAILED": "Spremembe ni bilo mogoče shraniti."
-    }
+    },
+    "aiLabelTitle": "Ta objava prikazuje osebo, ustvarjeno z AI – ob objavi jo označi.",
+    "aiLabelHow": {
+      "instagram": "Instagram: pri objavi odpri Napredne nastavitve in vklopi stikalo za oznako AI (»Add AI label«).",
+      "facebook": "Facebook: pri objavi vklopi stikalo za oznako AI (»Add AI label«) med možnostmi objave.",
+      "tiktok": "TikTok: pri objavi v Več možnosti vklopi »AI-generated content«.",
+      "youtube": "YouTube: pri nalaganju pri »Altered or synthetic content« izberi »Da«.",
+      "linkedin": "LinkedIn nima stikala za oznako AI; opomba na koncu besedila to pove bralcem.",
+      "x": "X nima stikala za oznako AI; opomba na koncu besedila to pove bralcem.",
+      "other": "Če ima omrežje stikalo za oznako AI, ga vklopi; opomba na koncu besedila to pove bralcem."
+    },
+    "aiLabelExport": "Zakon EU o umetni inteligenci (člen 50) zahteva, da je umetno ustvarjena realistična oseba označena. Izvoz (ZIP) zato doda opombo na konec besedila, slike in videi pa imajo oznako AI v podatkih datoteke."
   },
   "Connect": {
     "title": "Claude",

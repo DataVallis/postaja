@@ -67,3 +67,13 @@ creatives pass the chosen logo (`partnerLogoBytes`). `setPostPartnerLogo` / `set
 images exist they queue a free word redraw (`text` mode: same illustrations, a new version). Tests:
 `design/render-partner.test.ts` (pixels), `design.int.test.ts`, `ads.int.test.ts`, `files-http.int.test.ts`, E2E
 `images.spec.ts`.
+
+## AI disclosure (TASK-045, ADR-067)
+`src/server/images/ai-label.ts`. A background drawn with the persona gets `post_media.ai_person`; so does every slide
+drawn on such a background (also when a word redraw reuses it). Those slides are re-encoded with XMP IPTC
+`DigitalSourceType = compositeWithTrainedAlgorithmicMedia` (`markAiPng`). Persona videos (`composeVideo`) and
+animations of such a slide (`encodeFrames`) get `comment`/`description` metadata. `aiPersonPosts` (download service)
+= current AI-person slides or persona videos; exports append `aiDisclosure(language)` to `besedilo.txt` and mark the
+day's `pregled.csv` ("Oznaka AI"); the post page shows how to switch on the platform's label. Migration 0040 flags
+existing persona illustrations (made by the `image_ref` / `image_persona` models) and their slides.
+

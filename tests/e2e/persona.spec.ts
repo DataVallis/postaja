@@ -138,6 +138,9 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await expect(items.first().getByLabel("Video s persono Mila")).toHaveAttribute("poster", /\/api\/post-videos\/.*\?poster=1$/);
   const [download] = await Promise.all([p.waitForEvent("download"), p.getByTestId("persona-videos-download").click()]);
   expect(download.suggestedFilename()).toMatch(/\.mp4$/);
+  // TASK-045: the post now shows an AI person — the page says how to label it on Instagram.
+  await expect(p.getByTestId("ai-label")).toContainText("Ta objava prikazuje osebo, ustvarjeno z AI");
+  await expect(p.getByTestId("ai-label")).toContainText("Instagram: pri objavi odpri Napredne nastavitve");
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("persona-video.png"), fullPage: true });
   await ctx.close();

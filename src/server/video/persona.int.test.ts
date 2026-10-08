@@ -1,6 +1,10 @@
 // Persona video (TASK-025): Claude's shot from the post and the DNA → first frame from the passport pictures (reference
 // model, same person) → Kling 3.0 → 1080×1920 MP4 with a silent track; costs booked per step; refusals; images do
 // not remove it; tenancy.
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import sharp from "sharp";
@@ -124,6 +128,12 @@ describe("persona video", () => {
     const [video] = await listPostVideos(db, A, postA, "persona");
     expect(video).toMatchObject({ width: 1080, height: 1920, kind: "persona", spec: scene, model: "fal-ai/kling-video/v3/standard/image-to-video" });
     const probe = await probeVideo(await storage.get(video.storageKey));
+    // TASK-045: the video says it shows an AI person.
+    const tmp = path.join(os.tmpdir(), `persona-${Date.now()}.mp4`);
+    fs.writeFileSync(tmp, await storage.get(video.storageKey));
+    const tags = spawnSync("ffprobe", ["-v", "quiet", "-show_entries", "format_tags=comment", "-of", "default=nw=1:nk=1", tmp], { encoding: "utf8" }).stdout;
+    fs.rmSync(tmp, { force: true });
+    expect(tags).toContain("AI-generated person");
     expect(probe).toMatchObject({ width: 1080, height: 1920, codec: "h264" });
     expect(video.posterKey).not.toBeNull();
     expect(await postVideoUrl(db, storage, A, video.id, { download: true, poster: true })).toContain(".jpg");

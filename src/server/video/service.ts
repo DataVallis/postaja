@@ -21,6 +21,7 @@ import { motionRequest } from "./ai";
 import { encodeFrames, VideoError } from "./ffmpeg";
 import { FPS, MAX_S, motionSpecSchema, specIssues, type MotionSpec } from "./motion";
 import { addPostVideo } from "./media";
+import { AI_VIDEO_METADATA } from "../images/ai-label";
 import { makePersonaVideo } from "./persona";
 
 export const POST_VIDEO_QUEUE = "post-video";
@@ -108,7 +109,7 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
   const count = Math.round(Math.min(motion.durationS, MAX_S) * FPS);
   const { bytes, probe } = await encodeFrames(count, (i) => renderTemplate(spec, t, size, {
     slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font, motion: { spec: motion!, t: i / FPS }, cache,
-  }), { ...size, fps: FPS });
+  }), { ...size, fps: FPS, metadata: bg?.aiPerson ? AI_VIDEO_METADATA : undefined }); // TASK-045: the persona is disclosed
 
   const k = key(ctx.orgId, postId);
   await deps.storage.put(k, bytes, "video/mp4");

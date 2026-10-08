@@ -12,6 +12,7 @@ import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishe
 import { PostEditor } from "../editor";
 import { listImageVersions, listPostMedia } from "@/server/images/service";
 import { currentDesign, listPartnerLogos } from "@/server/design/service";
+import { aiPersonPosts } from "@/server/download/service";
 import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
@@ -50,6 +51,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const media = await listPostMedia(db, org, post.id);
   const imageVersions = await listImageVersions(db, org, post.id);
   const partnerLogos = await listPartnerLogos(db, org, post.brandId);
+  const aiPerson = (await aiPersonPosts(db, org, [post.id])).has(post.id);
   const [animatable, allVideos, animCost] = await Promise.all([animatablePositions(db, org, post), listPostVideos(db, org, post.id), animationEstimate(db, post.brandId)]);
   const tv = await getTranslations("Animation");
   const tpv = await getTranslations("PersonaVideo");
@@ -145,6 +147,13 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         <Card className="p-5"><PostEditor key={post.content ? "text" : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
+      {aiPerson ? (
+        <Card className="grid gap-1 border-signal/50 p-4 text-sm" data-testid="ai-label">
+          <p className="font-semibold">{t("aiLabelTitle")}</p>
+          <p>{t.has(`aiLabelHow.${ctx?.channel.platform ?? ""}`) ? t(`aiLabelHow.${ctx?.channel.platform}`) : t("aiLabelHow.other")}</p>
+          <p className="text-xs text-muted">{t("aiLabelExport")}</p>
+        </Card>
+      ) : null}
       <ImagesSection
         postId={post.id}
         status={post.mediaStatus}
