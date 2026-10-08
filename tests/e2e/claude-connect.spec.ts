@@ -11,7 +11,7 @@ const CLAUDE_CB = "https://claude.ai/api/mcp/auth_callback";
 
 function latestLinkTo(email: string): string | undefined {
   if (!fs.existsSync(MAIL_DIR)) return undefined;
-  for (const f of fs.readdirSync(MAIL_DIR).sort().reverse()) {
+  for (const f of fs.readdirSync(MAIL_DIR).filter((f) => f.endsWith(".json")).sort().reverse()) {
     const m = JSON.parse(fs.readFileSync(path.join(MAIL_DIR, f), "utf8"));
     if (m.to === email && m.subject.includes("Prijava")) return m.text.match(/https?:\/\/\S+/)![0];
   }

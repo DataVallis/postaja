@@ -9,7 +9,7 @@ import sharp from "sharp";
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
   if (!fs.existsSync(MAIL_DIR)) return undefined;
-  for (const f of fs.readdirSync(MAIL_DIR).sort().reverse()) {
+  for (const f of fs.readdirSync(MAIL_DIR).filter((f) => f.endsWith(".json")).sort().reverse()) {
     const m = JSON.parse(fs.readFileSync(path.join(MAIL_DIR, f), "utf8"));
     if (m.to === email && m.subject.includes("Prijava")) return m.text.match(/https?:\/\/\S+/)![0];
   }
@@ -84,9 +84,11 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   const inPosts = p.getByTestId("persona-in-posts");
   await expect(inPosts).toContainText("vklopljeno");
   await inPosts.getByRole("button", { name: "Izklopi" }).click();
+  // Wait for the new page (the hint text itself contains "vklopljeno"), not just for a word.
+  await expect(p.getByTestId("persona-in-posts").getByRole("button", { name: "Vklopi" })).toBeVisible();
   await expect(p.getByTestId("persona-in-posts")).toContainText("izklopljeno");
   await p.getByTestId("persona-in-posts").getByRole("button", { name: "Vklopi" }).click();
-  await expect(p.getByTestId("persona-in-posts")).toContainText("vklopljeno");
+  await expect(p.getByTestId("persona-in-posts").getByRole("button", { name: "Izklopi" })).toBeVisible();
 
   // The owner edits a field; uploads a picture of their own and makes it the primary.
   await dna.getByLabel("Hair Colour *").fill("Platinum blonde");
@@ -110,6 +112,12 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await p.getByLabel("Kaj objavimo?").fill("Deževen dan v Ljubljani");
   await p.getByRole("button", { name: "Ustvari objavo" }).click();
   await expect(p).toHaveURL(/\/app\/posts\//);
+  // The Persona tab links to the brand's posts, where the video is made.
+  const postUrl = p.url();
+  await p.getByRole("link", { name: "← Mila AI" }).click();
+  await tab("Persona");
+  await p.getByTestId("persona-videos").getByRole("link", { name: "Deževen dan v Ljubljani" }).click();
+  await expect(p).toHaveURL(`${postUrl}#persona-video`);
   const pv = p.getByTestId("persona-video");
   await expect(pv.getByRole("heading")).toContainText("Video s persono (Mila)");
   await expect(p.getByTestId("images-persona")).toHaveText("Ilustracije prikazujejo persono Mila (iz potnih slik).");

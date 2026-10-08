@@ -7,7 +7,7 @@ const MAIL_DIR = path.resolve("test-results/mail");
 
 function latestMailTo(email: string): { text: string } | undefined {
   if (!fs.existsSync(MAIL_DIR)) return undefined;
-  const files = fs.readdirSync(MAIL_DIR).sort().reverse();
+  const files = fs.readdirSync(MAIL_DIR).filter((f) => f.endsWith(".json")).sort().reverse();
   for (const f of files) {
     const m = JSON.parse(fs.readFileSync(path.join(MAIL_DIR, f), "utf8"));
     if (m.to === email) return m;

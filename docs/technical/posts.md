@@ -32,3 +32,11 @@ Status: **Built** (TASK-007). Decisions: ADR-010, ADR-015, ADR-022, ADR-035, ADR
 - Unit `src/server/posts/prompt.test.ts`: cost rounding, worst case, prompt layout/caching, injection guard, material budget, limits text, thread vs caption schema, fix-round text, hashtag normalisation, checkPost incl. X 280/281.
 - Integration `src/server/posts/generate.int.test.ts` (real Postgres + S3 stand-in, fake LLM `src/server/llm/fake.ts`): ready path with exact cost, fix round, needs_review, invalid output, provider error releases the reservation, X thread, knowledge base (PDF/DOCX/XLSX/PPTX/CSV in; image, unreadable PDF, other brand/org out), lazy read of pre-TASK-009 sources (and not by another org), over-budget selection by brief, editor allowed / other org / archived / bad brief, cap refusal without a call, cap boundary (= passes, +1 refused, last month ignored), 5 parallel reservations vs cap, edit re-check, transitions, cross-tenant harness for `posts`.
 - E2E `tests/e2e/posts.spec.ts` with `tests/e2e/mock-anthropic.mjs` (started by Playwright, reached via `ANTHROPIC_BASE_URL`).
+
+## No-repeat and published link (TASK-029, ADR-059)
+- `src/server/posts/repeat.ts` `repeatFor()`: the brand's written posts of the window (org `repeat_thresholds.windowDays`)
+  vs the new post's topic, with `ideas/similar.ts` (TF-IDF over stems; warn 0.4, block 0.6). Called at the end of the
+  writing loop (`writeInto`) and when a planned post gets its first hand-written text (`editPost`); stored in
+  `posts.repeat_of`; `blocks` → `needs_review`. The post page shows the match (`data-testid="repeat"`).
+- `setPostStatus(…, "published", { url })` stores `posts.published_url` (http(s), ≤ 500); `setPublishedUrl` edits it
+  while published; leaving "published" clears date and link.

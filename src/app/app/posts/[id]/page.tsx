@@ -8,7 +8,7 @@ import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
-import { reschedulePostAction, retryPostAction, setPostStatusAction, writePlannedPostAction } from "../actions";
+import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishedUrlAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
 import { listPostMedia } from "@/server/images/service";
 import { currentDesign } from "@/server/design/service";
@@ -33,10 +33,10 @@ const NEXT: Partial<Record<PostStatus, PostStatus[]>> = {
   planned: ["skipped"],
 };
 
-export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string; imageError?: string; videoError?: string; personaVideoError?: string }> }) {
+export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string; imageError?: string; videoError?: string; personaVideoError?: string; statusError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
-  const { slotError, imageError, videoError, personaVideoError } = await searchParams;
+  const { slotError, imageError, videoError, personaVideoError, statusError } = await searchParams;
   const db = getDb();
   const post = await getPost(db, org, id).catch((e) => {
     if (e instanceof PostError) notFound();
@@ -71,7 +71,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
     [ti("fields.topic"), plan.topic], [ti("fields.category"), plan.category], [ti("fields.audience"), plan.audience], [ti("fields.account"), plan.account],
     [ti("fields.cta"), plan.cta], [ti("fields.link"), plan.link], [ti("fields.first_comment"), plan.firstComment],
     [ti("fields.overlay_text"), plan.overlayText], [ti("fields.image_prompt"), plan.imagePrompt], [ti("fields.notes"), plan.notes],
-    [t("publishedAt"), post.publishedAt ? f.dateTime(post.publishedAt, { dateStyle: "medium" }) : null],
+    [t("publishedAt"), post.publishedAt ? <>{f.dateTime(post.publishedAt, { dateStyle: "medium" })}{post.publishedUrl ? <> · <a href={post.publishedUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" data-testid="published-link">{t("openPublished")}</a></> : null}</> : null],
     [t("planSource"), post.importId ? <Link href={`/app/import/${post.importId}`} className="underline underline-offset-4">{plan.sourceRef ?? t("planImport")}</Link> : null],
   ];
   return (
@@ -104,6 +104,17 @@ export default async function PostPage({ params, searchParams }: { params: Promi
               <li key={i}>{t(`violations.${v.code}`, { actual: String(v.actual), limit: String(v.limit), part: v.part ?? 0 })}</li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {post.repeatOf && post.status !== "published" ? (
+        <div className={`grid gap-1 rounded-xl border p-4 text-sm ${post.repeatOf.blocks ? "border-signal/60 bg-signal/10" : "border-line"}`} data-testid="repeat">
+          <p className="font-semibold">{post.repeatOf.blocks ? t("repeatBlocks") : t("repeatWarns")}</p>
+          <p>
+            <Link href={`/app/posts/${post.repeatOf.postId}`} className="underline underline-offset-4">»{post.repeatOf.label}«</Link>
+            {post.repeatOf.date ? ` · ${f.dateTime(new Date(`${post.repeatOf.date}T12:00:00Z`), { dateStyle: "medium" })}` : ""} · {t("repeatScore", { n: Math.round(post.repeatOf.score * 100) })}
+          </p>
+          {post.repeatOf.blocks ? <p className="text-muted">{t("repeatOverride")}</p> : null}
         </div>
       ) : null}
 
@@ -184,13 +195,30 @@ export default async function PostPage({ params, searchParams }: { params: Promi
 
       <div className="flex flex-wrap gap-2">
         {next.map((to) => (
-          <form key={to} action={setPostStatusAction}>
+          <form key={to} action={setPostStatusAction} className={to === "published" ? "flex flex-wrap items-center gap-2" : undefined}>
             <input type="hidden" name="postId" value={post.id} />
             <input type="hidden" name="to" value={to} />
+            {to === "published" ? (
+              <>
+                <label htmlFor="published-url" className="sr-only">{t("publishedUrl")}</label>
+                <input id="published-url" name="url" type="url" inputMode="url" placeholder={t("publishedUrlPlaceholder")} className={`${inputClass} h-9 w-72`} />
+              </>
+            ) : null}
             <button type="submit" className={buttonClass(to === "approved" ? "primary" : "secondary", "sm")}>{t(`to.${to}`)}</button>
           </form>
         ))}
       </div>
+      {statusError ? <p role="alert" className="text-sm text-danger">{t(`statusErrors.${statusError === "BAD_URL" ? "BAD_URL" : "FAILED"}`)}</p> : null}
+      {post.status === "published" ? (
+        <form action={setPublishedUrlAction} className="flex flex-wrap items-end gap-2" data-testid="published-url-form">
+          <input type="hidden" name="postId" value={post.id} />
+          <div className="grid gap-1">
+            <label htmlFor="published-url-edit" className="text-sm font-medium">{t("publishedUrl")}</label>
+            <input id="published-url-edit" name="url" type="url" inputMode="url" defaultValue={post.publishedUrl ?? ""} placeholder={t("publishedUrlPlaceholder")} className={`${inputClass} w-96 max-w-full`} />
+          </div>
+          <button type="submit" className={buttonClass("secondary", "sm")}>{t("savePublishedUrl")}</button>
+        </form>
+      ) : null}
 
       <p className="text-xs text-muted">
         {f.dateTime(post.createdAt, { dateStyle: "medium", timeStyle: "short" })} · {post.model} · {t("cost", { usd: microToUsd(cost, 4) })}

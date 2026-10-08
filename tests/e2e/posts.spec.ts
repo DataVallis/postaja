@@ -7,7 +7,7 @@ const tab = (p: Page, name: string) => p.getByRole("navigation", { name: "Razdel
 const MAIL_DIR = path.resolve("test-results/mail");
 function latestLinkTo(email: string): string | undefined {
   if (!fs.existsSync(MAIL_DIR)) return undefined;
-  for (const f of fs.readdirSync(MAIL_DIR).sort().reverse()) {
+  for (const f of fs.readdirSync(MAIL_DIR).filter((f) => f.endsWith(".json")).sort().reverse()) {
     const m = JSON.parse(fs.readFileSync(path.join(MAIL_DIR, f), "utf8"));
     if (m.to === email && m.subject.includes("Prijava")) return m.text.match(/https?:\/\/\S+/)![0];
   }
@@ -81,8 +81,17 @@ test("owner asks for a post, gets it checked against the rules, edits, approves 
 
   await p.getByRole("button", { name: "Odobri" }).click();
   await expect(p.getByTestId("status")).toHaveText("odobrena");
+  // Marking published can carry the post's link (TASK-029); a non-web link is refused.
+  await p.getByLabel("Povezava do objave").fill("javascript:alert(1)");
+  await p.getByLabel("Povezava do objave").evaluate((e: HTMLInputElement) => { e.type = "text"; });
+  await p.getByRole("button", { name: "Označi kot objavljeno" }).click();
+  await expect(p.getByText("Povezava mora biti spletni naslov (https://…).")).toBeVisible();
+  await expect(p.getByTestId("status")).toHaveText("odobrena");
+  await p.getByLabel("Povezava do objave").fill("https://www.instagram.com/p/e2e/");
   await p.getByRole("button", { name: "Označi kot objavljeno" }).click();
   await expect(p.getByTestId("status")).toHaveText("objavljena");
+  await expect(p.getByTestId("published-link")).toHaveAttribute("href", "https://www.instagram.com/p/e2e/");
+  await expect(p.getByTestId("published-url-form").getByLabel("Povezava do objave")).toHaveValue("https://www.instagram.com/p/e2e/");
 
   // A draft that keeps breaking the rules ends in "za pregled" with the reason listed.
   await p.getByRole("link", { name: "← Inženirji" }).click();

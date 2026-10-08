@@ -18,11 +18,12 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { buildPostPrompt, MATERIALS_MAX_CHARS } from "./prompt";
 import { selectMaterials } from "./retrieve";
+import { repeatFor, topicOf } from "./repeat";
 
 export const MAX_OUTPUT_TOKENS = 2000;
 
 export class PostError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "ARCHIVED" | "NO_MODEL" | "BAD_STATE") {
+  constructor(public readonly code: "NOT_FOUND" | "ARCHIVED" | "NO_MODEL" | "BAD_STATE" | "BAD_URL") {
     super(code);
   }
 }
@@ -157,7 +158,9 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
     const content = composeContent(parsed.data);
     const violations = checkPost(content, r.rules, r.cta);
     if (violations.length && attempt === 0) { previous = { draft: parsed.data, violations }; continue; }
-    await finish({ status: violations.length ? "needs_review" : "ready", content, topicSummary: parsed.data.topic_summary, ruleFailures: violations, fixAttempts: attempt, error: null });
+    // No-repeat (TASK-029): a close repeat of an earlier post goes to review; approving it is the override.
+    const repeatOf = await repeatFor(db, ctx, { id: postId, brandId: r.brand.id, topic: parsed.data.topic_summary }, deps.now);
+    await finish({ status: violations.length || repeatOf?.blocks ? "needs_review" : "ready", content, topicSummary: parsed.data.topic_summary, repeatOf, ruleFailures: violations, fixAttempts: attempt, error: null });
     return;
   }
 }
@@ -236,7 +239,9 @@ export async function editPost(db: Db, ctx: OrgContext, postId: string, input: {
   // Hand edits contain the hashtags inline; they are counted from the text itself.
   const content: PostContent = body.parts ? { caption: body.parts.join("\n\n"), parts: body.parts, hashtags: [] } : { caption: body.caption ?? "", hashtags: [] };
   const violations = checkPost(content, r.rules, r.cta);
-  await forOrg(db, ctx).update(posts, { content, ruleFailures: violations, status: violations.length ? "needs_review" : "ready", updatedAt: new Date() }, eq(posts.id, postId));
+  // A hand-written text of a plan (no topic summary yet) is checked for repeats too; an edit keeps the earlier match.
+  const repeatOf = p.content ? p.repeatOf : await repeatFor(db, ctx, { id: p.id, brandId: p.brandId, topic: topicOf(p) });
+  await forOrg(db, ctx).update(posts, { content, ruleFailures: violations, repeatOf, status: violations.length || repeatOf?.blocks ? "needs_review" : "ready", updatedAt: new Date() }, eq(posts.id, postId));
   return violations;
 }
 
@@ -250,13 +255,34 @@ const transitions: Partial<Record<PostStatus, PostStatus[]>> = {
   planned: ["skipped"],
 };
 
-/** Status moves a person makes (approve, mark published, skip). Approving a post with failures is an explicit override. */
-export async function setPostStatus(db: Db, ctx: OrgContext, postId: string, to: PostStatus) {
+/** The link of a published post: http(s) only, at most 500 characters; empty = none (TASK-029). */
+export const publishedUrlInput = z.string().trim().max(500).transform((s) => s || null)
+  .refine((s) => s === null || /^https?:\/\/[^\s]+$/i.test(s), "url");
+
+/**
+ * Status moves a person makes (approve, mark published, skip). Approving a post with failures is an explicit override.
+ * Marking published may carry the post's link (TASK-029); moving back from published clears date and link.
+ */
+export async function setPostStatus(db: Db, ctx: OrgContext, postId: string, to: PostStatus, opts: { url?: string } = {}) {
   const p = await ownPost(db, ctx, postId);
   if (!transitions[p.status]?.includes(to)) throw new PostError("BAD_STATE");
   // Back from "skipped": a post with text returns to ready, a text-less plan to planned.
   if (p.status === "skipped" && (to === "ready") !== !!p.content) throw new PostError("BAD_STATE");
-  await forOrg(db, ctx).update(posts, { status: to, updatedAt: new Date(), ...(to === "published" ? { publishedAt: new Date() } : p.status === "published" ? { publishedAt: null } : {}) }, eq(posts.id, postId));
+  const url = publishedUrlInput.safeParse(opts.url ?? "");
+  if (!url.success) throw new PostError("BAD_URL");
+  await forOrg(db, ctx).update(posts, {
+    status: to, updatedAt: new Date(),
+    ...(to === "published" ? { publishedAt: new Date(), publishedUrl: url.data } : p.status === "published" ? { publishedAt: null, publishedUrl: null } : {}),
+  }, eq(posts.id, postId));
+}
+
+/** The link of an already published post can be added or corrected later. */
+export async function setPublishedUrl(db: Db, ctx: OrgContext, postId: string, raw: string) {
+  const p = await ownPost(db, ctx, postId);
+  if (p.status !== "published") throw new PostError("BAD_STATE");
+  const url = publishedUrlInput.safeParse(raw);
+  if (!url.success) throw new PostError("BAD_URL");
+  await forOrg(db, ctx).update(posts, { publishedUrl: url.data, updatedAt: new Date() }, eq(posts.id, postId));
 }
 
 export async function listPosts(db: Db, ctx: OrgContext, brandId: string, limit = 50) {

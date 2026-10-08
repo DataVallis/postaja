@@ -36,7 +36,7 @@ Ko ima persona vsaj eno potno sliko, ilustracije slik objav tega branda prikazuj
 
 ## Video s persono
 
-Na vsaki objavi branda s persono je razdelek **Video s persono**.
+Video nastane na **objavi**: odpri objavo branda s persono (zavihek **Objave** ali povezave v razdelku **Video s persono** v zavihku **Persona**). Na strani objave je razdelek **Video s persono**, pod **Slike**.
 
 1. Izberi dolžino (5 ali 10 s). Ob vsaki je največja cena.
 2. Po želji napiši **Navodila za prizor** (kje je, kaj počne, kako se premika kamera). Video nima zvoka, zato persona ne govori.

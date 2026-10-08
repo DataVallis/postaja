@@ -111,7 +111,8 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
       {tab === "persona" ? (
         <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
-          data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport} />
+          data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport}
+          posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: x.videoMode === "persona" && x.videoStatus === "ready" }))} />
       ) : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 

@@ -36,7 +36,9 @@ export function createFileMailer(dir: string): Mailer {
     async send(mail) {
       await fs.mkdir(dir, { recursive: true });
       const file = path.join(dir, `${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
-      await fs.writeFile(file, JSON.stringify(mail, null, 2));
+      // Written aside and renamed: a reader (the E2E tests poll this folder) never sees a half-written file.
+      await fs.writeFile(`${file}.tmp`, JSON.stringify(mail, null, 2));
+      await fs.rename(`${file}.tmp`, file);
     },
   };
 }

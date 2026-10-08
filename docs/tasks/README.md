@@ -37,7 +37,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-026 | **User guide**: customer guide in Slovenian (9 chapters) in `docs/guides/user/sl`, shown in the app under Pomoč; kept current in every PR (ADR-056) | — | Done |
 | TASK-027 | **Persona in post images**: illustrations of persona brands show the persona (reference model from the passport); owner toggle; bulk estimate (ADR-057) | TASK-024 | Done |
 | TASK-028 | **Team and plan limits**: owners invite/cancel/change role/remove members (Ekipa in paket, audited, last owner kept); limits for brands, members, AI generations per month set in /admin and enforced (ADR-058) | TASK-003b | Done |
-| TASK-029 | **No-repeat for posts + published URL**: generated and edited posts checked against the brand's last posts (warn / needs review), "Označi kot objavljeno" with the post's link | TASK-019 | Next |
+| TASK-029 | **No-repeat for posts + published URL**: written posts checked against the brand's posts of the window (warning; close repeats need review, approve = override); "Označi kot objavljeno" with the post's link (ADR-059) | TASK-019 | Done |
 | TASK-030 | **Production backups**: nightly `pg_dump` (+ S3 objects) of **production only** to `postaja-backup` (fsn1.your-objectstorage.com), retention, restore drill; owner sets the keys | prod env | Planned (needs prod) |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
