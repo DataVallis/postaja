@@ -13,7 +13,7 @@ import { addChannel, createBrand, getBrandDetail, saveProfile, setBrandTextModel
 import { runBulkItem, startBulk, type JobQueue, type QueueJob } from "../bulk/service";
 import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
-import { ImageError, type ImageClient, type ImageRequest } from "../images/fal";
+import { type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
 import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
 import { postArchive } from "../download/service";
@@ -379,10 +379,23 @@ describe("post images from the design", () => {
     const now = await listImageVersions(db, A, id);
     expect(now).toHaveLength(1);
     await expect(restoreImageVersion(db, B, id, now[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    await deleteImageVersion(db, storage, A, id, now[0].id);
+    // Back to the word redraw: it still has the illustration it reused.
+    await restoreImageVersion(db, A, id, now[0].id);
+    expect((await media(id)).map((m) => m.storage_key)).toEqual([before[0].storage_key, after[1].storage_key]);
+    // Deleting the first version keeps that illustration (the current version draws on it), and words redraw for free.
+    const [first] = await listImageVersions(db, A, id);
+    await deleteImageVersion(db, storage, A, id, first.id);
     expect(await listImageVersions(db, A, id)).toEqual([]);
-    expect(await storage.exists(after[1].storage_key)).toBe(false);
-    expect((await media(id)).map((m) => m.storage_key)).toEqual([before[0].storage_key, before[1].storage_key]);
+    expect(await storage.exists(before[1].storage_key)).toBe(false);
+    expect(await storage.exists(before[0].storage_key)).toBe(true);
+    expect((await media(id)).map((m) => m.storage_key)).toEqual([before[0].storage_key, after[1].storage_key]);
+    await expect(deleteImageVersion(db, storage, A, id, first.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "text");
+    const fal2 = fakeImages();
+    await runImages(jobs, fakeClaude(), fal2.client);
+    expect(fal2.calls).toHaveLength(0);
+    expect((await media(id))[0].storage_key).toBe(before[0].storage_key);
     await expect(setSlideTexts(db, B, id, [])).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 

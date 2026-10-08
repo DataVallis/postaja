@@ -2,10 +2,10 @@
 // the illustration subject; fal draws one illustration per variant (the brand's past posts as style reference); Postaja
 // renders every chosen placement in its exact size, keeping text and logo out of the platform's UI (safe zone). Word
 // edits re-render on the stored illustrations for free. Download: a ZIP with a folder per placement and copy.csv.
-import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
-import { adMedia, adSets, brands, brandSources, formatPresets, modelRegistry, type AdVisual } from "../db/schema";
+import { adCreativeRuns, adMedia, adSets, brands, brandSources, formatPresets, modelRegistry, type AdVisual } from "../db/schema";
 import { renderTemplate } from "../design/render";
 import { brandAssetBytes, brandExamples, currentDesign } from "../design/service";
 import { issues as zodIssues } from "../design/ai";
@@ -100,7 +100,8 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
   } else visual = a.visual!;
 
   const assets = await brandAssetBytes(db, deps.storage, ctx, a.brandId);
-  const old = (await forOrg(db, ctx).select(adMedia, eq(adMedia.adSetId, id))) as (typeof adMedia.$inferSelect)[];
+  // The current creatives (earlier versions are archived and stay — TASK-034).
+  const old = (await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), isNull(adMedia.archivedAt))!)) as (typeof adMedia.$inferSelect)[];
   const oldIllustrations = new Map(old.filter((m) => m.kind === "illustration").map((m) => [m.variant, m]));
   const kept = new Set<string>();
   const rows: Omit<typeof adMedia.$inferInsert, "orgId">[] = [];
@@ -130,14 +131,16 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
       rows.push({ id: crypto.randomUUID(), adSetId: id, kind: "creative", variant: i, placement: p.key, storageKey: k, contentType: "image/png", width: p.width, height: p.height, sizeBytes: png.byteLength });
     }
   }
+  // A new version (TASK-034, ADR-062): replaced creatives are archived, never deleted.
   const replaced = old.filter((m) => !kept.has(m.id));
+  const runId = crypto.randomUUID();
   await db.transaction(async (tx) => {
     const s = forOrg(tx as unknown as Db, ctx);
-    if (replaced.length) await s.delete(adMedia, inArray(adMedia.id, replaced.map((m) => m.id)));
-    for (const r of rows) await s.insert(adMedia, r);
+    if (replaced.length) await s.update(adMedia, { archivedAt: new Date() }, inArray(adMedia.id, replaced.map((m) => m.id)));
+    await s.insert(adCreativeRuns, { id: runId, adSetId: id, visual, kept: [...kept], createdBy: ctx.userId });
+    for (const r of rows) await s.insert(adMedia, { ...r, runId });
     await s.update(adSets, { visual, mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(adSets.id, id));
   });
-  await Promise.all(replaced.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
   return rows.filter((r) => r.kind === "creative").length;
 }
 
@@ -192,7 +195,7 @@ export async function setAdSlides(db: Db, ctx: OrgContext, id: string, edits: z.
 export async function listAdMedia(db: Db, ctx: OrgContext, id: string) {
   return db.select({ id: adMedia.id, variant: adMedia.variant, placement: adMedia.placement, width: adMedia.width, height: adMedia.height })
     .from(adMedia)
-    .where(and(eq(adMedia.orgId, ctx.orgId), eq(adMedia.adSetId, id), eq(adMedia.kind, "creative")))
+    .where(and(eq(adMedia.orgId, ctx.orgId), eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"), isNull(adMedia.archivedAt)))
     .orderBy(asc(adMedia.placement), asc(adMedia.variant));
 }
 
@@ -212,7 +215,7 @@ export async function adMediaUrl(db: Db, storage: Storage, ctx: OrgContext, medi
 export async function adZip(db: Db, storage: Storage, ctx: OrgContext, id: string): Promise<{ filename: string; stream: ReadableStream<Uint8Array> }> {
   const a = await getAdSet(db, ctx, id);
   const [brand] = (await forOrg(db, ctx).select(brands, eq(brands.id, a.brandId))) as (typeof brands.$inferSelect)[];
-  const media = (await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"))!)) as (typeof adMedia.$inferSelect)[];
+  const media = (await forOrg(db, ctx).select(adMedia, and(eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"), isNull(adMedia.archivedAt))!)) as (typeof adMedia.$inferSelect)[];
   if (!media.length) throw new AdError("BAD_STATE", "NO_IMAGES");
   const { csv } = await adCopyCsv(db, ctx, id);
   const entries: ZipSource[] = [{ name: "copy.csv", bytes: async () => new TextEncoder().encode(csv) }];
@@ -239,4 +242,61 @@ export async function adImageEstimate(db: Db, ctx: OrgContext, a: Pick<AdSetRow,
   const each = m ? m.perImage + BigInt(billedMegapixels(ILLUSTRATION.width, ILLUSTRATION.height)) * m.perMegapixel : 0n;
   const plan = text ? 2n * worstCaseMicroUsd(5_000 + JSON.stringify(design.spec.templates).length, 3_000, text) : 0n;
   return { illustrations, max: BigInt(illustrations) * each + plan };
+}
+
+// ---- Earlier versions of an ad set's creatives (TASK-034, ADR-062) ---------------------------------------------------
+
+/** Earlier creative versions, newest first, with their archived creatives. Any member. */
+export async function listCreativeVersions(db: Db, ctx: OrgContext, id: string) {
+  const rows = await db.select({ id: adMedia.id, runId: adMedia.runId, variant: adMedia.variant, placement: adMedia.placement, width: adMedia.width, height: adMedia.height })
+    .from(adMedia)
+    .where(and(eq(adMedia.orgId, ctx.orgId), eq(adMedia.adSetId, id), eq(adMedia.kind, "creative"), isNotNull(adMedia.archivedAt)))
+    .orderBy(asc(adMedia.variant), asc(adMedia.placement));
+  const ids = [...new Set(rows.map((r) => r.runId).filter((x): x is string => !!x))];
+  if (!ids.length) return [];
+  const runs = await db.select().from(adCreativeRuns).where(and(eq(adCreativeRuns.orgId, ctx.orgId), inArray(adCreativeRuns.id, ids))).orderBy(desc(adCreativeRuns.createdAt));
+  return runs.map((r) => ({ id: r.id, createdAt: r.createdAt, creatives: rows.filter((x) => x.runId === r.id) }));
+}
+
+/** The illustrations a version drew on: its own and the ones it reused (`kept`). */
+async function versionIllustrations(db: Db, ctx: OrgContext, id: string) {
+  const runs = await db.select({ id: adCreativeRuns.id, kept: adCreativeRuns.kept }).from(adCreativeRuns)
+    .where(and(eq(adCreativeRuns.orgId, ctx.orgId), eq(adCreativeRuns.adSetId, id)));
+  const own = await db.select({ id: adMedia.id, runId: adMedia.runId }).from(adMedia)
+    .where(and(eq(adMedia.orgId, ctx.orgId), eq(adMedia.adSetId, id), eq(adMedia.kind, "illustration")));
+  return new Map(runs.map((r) => [r.id, new Set([...own.filter((m) => m.runId === r.id).map((m) => m.id), ...r.kept])]));
+}
+
+/** Any member: an earlier version of the creatives becomes current again (with its words); nothing is deleted. */
+export async function restoreCreativeVersion(db: Db, ctx: OrgContext, id: string, runId: string) {
+  const a = await getAdSet(db, ctx, id);
+  if (a.mediaStatus === "queued" || a.mediaStatus === "rendering") throw new AdError("BAD_STATE");
+  const [run] = (await forOrg(db, ctx).select(adCreativeRuns, and(eq(adCreativeRuns.id, runId), eq(adCreativeRuns.adSetId, id))!)) as (typeof adCreativeRuns.$inferSelect)[];
+  if (!run) throw new AdError("NOT_FOUND");
+  const illustrations = [...((await versionIllustrations(db, ctx, id)).get(runId) ?? [])];
+  await db.transaction(async (tx) => {
+    const s = forOrg(tx as unknown as Db, ctx);
+    const now = new Date();
+    await s.update(adMedia, { archivedAt: now }, and(eq(adMedia.adSetId, id), isNull(adMedia.archivedAt))!);
+    await s.update(adMedia, { archivedAt: null }, and(eq(adMedia.adSetId, id), eq(adMedia.runId, runId), eq(adMedia.kind, "creative"))!);
+    if (illustrations.length) await s.update(adMedia, { archivedAt: null }, and(eq(adMedia.adSetId, id), inArray(adMedia.id, illustrations))!);
+    await s.update(adSets, { visual: run.visual, mediaStatus: "ready", mediaError: null, updatedAt: now }, eq(adSets.id, id));
+  });
+}
+
+/** Any member deletes an earlier creatives version for good; an illustration another version drew on stays. */
+export async function deleteCreativeVersion(db: Db, storage: Storage, ctx: OrgContext, id: string, runId: string) {
+  const byRun = await versionIllustrations(db, ctx, id);
+  const mine = byRun.get(runId);
+  const archived = and(eq(adMedia.adSetId, id), isNotNull(adMedia.archivedAt));
+  const creatives = mine ? ((await forOrg(db, ctx).select(adMedia, and(archived, eq(adMedia.runId, runId), eq(adMedia.kind, "creative"))!)) as (typeof adMedia.$inferSelect)[]) : [];
+  if (!creatives.length) throw new AdError("NOT_FOUND"); // unknown, or the current version
+  const elsewhere = new Set([...byRun].filter(([r]) => r !== runId).flatMap(([, ids]) => [...ids]));
+  const illustrations = [...mine!].filter((x) => !elsewhere.has(x));
+  const gone = (await forOrg(db, ctx).delete(adMedia, and(archived, or(
+    and(eq(adMedia.runId, runId), eq(adMedia.kind, "creative")),
+    illustrations.length ? inArray(adMedia.id, illustrations) : sql`false`,
+  ))!)) as (typeof adMedia.$inferSelect)[];
+  await forOrg(db, ctx).delete(adCreativeRuns, eq(adCreativeRuns.id, runId));
+  await Promise.all(gone.map((m) => storage.delete(m.storageKey).catch(() => undefined)));
 }

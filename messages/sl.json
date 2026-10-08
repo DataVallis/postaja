@@ -1438,5 +1438,15 @@
     "delete": "Izbriši",
     "deleteWarning": "Video bo trajno izbrisan. Nov video stane znova.",
     "deleteConfirm": "Izbriši video"
+  },
+  "AdVersions": {
+    "copyTitle": "Prejšnja besedila ({n})",
+    "creativesTitle": "Prejšnje verzije kreativ ({n})",
+    "replaced": "Zamenjano {when}",
+    "variants": "{n, plural, one {# različica} two {# različici} few {# različice} other {# različic}}",
+    "restore": "Vrni to verzijo",
+    "delete": "Izbriši verzijo",
+    "deleteWarning": "Ta verzija bo trajno izbrisana.",
+    "deleteConfirm": "Izbriši verzijo"
   }
 }

@@ -90,6 +90,8 @@ export const postImageRuns = pgTable(
     orgId: text("org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
     postId: text("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
     visual: jsonb("visual").$type<PostVisual>(),
+    /** Illustrations this version drew on that an earlier version made (a word redraw reuses them). */
+    kept: jsonb("kept").$type<string[]>().notNull().default([]),
     createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
