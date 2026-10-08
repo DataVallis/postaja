@@ -78,6 +78,12 @@ test("super admin creates an organization, sets the plan, invites an editor; inv
   expect(await axe(page)).toEqual([]);
   await page.screenshot({ path: info.outputPath("admin-platform.png"), fullPage: true });
 
+  // Backups (TASK-030): production only — this environment shows them off, and "run now" is not offered.
+  await page.getByRole("navigation", { name: "Glavna navigacija" }).getByRole("link", { name: "Varnostne kopije" }).click();
+  await expect(page.getByTestId("backups-off")).toContainText("samo produkcija");
+  await expect(page.getByRole("button", { name: "Naredi kopijo zdaj" })).toHaveCount(0);
+  expect(await axe(page)).toEqual([]);
+
   await page.goto("/app");
   await expect(page.getByTestId("org")).toContainText("Data Vallis E2E");
 

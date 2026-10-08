@@ -171,7 +171,20 @@
     "limitsHint": "Empty = unlimited. A generation is one paid AI call (text, image, video).",
     "limitBrands": "Max brands (not archived)",
     "limitMembers": "Max members (incl. invitations)",
-    "limitGenerations": "Max AI generations per month"
+    "limitGenerations": "Max AI generations per month",
+    "backups": {
+      "title": "Database backups",
+      "intro": "Every night at 2:15 Postaja saves the whole database (pg_dump) to a separate bucket. Backups run in production only; dev is never backed up.",
+      "off": "Backups are off in this environment (production only: BACKUP_ENABLED=1 and the BACKUP_S3_* variables).",
+      "on": "On: bucket {bucket}, kept {days} days (the last 7 copies always stay).",
+      "queued": "A backup is queued and will be made in a few minutes.",
+      "listError": "The list of backups could not be read from the bucket.",
+      "runNow": "Back up now",
+      "when": "When",
+      "file": "File",
+      "size": "Size",
+      "none": "No backups yet."
+    }
   },
   "Brands": {
     "title": "Brands",
@@ -587,7 +600,8 @@
     "helpSection": "Help",
     "help": "User guide",
     "orgSection": "Organization",
-    "team": "Team and plan"
+    "team": "Team and plan",
+    "backups": "Backups"
   },
   "Dashboard": {
     "title": "Dashboard",

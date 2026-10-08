@@ -31,6 +31,7 @@ export async function AppShell({ user, orgName, hasOrg, children }: { user: Shel
             { href: "/admin", label: t("organizations"), icon: "orgs" as const, exact: true, also: ["/admin/orgs"] },
             { href: "/admin/platform", label: t("platform"), icon: "platform" as const },
             { href: "/admin/audit", label: t("audit"), icon: "audit" as const },
+            { href: "/admin/backups", label: t("backups"), icon: "backups" as const },
           ],
         }]
       : []),

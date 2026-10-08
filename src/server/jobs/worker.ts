@@ -10,6 +10,7 @@ import { DESIGN_QUEUE, runDesignJob, type DesignJob } from "../design/service";
 import { AD_IMAGE_QUEUE, runAdImageJob, type AdImageJob } from "../ads/creatives";
 import { POST_VIDEO_QUEUE, runVideoJob, type PostVideoJob } from "../video/service";
 import { PERSONA_PASSPORT_QUEUE, runPassportJob, type PassportJob } from "../personas/service";
+import { BACKUP_QUEUE, backupConfigFromEnv, runBackup } from "../backup/service";
 import { getBoss } from "./boss";
 
 export async function startWorkers() {
@@ -35,5 +36,18 @@ export async function startWorkers() {
   await boss.work<PassportJob>(PERSONA_PASSPORT_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 2 }, async ([job]) => {
     await runPassportJob(getDb(), deps, job.data);
   });
+  // Database backups (TASK-030, ADR-063): production only — the config exists only where BACKUP_ENABLED=1.
+  const backup = backupConfigFromEnv();
+  if (backup) {
+    await boss.createQueue(BACKUP_QUEUE, { retryLimit: 2, retryDelay: 600, expireInSeconds: 3600 }).catch(() => undefined);
+    await boss.schedule(BACKUP_QUEUE, "15 2 * * *", {}, { tz: "Europe/Ljubljana" });
+    await boss.work(BACKUP_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 30 }, async () => {
+      const r = await runBackup(backup, process.env.DATABASE_URL!);
+      console.log(`[backup] ${r.key} ${r.bytes} bytes, ${r.deleted} old removed`);
+    });
+  } else {
+    // Dev, uat and tests never back up (owner, 2026-10-08); drop a schedule left from an earlier config.
+    await boss.unschedule(BACKUP_QUEUE).catch(() => undefined);
+  }
   console.log("[jobs] workers started");
 }

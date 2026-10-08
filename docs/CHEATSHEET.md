@@ -31,6 +31,13 @@ Never values here — only names and where they live.
 | `SUPERADMIN_EMAILS` | repo variable | Actions → Variables | emails that may bootstrap as super admin (comma separated) |
 | `GITHUB_TOKEN` | automatic | — | push image to GHCR |
 
+### Production only (when the production environment is set up)
+| Name | Kind | Where | Used by |
+|---|---|---|---|
+| `BACKUP_ENABLED` | env `production` variable (`1`) | Environments → production | turns on nightly database backups (TASK-030) |
+| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | env `production` variables | Environments → production | `https://fsn1.your-objectstorage.com`, `postaja-backup` |
+| `BACKUP_S3_ACCESS_KEY_ID` / `BACKUP_S3_SECRET_ACCESS_KEY` | env `production` secrets | Environments → production | Hetzner Object Storage keys for `postaja-backup` only (separate from the app bucket keys) |
+
 Keep your own copy of every secret (GitHub never shows it again).
 
 ## Commands (owner's machine, with the env vars above exported)
