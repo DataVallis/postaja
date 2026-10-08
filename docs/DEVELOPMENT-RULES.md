@@ -75,6 +75,7 @@ Rules:
   not yet exercised on the target) · **Planned** (spec/ADR only). Never label something Live without proof.
 - Docs describe **reality**, not intentions. A rule that is no longer true is deleted or corrected.
 - Language: code, specs, commits, PRs and docs in English; conversation with the owner in <owner language>.
+  Exception: the customer user guide (`docs/guides/user/<locale>/`) is written in the customers' language (Slovenian first).
 
 ---
 
@@ -167,7 +168,10 @@ E2E + accessibility (critical journeys, both themes, desktop + mobile) · domain
 
 Every task updates, in the same PR:
 - `docs/technical/<chapter>.md` for each area it changed (follow the maintenance map in `docs/technical/README.md`);
-- `docs/guides/*` when user- or owner-visible behaviour changed;
+- `docs/guides/*` when user- or owner-visible behaviour changed — in particular the **customer user guide**
+  `docs/guides/user/sl/*.md` (shown in the app under Pomoč): every new or changed screen, button, limit or price a
+  customer sees is described there in the same PR, with the UI's exact labels. A PR that changes the UI without it is
+  not done;
 - `docs/CHEATSHEET.md` when URLs, hosts, commands, env var names or secret locations changed;
 - `.env.example` for every new env var (name only);
 - `docs/tasks/TASK-XXX.feedback.md` with real outputs and deliberate breaks;
