@@ -141,7 +141,7 @@ export async function writeAdCopy(db: Db, deps: Deps, ctx: OrgContext, id: strin
   for (let round = 0; round < 2; round++) {
     let out;
     try {
-      out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: brand.id, postId: null, now: deps.now }, adCopyRequest(inputs, fix));
+      out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: brand.id, postId: null, now: deps.now, action: round === 0 ? "text" : "assist" }, adCopyRequest(inputs, fix));
     } catch (e) {
       if (best) break; // keep the first draft; its issues are shown
       if (e instanceof SpendCapError) return fail("SPEND_CAP");

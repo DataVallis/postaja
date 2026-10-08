@@ -168,7 +168,7 @@
       "badge": "re-check"
     },
     "limits": "Plan limits",
-    "limitsHint": "Empty = unlimited. A generation is one paid AI call (text, image, video).",
+    "limitsHint": "Empty = unlimited. A generation is one paid AI call (text, image, video). Credits: the plan's monthly allowance; bought packs are used after it.",
     "limitBrands": "Max brands (not archived)",
     "limitMembers": "Max members (incl. invitations)",
     "limitGenerations": "Max AI generations per month",
@@ -246,6 +246,56 @@
         "NOT_FOUND": "The demo does not exist.",
         "FAILED": "That did not work. Try again."
       }
+    },
+    "limitCredits": "Credits per month",
+    "credits": {
+      "title": "Credits",
+      "intro": "Every paid AI action costs credits from the price list below. An organization first uses its plan's monthly credits (Admin → organization → Credits per month; empty = unlimited), then bought packs, valid 12 months. The € spend cap stays as the safety limit. Until payments exist (TASK-036) owners request packs in the app and you grant them once paid.",
+      "requests": "Purchase requests",
+      "noRequests": "No open requests.",
+      "pack": "{credits} credits ({price} €)",
+      "grantPaid": "Paid – grant",
+      "decline": "Decline",
+      "prices": "Price list",
+      "pricesHint": "Applies to new calls. Fix rounds and other helper calls cost what “Helper calls” costs.",
+      "savePrices": "Save prices",
+      "actions": {
+        "text": "Post text / ad copy",
+        "illustration": "AI illustration (image, slide)",
+        "animation": "Image animation",
+        "persona_image": "Persona image / passport picture",
+        "persona_video_5s": "Persona video 5 s",
+        "persona_video_10s": "Persona video 10 s",
+        "research": "Competitor research (find, analyse)",
+        "assist": "Helper calls (fix round, image plan, design, ideas, import)"
+      },
+      "grant": "Grant credits",
+      "org": "Organization",
+      "credits": "Credits",
+      "months": "Valid (months)",
+      "note": "Note",
+      "grantButton": "Grant",
+      "ok": {
+        "prices": "Prices saved.",
+        "granted": "Credits granted.",
+        "declined": "Request declined."
+      },
+      "errors": {
+        "INVALID": "Check the values (whole numbers, 0–10,000).",
+        "NOT_FOUND": "The request or organization no longer exists.",
+        "FORBIDDEN": "Super admins only.",
+        "FAILED": "That did not work. Try again."
+      },
+      "unlimited": "No monthly credit limit. Used this month: {used}.",
+      "status": "Used this month {used} (monthly {allowance}); in packs {packs}; available {available}.",
+      "packLine": "{remaining}/{credits} credits, valid until {until} ({source})",
+      "sources": {
+        "grant": "granted",
+        "purchase": "bought"
+      },
+      "manage": "Manage credits",
+      "pendingBanner": "Open credit purchase requests: {n}.",
+      "open": "Open"
     }
   },
   "Brands": {
@@ -564,7 +614,7 @@
       "too_many_slides": "Too many slides: {actual}, at most {limit}."
     },
     "errors": {
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "PROVIDER": "The AI service is not answering. Try again in a minute.",
       "NOT_CONFIGURED": "The AI key is not set on the server.",
       "INVALID_OUTPUT": "The AI returned an invalid answer twice. Try again or rephrase the request.",
@@ -690,7 +740,8 @@
     "orgSection": "Organization",
     "team": "Team and plan",
     "backups": "Backups",
-    "demos": "Demo from a website"
+    "demos": "Demo from a website",
+    "credits": "Credits"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -792,7 +843,7 @@
         "INVALID_FILE": "The file could not be read.",
         "NO_POSTS": "No posts found in the file.",
         "AI_FAILED": "The AI could not read the document ({detail}). Try again or upload a table.",
-        "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+        "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
         "NO_MODEL": "No AI model is set up.",
         "BAD_ORIGIN": "The request did not come from Postaja.",
         "failed": "Upload failed. Try again."
@@ -1072,7 +1123,7 @@
       "IMAGE_TIMEOUT": "The image provider took too long. Try again.",
       "IMAGE_BLOCKED": "The provider refused the image description. Change the image description in the plan and try again.",
       "IMAGE_INVALID": "The provider returned an invalid image. Try again.",
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "NO_ACCESS": "The member who asked for the images no longer has access.",
       "NOT_FOUND": "The post no longer exists.",
       "BAD_STATE": "The images are already being made, or the post is skipped.",
@@ -1174,7 +1225,7 @@
       "NO_DESIGN": "Create the visual identity first.",
       "INVALID": "The text is too long or too short.",
       "INVALID_OUTPUT": "Claude did not return a valid design. Try again or add to the description.",
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "PROVIDER": "Claude did not respond. Try again.",
       "NO_TOOL_CALL": "Claude did not return a design. Try again.",
@@ -1207,7 +1258,7 @@
     "toPlan": "Open the plan",
     "errors": {
       "FAILED": "Ideas could not be prepared. Try again.",
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "AI_FAILED": "Claude returned no usable ideas. Try again or add a wish.",
       "NO_MODEL": "No AI model is configured.",
       "NO_CHANNEL": "The channel no longer exists.",
@@ -1296,7 +1347,7 @@
       "BAD_STATE": "The brand is archived.",
       "NO_PLACEMENT": "Pick at least one placement of a chosen network.",
       "LANGUAGE": "The language is not one of the brand's.",
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "NO_MODEL": "No Claude model is configured.",
       "AI_FAILED": "Claude returned no usable copy. Try again."
     },
@@ -1417,7 +1468,7 @@
       "IMAGE_TIMEOUT": "The image provider took too long. Try again.",
       "IMAGE_BLOCKED": "The provider refused the request. Change the DNA and try again.",
       "IMAGE_INVALID": "The provider returned an invalid picture. Try again.",
-      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
+      "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "NO_ACCESS": "The member who asked no longer has access.",
       "LLM_PROVIDER": "Claude did not respond. Try again.",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
@@ -1533,7 +1584,8 @@
       "invited": "Invitation sent.",
       "canceled": "Invitation canceled.",
       "role": "Role changed.",
-      "removed": "Member removed."
+      "removed": "Member removed.",
+      "creditsRequested": "Credit request sent. The credits appear here once the payment is confirmed."
     },
     "errors": {
       "FAILED": "Something went wrong. Try again.",
@@ -1542,7 +1594,30 @@
       "NOT_FOUND": "The member or invitation no longer exists.",
       "ALREADY_MEMBER": "This person is already a member.",
       "LIMIT_REACHED": "The plan allows no more members. Contact the Postaja administrator for more.",
-      "LAST_OWNER": "The organization must keep at least one owner."
+      "LAST_OWNER": "The organization must keep at least one owner.",
+      "TOO_MANY": "3 credit requests are already open. Please wait until they are confirmed."
+    },
+    "credits": {
+      "title": "Credits",
+      "month": "Monthly credits",
+      "packs": "In bought packs",
+      "packsUntil": "first valid until {at}",
+      "available": "Available",
+      "unlimited": "Credits are not limited for this organization. Used this month: {used}.",
+      "hint": "Text 1, AI illustration 2, animation 1, persona image 5, persona video 25–40 credits. Monthly credits are used first, then packs (valid 12 months). A failed call is not charged.",
+      "warn": "More than 80 % of this month's credits are used.",
+      "out": "Credits are used up. New posts, images and videos are possible again next month or after buying more.",
+      "buy": "Buy credits:",
+      "packButton": "{credits} for {price} €",
+      "requestLine": "{credits} credits · {at} · {status}",
+      "statuses": {
+        "pending": "awaiting payment",
+        "granted": "added",
+        "declined": "declined"
+      },
+      "bannerWarn": "More than 80 % of this month's credits are used ({available} left).",
+      "bannerOut": "This month's credits are used up.",
+      "bannerLink": "Buy credits"
     }
   },
   "Videos": {

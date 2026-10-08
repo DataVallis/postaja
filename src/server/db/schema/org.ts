@@ -65,7 +65,7 @@ export const orgSettings = pgTable(
     status: text("status").$type<(typeof ORG_STATUSES)[number]>().notNull().default("active"),
     // Monthly provider spend cap in micro-USD (ADR-015). Default 50 USD.
     spendCapMicroUsd: bigint("spend_cap_micro_usd", { mode: "bigint" }).notNull().default(sql`50000000`),
-    limits: jsonb("limits").$type<{ brands?: number; members?: number; generationsPerMonth?: number }>().notNull().default({}),
+    limits: jsonb("limits").$type<{ brands?: number; members?: number; generationsPerMonth?: number; creditsPerMonth?: number }>().notNull().default({}),
     repeatThresholds: jsonb("repeat_thresholds").$type<{ reject: number; warn: number; windowDays: number }>()
       .notNull()
       .default({ reject: 0.9, warn: 0.82, windowDays: 180 }),

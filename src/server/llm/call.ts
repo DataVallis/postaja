@@ -4,6 +4,7 @@ import type { Db } from "../db/client";
 import { brands, modelRegistry } from "../db/schema";
 import { costMicroUsd, WEB_SEARCH_MICRO_USD, worstCaseMicroUsd } from "./cost";
 import { release, reserve, settle } from "./spend";
+import type { CreditAction } from "../db/schema";
 import { LlmError, type LlmClient, type StructuredRequest, type Usage } from "./types";
 
 /** A picture costs at most ~1,600 input tokens (Anthropic: width × height / 750, images ≤ 1.15 MP). */
@@ -29,7 +30,7 @@ export async function textModelFor(db: Db, brandId: string | null) {
 /** Throws SpendCapError before any call when the cap would be passed; LlmError from the provider. */
 export async function cappedCall(
   db: Db, llm: LlmClient,
-  who: { orgId: string; brandId: string | null; postId: string | null; now?: Date },
+  who: { orgId: string; brandId: string | null; postId: string | null; now?: Date; action?: CreditAction },
   req: Omit<StructuredRequest, "model">,
 ): Promise<{ input: unknown; usage: Usage; model: string }> {
   const model = await textModelFor(db, who.brandId);

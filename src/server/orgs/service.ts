@@ -87,11 +87,12 @@ export async function createOrganization(
 }
 
 /** Plan limits (TASK-028): a missing key means unlimited. */
-export type OrgLimits = { brands?: number; members?: number; generationsPerMonth?: number };
+export type OrgLimits = { brands?: number; members?: number; generationsPerMonth?: number; creditsPerMonth?: number };
 const limitsInput = z.object({
   brands: z.number().int().min(0).max(10_000).optional(),
   members: z.number().int().min(1).max(10_000).optional(),
   generationsPerMonth: z.number().int().min(0).max(10_000_000).optional(),
+  creditsPerMonth: z.number().int().min(0).max(10_000_000).optional(),
 }).strict();
 
 /** Super admin only: change plan, status, spend cap or limits. */

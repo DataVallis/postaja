@@ -53,7 +53,7 @@ export async function updateSettingsAction(_prev: ActionState, form: FormData): 
       status: z.enum(["active", "suspended"]).parse(form.get("status")),
       spendCapMicroUsd: usdToMicro(String(form.get("spendCapUsd") ?? "")),
       // Empty = unlimited (TASK-028).
-      limits: Object.fromEntries(([["brands", "limitBrands"], ["members", "limitMembers"], ["generationsPerMonth", "limitGenerations"]] as const)
+      limits: Object.fromEntries(([["brands", "limitBrands"], ["members", "limitMembers"], ["generationsPerMonth", "limitGenerations"], ["creditsPerMonth", "limitCredits"]] as const)
         .map(([k, f]) => [k, String(form.get(f) ?? "").trim()])
         .filter(([, v]) => v !== "")
         .map(([k, v]) => [k, z.coerce.number().int().parse(v)])),

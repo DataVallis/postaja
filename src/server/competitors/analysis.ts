@@ -187,7 +187,7 @@ export async function runAnalyzeJob(db: Db, deps: AnalyzeDeps, job: CompetitorAn
   const req = analyzeRequest({ brandName: brand.name, language: brand.languages[0] ?? "sl", cgp: profile?.cgp ?? "", ourTopics, competitors: inputs }, images);
   let out;
   try {
-    out = await cappedCall(db, deps.llm, { orgId: run.orgId, brandId: run.brandId, postId: null, now: deps.now }, req);
+    out = await cappedCall(db, deps.llm, { orgId: run.orgId, brandId: run.brandId, postId: null, now: deps.now, action: "research" }, req);
   } catch (e) {
     if (e instanceof SpendCapError) return fail("SPEND_CAP");
     if (e instanceof LlmError) return fail(e.message && e.message !== e.code ? `AI_FAILED:${e.message}` : "AI_FAILED");

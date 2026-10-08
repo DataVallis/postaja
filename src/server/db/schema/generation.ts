@@ -154,6 +154,11 @@ export const usageLedger = pgTable(
     /** Image calls: billed megapixels (rounded up per image). */
     megapixels: integer("megapixels").notNull().default(0),
     costMicroUsd: bigint("cost_micro_usd", { mode: "bigint" }).notNull(),
+    /** TASK-038: what the call was for (credit_prices.action) and the credits it took. */
+    action: text("action").notNull().default("assist"),
+    credits: integer("credits").notNull().default(0),
+    /** The part of `credits` taken from bought/granted packs (the rest is the month's allowance); refunded on release. */
+    packDraws: jsonb("pack_draws").$type<{ packId: string; credits: number }[]>().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

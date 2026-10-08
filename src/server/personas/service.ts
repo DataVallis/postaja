@@ -336,7 +336,7 @@ export async function personaPicture(db: Db, deps: Pick<ImageDeps, "images" | "n
   const model = await defaultModel(db, references.length ? "image_ref" : "image_persona");
   if (!model) throw new PersonaError("NO_REF_MODEL");
   const gen = generationSize(shape.width, shape.height);
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: priceOf(model, shape.width, shape.height), now: deps.now });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: priceOf(model, shape.width, shape.height), now: deps.now, action: "persona_image" });
   let out;
   try {
     out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: references.length ? references : undefined });
