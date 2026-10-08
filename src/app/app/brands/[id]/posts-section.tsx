@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Lightbulb } from "lucide-react";
+import { ExternalLink, Lightbulb } from "lucide-react";
 import { Badge, buttonClass, Card, DataTable, inputClass, selectClass, STATUS_TONE, td, textareaClass } from "@/components/ui";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { todayIn } from "@/lib/dates";
@@ -84,7 +84,11 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
             <tr key={p.id}>
               <td className={`${td} min-w-56 max-w-xl`}><Link href={`/app/posts/${p.id}`} className="line-clamp-2 hover:underline">{p.content?.caption ?? p.brief}</Link></td>
               <td className={`${td} whitespace-nowrap text-muted`}>{p.channelId ? label.get(p.channelId) : "—"}</td>
-              <td className={td}><Badge tone={STATUS_TONE[p.status]} dot>{t(`status.${p.status}`)}</Badge></td>
+              <td className={`${td} whitespace-nowrap`}><Badge tone={STATUS_TONE[p.status]} dot>{t(`status.${p.status}`)}</Badge>{p.publishedUrl ? (
+                <a href={p.publishedUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs text-muted underline-offset-4 hover:text-fg hover:underline" data-testid="published-link">
+                  <ExternalLink aria-hidden className="size-3.5" />{t("openPublished")}
+                </a>
+              ) : null}</td>
               <td className={`${td} whitespace-nowrap text-muted`}>{f.dateTime(p.createdAt, { dateStyle: "medium", timeStyle: "short" })}</td>
             </tr>
           ))}

@@ -39,7 +39,7 @@ export async function listOrgPosts(db: Db, ctx: OrgContext, f: PostFilters = {})
   const page = f.page ?? 1;
   const base = db
     .select({
-      id: posts.id, status: posts.status, brief: posts.brief, caption: sql<string | null>`${posts.content}->>'caption'`,
+      id: posts.id, status: posts.status, publishedUrl: posts.publishedUrl, brief: posts.brief, caption: sql<string | null>`${posts.content}->>'caption'`,
       createdAt: posts.createdAt, updatedAt: posts.updatedAt, brandId: posts.brandId, brandName: brands.name,
       format: posts.format, scheduledOn: posts.scheduledOn, scheduledTime: posts.scheduledTime, topic: sql<string | null>`${posts.plan}->>'topic'`,
       platform: channels.platform, handle: channels.handle,

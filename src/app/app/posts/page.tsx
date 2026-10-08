@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ExternalLink, Search } from "lucide-react";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge, buttonClass, DataTable, inputClass, PageHeader, selectClass, STATUS_TONE, td } from "@/components/ui";
@@ -79,7 +79,11 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
             <td className={td}><Link href={`/app/brands/${p.brandId}`} className="hover:underline">{p.brandName}</Link></td>
             <td className={`${td} whitespace-nowrap text-muted`}>{p.platform ? `${p.platform} · ${p.handle}` : "—"}</td>
             <td className={`${td} whitespace-nowrap`}>{tf(p.format)}</td>
-            <td className={td}><Badge tone={STATUS_TONE[p.status]} dot>{tp(`status.${p.status}`)}</Badge></td>
+            <td className={`${td} whitespace-nowrap`}><Badge tone={STATUS_TONE[p.status]} dot>{tp(`status.${p.status}`)}</Badge>{p.publishedUrl ? (
+                <a href={p.publishedUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs text-muted underline-offset-4 hover:text-fg hover:underline" data-testid="published-link">
+                  <ExternalLink aria-hidden className="size-3.5" />{tp("openPublished")}
+                </a>
+              ) : null}</td>
           </tr>
         ))}
       </DataTable>
