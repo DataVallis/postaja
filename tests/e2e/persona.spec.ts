@@ -120,7 +120,7 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await expect(p).toHaveURL(`${postUrl}#persona-video`);
   const pv = p.getByTestId("persona-video");
   await expect(pv.getByRole("heading")).toContainText("Video s persono (Mila)");
-  await expect(p.getByTestId("images-persona")).toHaveText("Ilustracije prikazujejo persono Mila (iz potnih slik).");
+  await expect(p.getByTestId("images-persona")).toHaveCount(0); // no visual identity yet → no image form; covered in design.int.test
   await expect(pv.getByLabel("Dolžina").locator("option")).toHaveText([/^5 s · največ [\d.]+ €$/, /^10 s · največ [\d.]+ €$/]);
   await pv.getByLabel("Navodila za prizor (neobvezno)").fill("z dežnikom");
   const falBefore = (await falLog()).length;

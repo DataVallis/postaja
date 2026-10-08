@@ -68,7 +68,7 @@ export function illustrationShape(t: Template, size: { width: number; height: nu
 const STALE_MS = 10 * 60 * 1000;
 
 /** Any member. Claims the post's images (a second request while one runs is refused) and queues the job. */
-export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string) {
+export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean } = {}) {
   z.enum(["new", "text", "revise"]).parse(mode);
   const words = instruction?.trim() ?? "";
   if (mode === "revise" && (!words || words.length > REVISION_MAX)) throw new ImageJobError("INVALID");
@@ -79,7 +79,7 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
   const claimed = await forOrg(db, ctx).update(
     posts,
-    { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, updatedAt: new Date() },
+    { mediaStatus: "queued", mediaError: null, mediaRequestedBy: ctx.userId, ...(opts.withPersona !== undefined ? { imagesWithPersona: opts.withPersona } : {}), updatedAt: new Date() },
     and(
       eq(posts.id, postId),
       or(inArray(posts.mediaStatus, ["none", "ready", "failed"]), and(inArray(posts.mediaStatus, ["queued", "rendering"]), lt(posts.updatedAt, new Date(Date.now() - STALE_MS))))!,
@@ -182,7 +182,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
 
   const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
   // TASK-027: a persona brand's illustrations show the persona, made from its passport pictures.
-  const persona = await postPersona(db, ctx, p.brandId);
+  const persona = await postPersona(db, ctx, p.brandId, p.imagesWithPersona);
   const where = { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages), persona: persona ? { name: persona.name } : null };
   // A correction in words: Claude sees the current plan and images and changes only what was asked.
   const revising = mode === "revise" && !!p.visual && p.visual.designId === design.id && !!instruction?.trim();

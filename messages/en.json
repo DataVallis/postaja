@@ -1002,7 +1002,7 @@
     "lastRevision": "Last correction: {text}",
     "pdf": "Download PDF carousel",
     "pdfHint": "Post a LinkedIn carousel as a document (PDF); the ZIP has it too.",
-    "personaNote": "Illustrations show the persona {name} (from the passport pictures)."
+    "withPersona": "With the persona {name} (illustrations from the passport pictures)"
   },
   "Design": {
     "title": "Visual identity",
@@ -1311,10 +1311,10 @@
       "UNAUTHORIZED": "Your session has expired."
     },
     "generateAgain": "New passport picture",
-    "inPostsTitle": "Persona in post images",
+    "inPostsTitle": "Persona in post images (default)",
     "inPostsOn": "on",
     "inPostsOff": "off",
-    "inPostsHint": "When on, the illustrations of this brand's post images show the persona: Claude describes the scene, the picture is made from the passport pictures (same person, Nano Banana Pro edit, €0.15 per illustration). Words and logo are still drawn by Postaja from the visual identity.",
+    "inPostsHint": "The default for this brand's post images. On each post you can change it with \"With the persona\" next to Create images. An illustration with the persona is made from the passport pictures (same person, Nano Banana Pro edit, €0.15 per illustration); without the persona it follows the visual identity. Words and logo are always drawn by Postaja.",
     "inPostsEnable": "Turn on",
     "inPostsDisable": "Turn off",
     "videosTitle": "Video with the persona",

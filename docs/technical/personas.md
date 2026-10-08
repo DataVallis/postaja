@@ -37,8 +37,9 @@ On a post of a brand whose persona has pictures (`src/server/video/persona.ts`, 
    `keyframe` (poster). Runs on the `post-video` queue with `posts.video_mode = 'persona'`.
 
 ## Persona in post images (TASK-027, ADR-057)
-- `personas.use_in_posts` (default on; owner toggles it on the Persona tab). `postPersona()` returns the persona when it
-  is on and has at least one picture.
+- `personas.use_in_posts` is the brand default (owner toggles it on the Persona tab); `posts.images_with_persona` is the
+  post's own choice from the images form (TASK-031, ADR-060; null = default). `postPersona(db, ctx, brandId, choice)`
+  returns the persona when the choice (or default) is on and it has at least one picture.
 - `renderPostImages` then tells Claude (`<persona>` in `plan_post_images`) to describe each illustration as a photo
   scene without the person's looks, and draws it with `personaPicture` (default `image_ref`, Nano Banana Pro edit) from
   up to 4 passport pictures; the prompt is `personaIllustrationPrompt` (identity fields, scene, the DNA's style). Words
