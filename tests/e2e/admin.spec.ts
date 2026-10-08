@@ -30,6 +30,8 @@ async function axe(page: Page) {
 
 test("super admin creates an organization, sets the plan, invites an editor; invitee joins; non-admins get 404", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one full flow is enough; mobile covers layout via other specs");
+  // Several sign-ins by email: ~30 s, right at the default timeout (the likely flaky E2E on #56).
+  test.setTimeout(90_000);
   const slug = `e2e-${Date.now()}`;
   const admin = "e2e-root@example.test"; // separate super admin: auth.spec expects e2e-admin to have no org
   const editor = `editor-${Date.now()}@example.test`;

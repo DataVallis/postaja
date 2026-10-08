@@ -22,7 +22,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
       </div>
       <section aria-labelledby="settings-h">
         <h2 id="settings-h" className="mb-4 text-lg font-semibold">{t("settings")}</h2>
-        <SettingsForm orgId={org.id} plan={org.plan} status={org.status} capUsd={microToUsd(org.spendCapMicroUsd)} />
+        <SettingsForm orgId={org.id} plan={org.plan} status={org.status} capUsd={microToUsd(org.spendCapMicroUsd)} limits={org.limits} />
       </section>
       <section aria-labelledby="members-h">
         <h2 id="members-h" className="mb-4 text-lg font-semibold">{t("members")}</h2>

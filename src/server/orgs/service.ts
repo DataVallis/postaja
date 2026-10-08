@@ -86,12 +86,20 @@ export async function createOrganization(
   return result;
 }
 
-/** Super admin only: change plan, status or spend cap. */
+/** Plan limits (TASK-028): a missing key means unlimited. */
+export type OrgLimits = { brands?: number; members?: number; generationsPerMonth?: number };
+const limitsInput = z.object({
+  brands: z.number().int().min(0).max(10_000).optional(),
+  members: z.number().int().min(1).max(10_000).optional(),
+  generationsPerMonth: z.number().int().min(0).max(10_000_000).optional(),
+}).strict();
+
+/** Super admin only: change plan, status, spend cap or limits. */
 export async function updateOrgSettings(
   db: Db,
   actor: Actor,
   orgId: string,
-  patch: { plan?: (typeof PLANS)[number]; status?: "active" | "suspended"; spendCapMicroUsd?: bigint },
+  patch: { plan?: (typeof PLANS)[number]; status?: "active" | "suspended"; spendCapMicroUsd?: bigint; limits?: OrgLimits },
 ) {
   requireSuperadmin(actor);
   const parsed = z
@@ -99,6 +107,7 @@ export async function updateOrgSettings(
       plan: z.enum(PLANS).optional(),
       status: z.enum(["active", "suspended"]).optional(),
       spendCapMicroUsd: z.bigint().nonnegative().optional(),
+      limits: limitsInput.optional(),
     })
     .strict()
     .parse(patch);
@@ -110,8 +119,9 @@ export async function updateOrgSettings(
       .set({ ...parsed, updatedAt: new Date() })
       .where(eq(orgSettings.orgId, orgId))
       .returning();
+    const show = (v: unknown) => (v !== null && typeof v === "object" ? JSON.stringify(v) : String(v));
     const changes = Object.fromEntries(
-      Object.keys(parsed).map((k) => [k, { from: String(before[k as keyof typeof before]), to: String(after[k as keyof typeof after]) }]),
+      Object.keys(parsed).map((k) => [k, { from: show(before[k as keyof typeof before]), to: show(after[k as keyof typeof after]) }]),
     );
     await audit(tx, actor, "org.settings.update", orgId, null, changes);
     return after;

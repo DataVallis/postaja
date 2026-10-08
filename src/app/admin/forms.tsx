@@ -43,7 +43,7 @@ export function CreateOrgForm() {
   );
 }
 
-export function SettingsForm(props: { orgId: string; plan: string; status: string; capUsd: string }) {
+export function SettingsForm(props: { orgId: string; plan: string; status: string; capUsd: string; limits?: { brands?: number; members?: number; generationsPerMonth?: number } }) {
   const t = useTranslations("Admin");
   const [state, action, pending] = useActionState(updateSettingsAction, undefined);
   return (
@@ -61,6 +61,13 @@ export function SettingsForm(props: { orgId: string; plan: string; status: strin
         </select>
       </Field>
       <Field id="spendCapUsd" label={t("capUsd")}><input id="spendCapUsd" name="spendCapUsd" required inputMode="decimal" defaultValue={props.capUsd} className={input} /></Field>
+      <fieldset className="grid gap-3">
+        <legend className="mb-1 text-sm font-medium">{t("limits")}</legend>
+        <p className="text-xs text-muted">{t("limitsHint")}</p>
+        <Field id="limitBrands" label={t("limitBrands")}><input id="limitBrands" name="limitBrands" inputMode="numeric" defaultValue={props.limits?.brands ?? ""} className={input} /></Field>
+        <Field id="limitMembers" label={t("limitMembers")}><input id="limitMembers" name="limitMembers" inputMode="numeric" defaultValue={props.limits?.members ?? ""} className={input} /></Field>
+        <Field id="limitGenerations" label={t("limitGenerations")}><input id="limitGenerations" name="limitGenerations" inputMode="numeric" defaultValue={props.limits?.generationsPerMonth ?? ""} className={input} /></Field>
+      </fieldset>
       <button type="submit" disabled={pending} className={button}>{t("save")}</button>
       <Feedback state={state} />
     </form>

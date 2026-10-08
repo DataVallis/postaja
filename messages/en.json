@@ -166,7 +166,12 @@
       "body": "This data was last verified 90 or more days ago. Check it against the source and update the date.",
       "open": "Open platforms →",
       "badge": "re-check"
-    }
+    },
+    "limits": "Plan limits",
+    "limitsHint": "Empty = unlimited. A generation is one paid AI call (text, image, video).",
+    "limitBrands": "Max brands (not archived)",
+    "limitMembers": "Max members (incl. invitations)",
+    "limitGenerations": "Max AI generations per month"
   },
   "Brands": {
     "title": "Brands",
@@ -474,7 +479,7 @@
       "too_many_slides": "Too many slides: {actual}, at most {limit}."
     },
     "errors": {
-      "SPEND_CAP": "The organization's monthly spend cap is reached. A super admin can raise it.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "PROVIDER": "The AI service is not answering. Try again in a minute.",
       "NOT_CONFIGURED": "The AI key is not set on the server.",
       "INVALID_OUTPUT": "The AI returned an invalid answer twice. Try again or rephrase the request.",
@@ -568,7 +573,9 @@
     "import": "Plan import",
     "plan": "Plan",
     "helpSection": "Help",
-    "help": "User guide"
+    "help": "User guide",
+    "orgSection": "Organization",
+    "team": "Team and plan"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -670,7 +677,7 @@
         "INVALID_FILE": "The file could not be read.",
         "NO_POSTS": "No posts found in the file.",
         "AI_FAILED": "The AI could not read the document ({detail}). Try again or upload a table.",
-        "SPEND_CAP": "The monthly AI spend cap is reached.",
+        "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
         "NO_MODEL": "No AI model is set up.",
         "BAD_ORIGIN": "The request did not come from Postaja.",
         "failed": "Upload failed. Try again."
@@ -949,7 +956,7 @@
       "IMAGE_TIMEOUT": "The image provider took too long. Try again.",
       "IMAGE_BLOCKED": "The provider refused the image description. Change the image description in the plan and try again.",
       "IMAGE_INVALID": "The provider returned an invalid image. Try again.",
-      "SPEND_CAP": "The organization's monthly spend cap has been reached.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "NO_ACCESS": "The member who asked for the images no longer has access.",
       "NOT_FOUND": "The post no longer exists.",
       "BAD_STATE": "The images are already being made, or the post is skipped.",
@@ -1040,7 +1047,7 @@
       "NO_DESIGN": "Create the visual identity first.",
       "INVALID": "The text is too long or too short.",
       "INVALID_OUTPUT": "Claude did not return a valid design. Try again or add to the description.",
-      "SPEND_CAP": "The monthly spend cap has been reached.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "PROVIDER": "Claude did not respond. Try again.",
       "NO_TOOL_CALL": "Claude did not return a design. Try again.",
@@ -1073,7 +1080,7 @@
     "toPlan": "Open the plan",
     "errors": {
       "FAILED": "Ideas could not be prepared. Try again.",
-      "SPEND_CAP": "The monthly spend cap is reached.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "AI_FAILED": "Claude returned no usable ideas. Try again or add a wish.",
       "NO_MODEL": "No AI model is configured.",
       "NO_CHANNEL": "The channel no longer exists.",
@@ -1162,7 +1169,7 @@
       "BAD_STATE": "The brand is archived.",
       "NO_PLACEMENT": "Pick at least one placement of a chosen network.",
       "LANGUAGE": "The language is not one of the brand's.",
-      "SPEND_CAP": "The monthly spend cap is reached.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "NO_MODEL": "No Claude model is configured.",
       "AI_FAILED": "Claude returned no usable copy. Try again."
     },
@@ -1283,7 +1290,7 @@
       "IMAGE_TIMEOUT": "The image provider took too long. Try again.",
       "IMAGE_BLOCKED": "The provider refused the request. Change the DNA and try again.",
       "IMAGE_INVALID": "The provider returned an invalid picture. Try again.",
-      "SPEND_CAP": "The organization's monthly spend cap is reached.",
+      "SPEND_CAP": "The organization's monthly limit is reached (spend or number of AI generations).",
       "NO_ACCESS": "The member who asked no longer has access.",
       "LLM_PROVIDER": "Claude did not respond. Try again.",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
@@ -1343,5 +1350,63 @@
     "onThisPage": "On this page",
     "empty": "The guide is not available yet.",
     "slOnly": "The guide is in Slovenian for now."
+  },
+  "Team": {
+    "title": "Team and plan",
+    "introOwner": "Members, invitations and the plan's use. As an owner you invite and remove members and change their roles.",
+    "introEditor": "Members and the plan's use. The owner invites members.",
+    "planTitle": "Plan: {plan}",
+    "plans": {
+      "trial": "trial",
+      "starter": "starter",
+      "pro": "pro",
+      "comped": "comped"
+    },
+    "brands": "Brands",
+    "members": "Members",
+    "generations": "AI generations",
+    "spend": "AI spend",
+    "thisMonth": "this month",
+    "ofCap": "of {cap} this month",
+    "withInvites": "{n} of them invitations",
+    "of": "{n} / {max}",
+    "unlimited": "{n} (no limit)",
+    "limitsHint": "A generation is one paid AI call (text, image, video). Plan limits are set by the Postaja administrator.",
+    "membersTitle": "Members",
+    "email": "Email",
+    "role": "Role",
+    "since": "Member since",
+    "actions": "Actions",
+    "you": "you",
+    "roleOf": "Role of {email}",
+    "change": "Change",
+    "remove": "Remove",
+    "removeConfirm": "Remove {email}",
+    "invitesTitle": "Invitations",
+    "validUntil": "Valid until",
+    "cancel": "Cancel invitation",
+    "inviteTitle": "Invite a member",
+    "inviteHint": "The invitation arrives by email and is valid for 7 days. On the first sign-in with that address the person becomes a member. Editors work on posts; owners also manage brands, the team and the persona.",
+    "invite": "Invite",
+    "inviting": "Sending …",
+    "roles": {
+      "owner": "owner",
+      "editor": "editor"
+    },
+    "ok": {
+      "invited": "Invitation sent.",
+      "canceled": "Invitation canceled.",
+      "role": "Role changed.",
+      "removed": "Member removed."
+    },
+    "errors": {
+      "FAILED": "Something went wrong. Try again.",
+      "FORBIDDEN": "Only an owner can do this.",
+      "INVALID": "Enter a valid email and role.",
+      "NOT_FOUND": "The member or invitation no longer exists.",
+      "ALREADY_MEMBER": "This person is already a member.",
+      "LIMIT_REACHED": "The plan allows no more members. Contact the Postaja administrator for more.",
+      "LAST_OWNER": "The organization must keep at least one owner."
+    }
   }
 }
