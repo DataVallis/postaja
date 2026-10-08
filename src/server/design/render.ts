@@ -41,6 +41,11 @@ export type RenderInput = {
   /** The post's generated picture (JPEG/PNG); a neutral stand-in is drawn when missing (previews). */
   illustration?: Uint8Array | null;
   logo?: Uint8Array | null;
+  /**
+   * A partner's logo chosen for this post or ad (TASK-035): drawn next to the brand logo, sharing the template's logo
+   * box; templates without a logo box get it in the bottom-right corner of the safe box.
+   */
+  partnerLogo?: Uint8Array | null;
   /** TTF/OTF of the brand font (used where the design says "brand"). */
   brandFont?: Uint8Array | null;
   /**
@@ -155,6 +160,23 @@ async function fittedUncached(bytes: Uint8Array, w: number, h: number, fit: "cov
   return png ? dataUri(await img.png().toBuffer(), "image/png") : dataUri(await img.jpeg({ quality: 88 }).toBuffer(), "image/jpeg");
 }
 
+/**
+ * The brand logo and a partner's logo in one box (TASK-035): side by side in a wide box, stacked in a tall one, each
+ * scaled to fit its half with a gap between; the partner alone fills the box when the brand has no logo.
+ */
+async function logoPair(brand: Uint8Array | null, partner: Uint8Array, box: { x: number; y: number; w: number; h: number; opacity: number }, cache?: Map<string, string>): Promise<Node> {
+  const row = box.w >= box.h;
+  const gap = brand ? Math.round(Math.min(box.w, box.h) * 0.25) : 0;
+  const pw = brand ? (row ? (box.w - gap) / 2 : box.w) : box.w;
+  const ph = brand ? (row ? box.h : (box.h - gap) / 2) : box.h;
+  const img = async (b: Uint8Array) => el("img", { width: pw, height: ph }, undefined, { src: await fitted(b, pw, ph, "contain", true, cache), width: pw, height: ph });
+  const items = brand ? [await img(brand), await img(partner)] : [await img(partner)];
+  return el("div", {
+    position: "absolute", left: box.x, top: box.y, width: box.w, height: box.h, opacity: box.opacity,
+    display: "flex", flexDirection: row ? "row" : "column", alignItems: "center", justifyContent: "center", gap,
+  }, items);
+}
+
 /** One PNG of `template` at `size`. */
 export async function renderTemplate(spec: DesignSpec, t: Template, size: { width: number; height: number }, input: RenderInput): Promise<Uint8Array> {
   const W = size.width, H = size.height;
@@ -198,6 +220,8 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
         position: "absolute", left: x, top: y, width: w, height: h, backgroundColor: color(s, e.color), opacity: e.opacity,
         borderRadius: (e.radius / 100) * BW, ...(e.borderColor && e.borderWidth ? { border: `${(e.borderWidth * BW) / 1080}px solid ${color(s, e.borderColor)}` } : {}),
       });
+    } else if (e.type === "image" && e.source === "logo" && input.partnerLogo) {
+      node = await logoPair(input.logo ?? null, input.partnerLogo, { x, y, w, h, opacity: e.opacity }, input.cache);
     } else if (e.type === "image") {
       const src = e.source === "logo" ? input.logo : picture;
       if (!src) continue;
@@ -217,6 +241,9 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
       }
     }
     children.push(node);
+  }
+  if (input.partnerLogo && !t.elements.some((e) => e.type === "image" && e.source === "logo")) {
+    children.push(await logoPair(null, input.partnerLogo, { x: ox + BW * 0.72, y: oy + BH * 0.88, w: BW * 0.24, h: BH * 0.08, opacity: 1 }, input.cache));
   }
   const svg = await satori(el("div", base, children.filter(Boolean)) as unknown as Parameters<typeof satori>[0], { width: W, height: H, fonts });
   return new Uint8Array(await sharp(Buffer.from(svg), { limitInputPixels: MAX_INPUT_PIXELS }).png({ compressionLevel: 6 }).toBuffer());

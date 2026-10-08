@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { brandAssets } from "./brand-files";
 import { brands } from "./brands";
 import { organization } from "./org";
 
@@ -56,6 +57,8 @@ export const adSets = pgTable(
     issues: jsonb("issues").$type<AdCopyIssue[]>().notNull().default([]),
     model: text("model"),
     error: text("error"),
+    /** TASK-035: a partner's logo drawn next to the brand logo on the creatives (null = none). */
+    partnerLogoId: text("partner_logo_id").references(() => brandAssets.id, { onDelete: "set null" }),
     visual: jsonb("visual").$type<AdVisual>(),
     mediaStatus: text("media_status").$type<AdMediaStatus>().notNull().default("none"),
     mediaError: text("media_error"),

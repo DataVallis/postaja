@@ -2,10 +2,10 @@ import { Download, ImageIcon, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
-import { Badge, buttonClass, Card, inputClass, textareaClass } from "@/components/ui";
+import { Badge, buttonClass, Card, inputClass, selectClass, textareaClass } from "@/components/ui";
 import { microToUsd } from "@/lib/money/usd";
 import type { AdMediaStatus, AdVisual } from "@/server/db/schema";
-import { requestAdImagesAction, saveAdSlidesAction } from "../actions";
+import { requestAdImagesAction, saveAdSlidesAction, setAdPartnerLogoAction } from "../actions";
 
 type Media = { id: string; variant: number; placement: string; width: number; height: number };
 type Placement = { key: string; label: string; width: number; height: number };
@@ -18,6 +18,8 @@ const LONG = new Set(["headline", "body", "subhead"]);
 export async function CreativesSection(props: {
   adSetId: string; status: AdMediaStatus; error: string | null; requestError?: string; media: Media[]; visual: AdVisual | null;
   templates: TemplateInfo[] | null; placements: Placement[]; variants: number; estimate: { illustrations: number; max: bigint } | null; designHref: string;
+  /** TASK-035: the brand's partner logos and the one on these creatives. */
+  partners?: { options: { id: string; name: string }[]; selected: string | null };
 }) {
   const t = await getTranslations("Ads");
   const ti = await getTranslations("Images");
@@ -104,6 +106,20 @@ export async function CreativesSection(props: {
             );
           })}
           <div><button type="submit" disabled={working} className={buttonClass("secondary")}><RefreshCw aria-hidden className="size-4" />{ti("saveAndRefresh")}</button></div>
+        </form>
+      ) : null}
+      {props.templates && props.partners?.options.length ? (
+        <form key={`partner-${props.partners.selected ?? ""}`} action={setAdPartnerLogoAction} className="flex flex-wrap items-end gap-3 border-t border-line pt-4" data-testid="partner-logo">
+          <input type="hidden" name="adSetId" value={props.adSetId} />
+          <label className="grid gap-1 text-sm">
+            <span>{ti("partnerLogo")}</span>
+            <select name="partnerLogoId" defaultValue={props.partners.selected ?? ""} className={selectClass}>
+              <option value="">{ti("partnerNone")}</option>
+              {props.partners.options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          <button type="submit" disabled={working} className={buttonClass("secondary", "sm")}>{ti("partnerSave")}</button>
+          <span className="basis-full text-xs text-muted">{props.media.length ? ti("partnerHintRedraw") : ti("partnerHint")}</span>
         </form>
       ) : null}
     </Card>

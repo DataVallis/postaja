@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
@@ -6,7 +7,7 @@ import { image, pdf } from "../../../tests/fixtures/files";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
-import { MAX_BYTES } from "./files";
+import { listBrandFiles, MAX_BYTES } from "./files";
 import { handleDownload, handleUpload, MULTIPART_OVERHEAD, type HttpDeps } from "./files-http";
 import { createBrand } from "./service";
 
@@ -23,9 +24,10 @@ let as: OrgContext | null;
 const deps = (): HttpDeps => ({ db, storage, appOrigin: ORIGIN, getCtx: async () => as });
 
 /** A browser-like multipart POST; Content-Length = real body size unless overridden. */
-async function post(brandId: string, slot: string, file: Uint8Array | null, opts: { origin?: string | null; length?: string | null; name?: string } = {}) {
+async function post(brandId: string, slot: string, file: Uint8Array | null, opts: { origin?: string | null; length?: string | null; name?: string; partner?: string } = {}) {
   const fd = new FormData();
   if (file) fd.append("file", new Blob([new Uint8Array(file)]), opts.name ?? "f.bin");
+  if (opts.partner !== undefined) fd.append("name", opts.partner);
   const encoded = new Response(fd); // one encoding: body and boundary must match
   const ct = encoded.headers.get("content-type")!;
   const body = new Uint8Array(await encoded.arrayBuffer());
@@ -65,6 +67,21 @@ describe("POST /api/brands/<id>/files", () => {
     const loc = dl.headers.get("location")!;
     expect(new URL(loc).searchParams.get("X-Amz-Expires")).toBe("300");
     expect(new Uint8Array(await (await fetch(loc)).arrayBuffer())).toEqual(bytes);
+  });
+
+  it("a partner logo (TASK-035) is stored with the partner's name, apart from the brand logos", async () => {
+    const png = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#1428dc" } }).png().toBuffer());
+    const res = await post(brandA, "partner", png, { name: "logo-polygon.png", partner: "Polygon" });
+    expect(res.status).toBe(201);
+    const { id, kind } = ((await res.json()) as { results: { id: string; kind: string }[] }).results[0];
+    expect(kind).toBe("partner");
+    const files = await listBrandFiles(db, A, brandA);
+    expect(files.partners.map((p) => [p.id, p.meta.name])).toEqual([[id, "Polygon"]]);
+    expect(files.logos).toEqual([]);
+    // Without a name the file name is used.
+    const other = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#14dc14" } }).png().toBuffer());
+    expect((await post(brandA, "partner", other, { name: "Acme.png" })).status).toBe(201);
+    expect((await listBrandFiles(db, A, brandA)).partners.map((p) => p.meta.name)).toEqual(["Acme", "Polygon"]);
   });
 
   it("cross-site or missing Origin → 403 before anything else; anonymous → 401", async () => {

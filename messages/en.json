@@ -301,7 +301,8 @@
       "went": {
         "logo": "logo",
         "font": "font",
-        "source": "source"
+        "source": "source",
+        "partner": "partner logo"
       },
       "addLogo": "Add logo",
       "logos": "Logos",
@@ -361,7 +362,14 @@
         "INVALID_FILE": "the file could not be read",
         "UNSUPPORTED_TYPE": "type not supported"
       },
-      "knowledgeHint": "Document text is the knowledge base: for every post Postaja takes the parts that match the request."
+      "knowledgeHint": "Document text is the knowledge base: for every post Postaja takes the parts that match the request.",
+      "partners": "Partner logos",
+      "partnersHint": "Logos of partners (e.g. Polygon) for joint posts. They are not the brand's logo: on each post or ad you choose whether one of them goes on the images, and Postaja draws it next to the brand logo.",
+      "noPartners": "No partner logos yet.",
+      "partnerName": "Partner name",
+      "partnerNamePlaceholder": "e.g. Polygon",
+      "partnerFile": "Logo (PNG, JPG or WebP)",
+      "addPartner": "Add partner logo"
     },
     "cgpImport": {
       "fromComputer": "Import from a document",
@@ -1022,7 +1030,12 @@
     "restoreVersion": "Restore this version",
     "deleteVersion": "Delete version",
     "deleteVersionWarning": "This version's images will be deleted for good.",
-    "deleteVersionConfirm": "Delete version"
+    "deleteVersionConfirm": "Delete version",
+    "partnerLogo": "Partner logo",
+    "partnerNone": "None",
+    "partnerSave": "Save logo",
+    "partnerHint": "Used when the images are made.",
+    "partnerHintRedraw": "The images are redrawn for free with the chosen logo (same illustrations); the current ones stay as an earlier version."
   },
   "Design": {
     "title": "Visual identity",

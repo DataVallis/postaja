@@ -77,6 +77,13 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
     { name: "objava-2.png", mimeType: "image/png", buffer: await past("#0a122a") },
   ]);
   await expect(p.getByText("objava-2.png").first()).toBeVisible();
+  // A partner's logo (TASK-035): named, kept apart from the brand logo.
+  const partner = p.getByTestId("add-partner");
+  await partner.getByLabel("Ime partnerja").fill("Polygon");
+  await partner.getByLabel("Logotip (PNG, JPG ali WebP)").setInputFiles({ name: "polygon.png", mimeType: "image/png", buffer: await sharp({ create: { width: 600, height: 200, channels: 4, background: "#8247e5" } }).png().toBuffer() });
+  await partner.getByRole("button", { name: "Dodaj partnerski logotip" }).click();
+  await expect(p.getByTestId("partners")).toContainText("Polygon");
+  await expect(p.getByTestId("logo-frame")).toHaveCount(1);
 
   // Visual identity: Claude designs it from the description and the examples; the owner corrects it in words.
   await tab("Vizualna podoba");
@@ -141,6 +148,16 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect.poll(() => images.getByTestId("image-list").getByRole("img").getAttribute("src")).not.toBe(oldSrc);
   await expect(images.getByTestId("slide-texts").getByLabel("Naslov")).toHaveValue("Nov naslov.\n*Še ena vrstica.*");
   expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falLog.length); // no new illustration
+
+  // The partner's logo on this post: chosen and saved, the image is redrawn for free next to the brand logo.
+  const beforePartner = await images.getByTestId("image-list").getByRole("img").getAttribute("src");
+  await images.getByTestId("partner-logo").getByLabel("Logotip partnerja").selectOption({ label: "Polygon" });
+  await images.getByTestId("partner-logo").getByRole("button", { name: "Shrani logotip" }).click();
+  await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  await expect.poll(() => images.getByTestId("image-list").getByRole("img").getAttribute("src")).not.toBe(beforePartner);
+  await expect(images.getByTestId("partner-logo").getByLabel("Logotip partnerja")).toHaveValue(/.+/);
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falLog.length); // no new illustration
+  expect(await serious(p)).toEqual([]);
 
   // A correction in words for the AI (owner, 2026-10-07): Claude sees the images and changes only what was asked.
   const revise = images.getByTestId("image-revise");

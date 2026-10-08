@@ -5,6 +5,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
+import { uploadBrandFile } from "../brands/files";
 import { createBrand, saveProfile } from "../brands/service";
 import sharp from "sharp";
 import { cardDesign } from "../../../tests/fixtures/design";
@@ -14,7 +15,7 @@ import { designSpecSchema } from "../design/spec";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import type { ImageClient, ImageRequest } from "../images/fal";
 import type { LlmClient, StructuredRequest } from "../llm/types";
-import { adImageEstimate, adMediaUrl, adZip, copyForImage, deleteCreativeVersion, listAdMedia, listCreativeVersions, renderAdImages, requestAdImages, restoreCreativeVersion, runAdImageJob, setAdSlides, type AdImageJob } from "./creatives";
+import { adImageEstimate, adMediaUrl, adZip, copyForImage, deleteCreativeVersion, setAdPartnerLogo, listAdMedia, listCreativeVersions, renderAdImages, requestAdImages, restoreCreativeVersion, runAdImageJob, setAdSlides, type AdImageJob } from "./creatives";
 import { createFakeLlm } from "../llm/fake";
 import { LlmError } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
@@ -33,7 +34,7 @@ let A: OrgContext, B: OrgContext, editorA: OrgContext, brandA: string;
 beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
   mailer.sent.length = 0;
-  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets, ad_media, ad_creative_runs, ad_copy_versions, brand_designs cascade`;
+  await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, brands, brand_profile_versions, channels, posts, usage_ledger, ad_sets, ad_media, ad_creative_runs, ad_copy_versions, brand_designs, brand_assets cascade`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
   const actor = { userId: s.user.id, role: "superadmin" as const };
   const d = { mailer, baseURL: "http://localhost:3000" };
@@ -328,6 +329,26 @@ describe("creatives (TASK-021b)", () => {
     expect(await listCreativeVersions(db, B, id)).toEqual([]);
     await requestAdImages(db, queue().q, A, id, "text");
     await expect(restoreCreativeVersion(db, A, id, v.id)).rejects.toMatchObject({ code: "BAD_STATE" });
+  });
+
+  it("partner logo (TASK-035): chosen per ad set, existing creatives redrawn for free; only this brand's partners", async () => {
+    await giveDesign();
+    const id = await adSet();
+    const png = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#1428dc" } }).png().toBuffer());
+    const partner = await uploadBrandFile(db, storage, A, brandA, "partner", { filename: "p.png", bytes: png, name: "Polygon" });
+    const { q, jobs } = queue();
+    await expect(setAdPartnerLogo(db, q, A, id, crypto.randomUUID())).rejects.toMatchObject({ code: "INVALID" });
+    await expect(setAdPartnerLogo(db, q, B, id, partner.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(await setAdPartnerLogo(db, q, editorA, id, partner.id)).toBe("saved"); // nothing drawn yet
+    await renderAdImages(db, { llm: plans(visuals).client, images: fal().client, storage }, A, id, "new");
+    expect((await getAdSet(db, A, id)).partnerLogoId).toBe(partner.id);
+    expect(await setAdPartnerLogo(db, q, A, id, null)).toBe("redrawn");
+    expect(jobs).toEqual([{ adSetId: id, mode: "text" }]);
+    const images = fal();
+    await runAdImageJob(db, { llm: plans(visuals).client, images: images.client, storage }, jobs[0]);
+    expect(images.calls).toHaveLength(0);
+    expect((await getAdSet(db, A, id)).partnerLogoId).toBeNull();
+    expect(await listCreativeVersions(db, A, id)).toHaveLength(1);
   });
 
   it("other organizations reach no creative, ZIP or job; an ad without images has no ZIP", async () => {

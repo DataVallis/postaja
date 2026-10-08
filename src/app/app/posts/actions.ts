@@ -9,7 +9,7 @@ import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
-import { ImageJobError, requestImages, setSlideTexts, deleteImageVersion, restoreImageVersion } from "@/server/images/service";
+import { deleteImageVersion, ImageJobError, requestImages, restoreImageVersion, setPostPartnerLogo, setSlideTexts } from "@/server/images/service";
 import { deletePostVideo } from "@/server/video/media";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
@@ -168,6 +168,21 @@ export async function saveSlidesAction(f: FormData): Promise<void> {
     await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "text");
   } catch (e) {
     error = e instanceof ImageJobError ? e.code : "INVALID";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
+}
+
+/** "Logotip partnerja" (TASK-035): saved on the post; existing images are redrawn with it for free. */
+export async function setPartnerLogoAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await setPostPartnerLogo(getDb(), bossQueue(await getBoss()), ctx, id, String(f.get("partnerLogoId") ?? "") || null);
+  } catch (e) {
+    error = e instanceof ImageJobError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);

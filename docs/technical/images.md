@@ -55,3 +55,12 @@ current). Current = `archived_at is null` (one per post/kind/position, partial u
 it. `listImageVersions`, `restoreImageVersion` (archives the current images, un-archives the run, restores its words),
 `deleteImageVersion` (archived slides of the run + illustrations no other run draws on, + files). A run records the
 illustrations it reused in `post_image_runs.kept` (TASK-034), so restoring a word redraw brings its illustration back. UI: "Prejšnje verzije slik" in `images-section.tsx`.
+
+## Partner logos (TASK-035, ADR-064)
+`RenderInput.partnerLogo`: in the template's logo box the brand logo and the partner's logo share the space (side by
+side in a wide box, stacked in a tall one, a gap of a quarter of the short side; the partner alone when the brand has no
+logo). A template without a logo box gets it in the bottom-right corner of the safe box. Post images, animations and ad
+creatives pass the chosen logo (`partnerLogoBytes`). `setPostPartnerLogo` / `setAdPartnerLogo` save the choice; when
+images exist they queue a free word redraw (`text` mode: same illustrations, a new version). Tests:
+`design/render-partner.test.ts` (pixels), `design.int.test.ts`, `ads.int.test.ts`, `files-http.int.test.ts`, E2E
+`images.spec.ts`.

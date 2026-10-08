@@ -95,6 +95,25 @@ export async function brandAssetBytes(db: Db, storage: Storage, ctx: OrgContext,
   return { logo, font, fontFamily: fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
 }
 
+/** The brand's partner logos (TASK-035) by name, to choose one per post or ad. Any member. */
+export async function listPartnerLogos(db: Db, ctx: OrgContext, brandId: string): Promise<{ id: string; name: string }[]> {
+  const rows = (await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.brandId, brandId), eq(brandAssets.kind, "partner"))!)) as (typeof brandAssets.$inferSelect)[];
+  return rows.map((r) => ({ id: r.id, name: r.meta.name ?? r.filename })).sort((a, b) => a.name.localeCompare(b.name, "sl"));
+}
+
+/** Whether `id` is one of this brand's partner logos (another brand's or org's never is). */
+export async function isPartnerLogo(db: Db, ctx: OrgContext, brandId: string, id: string): Promise<boolean> {
+  const [row] = await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.id, id), eq(brandAssets.brandId, brandId), eq(brandAssets.kind, "partner"))!);
+  return !!row;
+}
+
+/** The chosen partner logo's bytes, or null (none chosen, or deleted since). */
+export async function partnerLogoBytes(db: Db, storage: Storage, ctx: OrgContext, brandId: string, id: string | null): Promise<Uint8Array | null> {
+  if (!id) return null;
+  const [row] = (await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.id, id), eq(brandAssets.brandId, brandId), eq(brandAssets.kind, "partner"))!)) as (typeof brandAssets.$inferSelect)[];
+  return row ? storage.get(row.storageKey) : null;
+}
+
 /** The brand's example images (uploaded past posts), newest first, small JPEGs. */
 export async function brandExamples(db: Db, storage: Storage, ctx: OrgContext, brandId: string, max = EXAMPLES_MAX): Promise<Uint8Array[]> {
   const rows = await db.select({ key: brandSources.storageKey }).from(brandSources)
