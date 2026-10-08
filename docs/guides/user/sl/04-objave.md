@@ -60,6 +60,17 @@ Vsako sliko objave lahko animiraš: Claude zasnuje gibanje (kdaj se pojavi naslo
 
 Rezultat je video MP4 (3–10 s). Vsak ustvarjen video **ostane na objavi**: nova animacija se doda k prejšnjim (tudi k videom s persono), nove slike videov ne izbrišejo. Pri vsakem videu sta **Prenesi (MP4)** in **Izbriši**; brisanje je trajno.
 
+## Odobritev stranke
+
+Agencija lahko objave da v pregled svoji stranki, ne da bi ta potrebovala račun v Postaji.
+
+1. Na brandu, zavihek **Objave**, v razdelku **Povezava za stranko** vpiši, za koga je povezava (npr. »Polygon – Ana«), in izberi dneve (privzeto naslednji teden, največ 31 dni). Klikni **Ustvari povezavo**.
+2. Povezavo kopiraj (**Kopiraj**) in jo pošlji stranki. Postaja jo pokaže samo enkrat; če jo izgubiš, ustvari novo.
+3. Stranka po povezavi vidi objave branda za te dni (besedila, slike, videe). Pri vsaki klikne **Odobri** ali napiše komentar in klikne **Potrebni popravki**.
+4. Odobritev objavo označi kot **odobrena**; prošnja za popravke že odobreno objavo vrne v **pripravljena**. Odziv stranke vidiš na strani objave (**Odziv stranke**) in v tabeli objav (»stranka: odobreno« ali »stranka: popravki«).
+
+Povezava velja še 14 dni po zadnjem dnevu. Z **Prekliči** jo takoj ukineš. Pri povezavi vidiš, kdaj jo je stranka nazadnje odprla.
+
 ## Prenos
 
 **Prenesi ZIP** na objavi vsebuje besedilo (`besedilo.txt`), prvi komentar, slike, vse videe (`animacija-1.mp4`, `persona-video-1.mp4` …) in PDF karusel, kar objava ima. Dnevni ZIP-i v planu in na nadzorni plošči vsebujejo vse objave dneva in `pregled.csv`.

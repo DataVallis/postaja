@@ -18,7 +18,9 @@ import { PostsSection } from "./posts-section";
 import { listPosts } from "@/server/posts/generate";
 import { pendingDraft } from "@/server/mcp/service";
 import { bulkCandidates } from "@/server/bulk/service";
-import { todayIn } from "@/lib/dates";
+import { addDays, isoWeekday, todayIn } from "@/lib/dates";
+import { latestReviews, listApprovalLinks } from "@/server/reviews/service";
+import { ApprovalSection } from "./approval-section";
 import { listDesigns } from "@/server/design/service";
 import { DesignSection } from "./design-section";
 import { ModelSection } from "./model-section";
@@ -57,6 +59,10 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const [dnaCost, passport] = tab === "persona"
     ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
     : [null, null];
+  const approvalLinkList = tab === "posts" ? await listApprovalLinks(db, org, id) : [];
+  const postReviewMap = tab === "posts" ? await latestReviews(db, org, recentPosts.map((p) => p.id)) : new Map();
+  const today = todayIn();
+  const nextMonday = addDays(today, ((8 - isoWeekday(today)) % 7) || 7);
   const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
@@ -115,7 +121,10 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       />
 
       {tab === "posts" ? (
-        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} ideaHint={sp.ideaHint} />
+        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} ideaHint={sp.ideaHint} reviews={postReviewMap} />
+      ) : null}
+      {tab === "posts" ? (
+        <div className="mt-6"><ApprovalSection brandId={brand.id} links={approvalLinkList} from={nextMonday} to={addDays(nextMonday, 6)} archived={brand.archivedAt !== null} now={new Date(`${today}T00:00:00Z`).getTime()} /></div>
       ) : null}
 
       {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}

@@ -556,7 +556,12 @@
       "x": "X has no AI label switch; the note at the end of the text tells readers.",
       "other": "If the network has an AI label switch, turn it on; the note at the end of the text tells readers."
     },
-    "aiLabelExport": "The EU AI Act (Article 50) requires a realistic AI-generated person to be disclosed. The export (ZIP) therefore adds a note at the end of the text, and images and videos carry an AI label in their file data."
+    "aiLabelExport": "The EU AI Act (Article 50) requires a realistic AI-generated person to be disclosed. The export (ZIP) therefore adds a note at the end of the text, and images and videos carry an AI label in their file data.",
+    "clientReviews": "Client feedback",
+    "clientApproved": "The client approved",
+    "clientChanges": "The client asks for changes",
+    "clientApprovedShort": "client: approved",
+    "clientChangesShort": "client: changes"
   },
   "Connect": {
     "title": "Claude",
@@ -1590,5 +1595,60 @@
     },
     "olderReports": "Earlier analyses:",
     "screenshotN": "screenshot {n}"
+  },
+  "ApprovalLinks": {
+    "title": "Client link",
+    "intro": "Through the link, the agency's client sees this brand's posts for the chosen days (texts, images, videos) and approves each or asks for changes with a comment — without a Postaja account. An approval marks the post approved; a change request moves an approved post back to ready. The link works until 14 days after the last day and can be revoked at any time.",
+    "label": "For whom",
+    "labelPlaceholder": "e.g. Polygon – Ana",
+    "from": "From",
+    "to": "To",
+    "create": "Create link",
+    "creating": "Creating …",
+    "newLink": "Client link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "newLinkHint": "Copy the link and send it to the client now; for security Postaja does not show it again. Anyone with the link sees these posts.",
+    "viewed": "last opened {when}",
+    "notViewed": "not opened yet",
+    "active": "valid until {until}",
+    "expired": "expired",
+    "revoked": "revoked",
+    "revoke": "Revoke",
+    "revokeName": "Revoke the link for {name}",
+    "errors": {
+      "INVALID": "Check the input: the period can be at most 31 days and must not end in the past.",
+      "ARCHIVED": "The brand is archived.",
+      "NOT_FOUND": "Not found.",
+      "FAILED": "That did not work, try again."
+    }
+  },
+  "ClientReview": {
+    "title": "Posts for {brand}",
+    "range": "{from} – {to}",
+    "intro": "Review the posts. If a post is fine, click Approve; if you want a change, write a comment and click Changes needed.",
+    "none": "There are no posts in this period.",
+    "noDate": "no date",
+    "imageAlt": "Image {n}",
+    "video": "Video",
+    "notWritten": "Still being prepared: {topic}",
+    "approved": "Approved",
+    "changesAsked": "Changes needed",
+    "thanks": "Thank you, noted.",
+    "comment": "Comment",
+    "reviewer": "Name (optional)",
+    "approve": "Approve",
+    "askChanges": "Changes needed",
+    "footer": "This link is valid until {until}. Made with Postaja.",
+    "goneTitle": "This link no longer works",
+    "goneBody": "The link has expired or the agency revoked it. Ask the agency for a new one.",
+    "errors": {
+      "INVALID": "Write a comment when you ask for changes.",
+      "BAD_STATE": "This post cannot be reviewed now.",
+      "NOT_FOUND": "The post is no longer on this list.",
+      "TOO_MANY": "Too many answers in a short time; try again in a few minutes.",
+      "GONE": "This link no longer works.",
+      "FAILED": "That did not work, try again."
+    }
   }
 }

@@ -11,7 +11,7 @@ import { NewPostForm } from "../../posts/editor";
 type Post = Awaited<ReturnType<typeof listPosts>>[number];
 
 /** Creating content is the point of the brand page: the request form first, recent posts below (TASK-007). */
-export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0, ideaError, ideaHint }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number; ideaError?: string; ideaHint?: string }) {
+export async function PostsSection({ brandId, archived, channels, posts, channelsHref, plannedTodo = 0, ideaError, ideaHint, reviews }: { brandId: string; archived: boolean; channels: { id: string; label: string }[]; posts: Post[]; channelsHref: string; plannedTodo?: number; ideaError?: string; ideaHint?: string; reviews?: Map<string, { decision: "approved" | "changes" }> }) {
   const t = await getTranslations("Posts");
   const ti = await getTranslations("Ideas");
   const tb = await getTranslations("Bulk");
@@ -84,7 +84,7 @@ export async function PostsSection({ brandId, archived, channels, posts, channel
             <tr key={p.id}>
               <td className={`${td} min-w-56 max-w-xl`}><Link href={`/app/posts/${p.id}`} className="line-clamp-2 hover:underline">{p.content?.caption ?? p.brief}</Link></td>
               <td className={`${td} whitespace-nowrap text-muted`}>{p.channelId ? label.get(p.channelId) : "—"}</td>
-              <td className={`${td} whitespace-nowrap`}><Badge tone={STATUS_TONE[p.status]} dot>{t(`status.${p.status}`)}</Badge>{p.publishedUrl ? (
+              <td className={`${td} whitespace-nowrap`}><Badge tone={STATUS_TONE[p.status]} dot>{t(`status.${p.status}`)}</Badge>{reviews?.get(p.id) ? <span className="ml-2 text-xs" data-testid="client-badge">{reviews.get(p.id)!.decision === "approved" ? t("clientApprovedShort") : t("clientChangesShort")}</span> : null}{p.publishedUrl ? (
                 <a href={p.publishedUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs text-muted underline-offset-4 hover:text-fg hover:underline" data-testid="published-link">
                   <ExternalLink aria-hidden className="size-3.5" />{t("openPublished")}
                 </a>

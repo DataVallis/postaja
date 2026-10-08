@@ -60,6 +60,17 @@ You can animate any image of a post: Claude designs the motion (when the headlin
 
 The result is an MP4 video (3–10 s). Every video you create **stays on the post**: a new animation is added to the earlier ones (including persona videos), and new images do not delete videos. Each video has **Download (MP4)** and **Delete**; deleting is permanent.
 
+## Client approval
+
+An agency can send posts to its client for review without the client needing a Postaja account.
+
+1. On the brand, **Posts** tab, in the **Client link** section, enter who the link is for (e.g. "Polygon – Ana") and choose the days (next week by default, at most 31 days). Click **Create link**.
+2. Copy the link (**Copy**) and send it to the client. Postaja shows it only once; if you lose it, create a new one.
+3. Through the link the client sees the brand's posts for those days (texts, images, videos). For each one they click **Approve**, or write a comment and click **Changes needed**.
+4. An approval marks the post **approved**; a change request moves an already approved post back to **ready**. You see the client's feedback on the post page (**Client feedback**) and in the posts table ("client: approved" or "client: changes").
+
+The link works until 14 days after the last day. **Revoke** stops it at once. Next to the link you see when the client last opened it.
+
 ## Download
 
 **Download ZIP** on the post contains the text (`besedilo.txt`), the first comment, images, all videos (`animacija-1.mp4`, `persona-video-1.mp4` …) and the PDF carousel, whatever the post has. Daily ZIPs in the plan and on the dashboard contain all posts of the day and `pregled.csv`.
