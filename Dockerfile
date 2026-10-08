@@ -24,9 +24,18 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     GIT_SHA=${GIT_SHA}
 # ffmpeg: animations burn the template onto the provider's clip (TASK-022, ADR-021).
+# pg_dump 16 for the production database backups (TASK-030, ADR-063): bookworm ships 15, which refuses a 16 server, so
+# the client comes from the PostgreSQL project's apt repository (signed).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-16 \
+ && apt-get purge -y curl && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
+ENV PG_DUMP_PATH=/usr/lib/postgresql/16/bin/pg_dump
 RUN groupadd --system --gid 1001 app && useradd --system --uid 1001 --gid app app
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static

@@ -171,7 +171,20 @@
     "limitsHint": "Prazno = brez omejitve. Generacija je en plačljiv klic AI (besedilo, slika, video).",
     "limitBrands": "Največ brandov (nearhiviranih)",
     "limitMembers": "Največ članov (z vabili)",
-    "limitGenerations": "Največ AI generacij na mesec"
+    "limitGenerations": "Največ AI generacij na mesec",
+    "backups": {
+      "title": "Varnostne kopije baze",
+      "intro": "Vsako noč ob 2:15 Postaja shrani celotno bazo (pg_dump) v ločen bucket. Kopije se delajo samo v produkciji; dev se ne varnostno kopira.",
+      "off": "V tem okolju so varnostne kopije izklopljene (samo produkcija: BACKUP_ENABLED=1 in spremenljivke BACKUP_S3_*).",
+      "on": "Vklopljeno: bucket {bucket}, hranjenje {days} dni (vsaj zadnjih 7 kopij ostane).",
+      "queued": "Kopija je v vrsti in bo narejena v nekaj minutah.",
+      "listError": "Seznama kopij ni bilo mogoče prebrati iz bucketa.",
+      "runNow": "Naredi kopijo zdaj",
+      "when": "Kdaj",
+      "file": "Datoteka",
+      "size": "Velikost",
+      "none": "Še ni kopij."
+    }
   },
   "Brands": {
     "title": "Brandi",
@@ -587,7 +600,8 @@
     "helpSection": "Pomoč",
     "help": "Navodila za uporabo",
     "orgSection": "Organizacija",
-    "team": "Ekipa in paket"
+    "team": "Ekipa in paket",
+    "backups": "Varnostne kopije"
   },
   "Dashboard": {
     "title": "Nadzorna plošča",
