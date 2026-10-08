@@ -7,6 +7,7 @@ import { DESIGN_QUEUE } from "../design/service";
 import { AD_IMAGE_QUEUE } from "../ads/creatives";
 import { POST_VIDEO_QUEUE } from "../video/service";
 import { PERSONA_PASSPORT_QUEUE } from "../personas/service";
+import { COMPETITOR_FIND_QUEUE } from "../competitors/service";
 
 let started: Promise<PgBoss> | undefined;
 
@@ -29,6 +30,7 @@ export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
     await boss.createQueue(AD_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
     // Persona passports (TASK-024): up to 5 pictures one after another, each kept as soon as it is made; one retry.
     await boss.createQueue(PERSONA_PASSPORT_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 1200 }).catch(() => undefined);
+    await boss.createQueue(COMPETITOR_FIND_QUEUE, { retryLimit: 0, expireInSeconds: 900 }).catch(() => undefined);
     return boss;
   })();
   return started;

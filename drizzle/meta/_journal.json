@@ -267,6 +267,13 @@
       "when": 1791449313210,
       "tag": "0037_partner_logos",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791457686196,
+      "tag": "0038_competitors",
+      "breakpoints": true
     }
   ]
 }

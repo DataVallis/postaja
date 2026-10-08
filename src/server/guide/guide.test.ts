@@ -17,7 +17,7 @@ const links = (blocks: Block[]): string[] => {
 describe("user guide", () => {
   it("has chapters in order, each with a title and sections", async () => {
     const chapters = await guideChapters("sl");
-    expect(chapters.map((c) => c.slug)).toEqual(["zacetek", "brand", "vizualna-podoba", "objave", "plan", "oglasi", "persona", "claude", "stroski"]);
+    expect(chapters.map((c) => c.slug)).toEqual(["zacetek", "brand", "vizualna-podoba", "objave", "plan", "oglasi", "persona", "claude", "stroski", "konkurenca"]);
     for (const c of chapters) {
       expect(c.title).not.toBe(c.slug);
       expect(c.blocks.some((b) => b.t === "h" && b.level === 2)).toBe(true);

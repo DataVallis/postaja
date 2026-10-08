@@ -413,7 +413,8 @@
       "channels": "Channels",
       "versions": "Versions",
       "ads": "Ads",
-      "persona": "Persona"
+      "persona": "Persona",
+      "competitors": "Competitors"
     },
     "table": {
       "brand": "Brand",
@@ -1476,5 +1477,44 @@
     "delete": "Delete version",
     "deleteWarning": "This version will be deleted for good.",
     "deleteConfirm": "Delete version"
+  },
+  "Competitors": {
+    "title": "Competitors",
+    "intro": "From the CGP and with web search, Claude proposes the brand's competitors: website, public profiles and why each competes. Keep or remove suggestions, or add your own. The kept ones are analysed later (what we adopt, what we avoid, topic gaps). Postaja reads public pages only.",
+    "hintLabel": "Wish for the search (optional)",
+    "hintPlaceholder": "e.g. Slovenian only; agencies too; no big platforms",
+    "find": "Find competitors",
+    "finding": "Searching …",
+    "findHint": "Claude searches the web, which takes up to a few minutes. At most {cost}.",
+    "running": "Claude is looking for competitors …",
+    "lastRun": "Last search {when}: {n, plural, =0 {no new suggestions} one {# new suggestion} other {# new suggestions}}.",
+    "suggested": "Suggestions ({n})",
+    "suggestedHint": "Check the website and the reason; keep the ones that really compete.",
+    "kept": "Competitors ({n})",
+    "noneKept": "No competitors yet. Find them with Claude or add your own.",
+    "keep": "Keep",
+    "keepName": "Keep {name}",
+    "remove": "Remove",
+    "removeName": "Remove {name}",
+    "addTitle": "Add a competitor",
+    "name": "Name",
+    "website": "Website",
+    "profilePlatform": "Social profile",
+    "profileUrl": "Profile link",
+    "note": "Note (why it competes)",
+    "add": "Add",
+    "errors": {
+      "BUSY": "A search is already running.",
+      "INVALID": "Check the input: links must be web addresses (https://…).",
+      "DUPLICATE": "This competitor is already listed.",
+      "LIMIT_REACHED": "The brand has the maximum number of competitors (40).",
+      "ARCHIVED": "The brand is archived.",
+      "NOT_FOUND": "Not found.",
+      "SPEND_CAP": "The monthly AI spend limit is reached.",
+      "AI_FAILED": "Claude is not answering right now, try again.",
+      "INVALID_OUTPUT": "Claude did not return a usable list, try again.",
+      "NO_ACCESS": "The member who started the search no longer has access.",
+      "FAILED": "That did not work, try again."
+    }
   }
 }

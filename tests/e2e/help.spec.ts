@@ -42,7 +42,7 @@ test("help: the user guide from the menu, a chapter, its sections and the next c
   await p.getByRole("navigation", { name: "Glavna navigacija" }).getByRole("link", { name: "Navodila za uporabo" }).click();
   await expect(p.getByRole("heading", { name: "Navodila za uporabo", level: 1 })).toBeVisible();
   const chapters = p.getByTestId("help-chapters").getByRole("listitem").filter({ has: p.getByRole("heading", { level: 2 }) });
-  await expect(chapters).toHaveCount(9);
+  await expect(chapters).toHaveCount(10);
   expect(await serious(p)).toEqual([]);
 
   await p.getByRole("link", { name: "7. Persona (AI influencer)" }).click();

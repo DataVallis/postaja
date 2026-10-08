@@ -158,6 +158,16 @@ http
         const slides = [cover, ...(plan.slides ?? []).map((x, i) => ({ templateId: "points", slots: { number: `0${i + 1}`, headline: x }, illustration: null }))];
         return reply(tool, { slides });
       }
+      // Competitors (TASK-049): the web search tool is offered next to ours; three competitors, the wish in the reason.
+      if (tool === "submit_competitors") {
+        const searching = r.tools.some((t) => t.type?.startsWith("web_search") && t.max_uses > 0);
+        const wish = user.match(/<owner_wish>\n([\s\S]*?)\n<\/owner_wish>/)?.[1] ?? "";
+        return reply(tool, { competitors: searching ? [
+          { name: "Koda Akademija", website: "https://koda-akademija.example", handles: [{ platform: "instagram", url: "https://instagram.com/koda.akademija" }], reason: `Isti tečaj za ne-programerje. ${wish}`.trim() },
+          { name: "Startup Šola", website: "https://startup-sola.example", handles: [], reason: "Podobna publika, višja cena." },
+          { name: "Globalna Platforma", website: "https://global.example", handles: [], reason: "Velika tuja platforma." },
+        ] : [] });
+      }
       // Post ideas (TASK-019): N numbered ideas in the first allowed format, named after the owner's wish when given.
       // Ad copy (TASK-021): fill every field of every network the tool asks for, within its limits; variant n's Meta
       // headline is "Naslov n" so the E2E can find it.

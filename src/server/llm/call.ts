@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { brands, modelRegistry } from "../db/schema";
-import { costMicroUsd, worstCaseMicroUsd } from "./cost";
+import { costMicroUsd, WEB_SEARCH_MICRO_USD, worstCaseMicroUsd } from "./cost";
 import { release, reserve, settle } from "./spend";
 import { LlmError, type LlmClient, type StructuredRequest, type Usage } from "./types";
 
@@ -33,8 +33,10 @@ export async function cappedCall(
   req: Omit<StructuredRequest, "model">,
 ): Promise<{ input: unknown; usage: Usage; model: string }> {
   const model = await textModelFor(db, who.brandId);
-  const chars = req.system.reduce((n, b) => n + b.text.length, 0) + req.user.length + JSON.stringify(req.tool).length + (req.images?.length ?? 0) * IMAGE_TOKENS * 3;
-  const ledgerId = await reserve(db, { ...who, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, req.maxTokens, model) });
+  // Search results come back as input; ~30k tokens per search is the worst case we reserve for.
+  const chars = req.system.reduce((n, b) => n + b.text.length, 0) + req.user.length + JSON.stringify(req.tool).length + (req.images?.length ?? 0) * IMAGE_TOKENS * 3
+    + (req.webSearch?.maxUses ?? 0) * 30_000 * 3;
+  const ledgerId = await reserve(db, { ...who, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, req.maxTokens, model) + BigInt(req.webSearch?.maxUses ?? 0) * WEB_SEARCH_MICRO_USD });
   try {
     const out = await llm.structured({ ...req, model: model.modelKey });
     await settle(db, ledgerId, out.usage, costMicroUsd(out.usage, model));

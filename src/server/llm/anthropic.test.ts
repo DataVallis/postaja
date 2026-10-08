@@ -56,6 +56,26 @@ describe("anthropic adapter", () => {
     expect(second.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
   });
 
+  it("web search (TASK-049): offers Anthropic's server tool, continues a paused turn, counts searches and their cost", async () => {
+    bodies.length = 0;
+    const searched = { ...usage, server_tool_use: { web_search_requests: 2 } };
+    replies = [
+      { body: { ...msg([{ type: "server_tool_use", id: "s1", name: "web_search", input: { query: "q" } }], "pause_turn"), usage: searched } },
+      { body: { ...msg([{ type: "tool_use", id: "t", name: "submit", input: { found: 1 } }], "tool_use"), usage: { ...usage, server_tool_use: { web_search_requests: 1 } } } },
+    ];
+    const out = await createAnthropicClient("k").structured({ ...req, webSearch: { maxUses: 5 } });
+    expect(out.input).toEqual({ found: 1 });
+    expect(out.usage.webSearches).toBe(3);
+    expect(bodies[0].tools).toEqual([
+      { name: "submit", description: "d", input_schema: { type: "object", properties: {} } },
+      { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+    ]);
+    expect((bodies[1].messages as { role: string }[]).map((m) => m.role)).toEqual(["user", "assistant"]);
+    const { costMicroUsd } = await import("./cost");
+    const p = { inputPerMtok: 0n, outputPerMtok: 0n, cacheWritePerMtok: 0n, cacheReadPerMtok: 0n };
+    expect(costMicroUsd(out.usage, p)).toBe(30_000n); // $0.01 per search
+  });
+
   it("gives up after two text answers, and does not retry a cut-off answer", async () => {
     replies = [{ body: msg([{ type: "text", text: "a" }]) }, { body: msg([{ type: "text", text: "b" }]) }];
     await expect(createAnthropicClient("k").structured(req)).rejects.toMatchObject({ code: "NO_TOOL_CALL" });

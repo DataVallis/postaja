@@ -2,7 +2,7 @@
 
 export type SystemBlock = { text: string; cache?: boolean };
 export type ToolSpec = { name: string; description: string; inputSchema: Record<string, unknown> };
-export type Usage = { inputTokens: number; outputTokens: number; cacheWriteTokens: number; cacheReadTokens: number };
+export type Usage = { inputTokens: number; outputTokens: number; cacheWriteTokens: number; cacheReadTokens: number; /** Anthropic web searches (TASK-049), billed per search. */ webSearches?: number };
 
 export type ImageBlock = { mediaType: "image/jpeg" | "image/png"; data: string /* base64 */; caption?: string };
 
@@ -16,6 +16,8 @@ export type StructuredRequest = {
   maxTokens: number;
   /** Long answers (a whole brand design) need more than the default 90 s; such calls are retried at most once. */
   timeoutMs?: number;
+  /** Let Claude search the web (Anthropic's server tool) before answering, at most `maxUses` times (TASK-049). */
+  webSearch?: { maxUses: number };
 };
 
 export interface LlmClient {

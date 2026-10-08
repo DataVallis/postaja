@@ -25,7 +25,11 @@ const add = (a: Usage, u: Anthropic.Usage): Usage => ({
   outputTokens: a.outputTokens + u.output_tokens,
   cacheWriteTokens: a.cacheWriteTokens + (u.cache_creation_input_tokens ?? 0),
   cacheReadTokens: a.cacheReadTokens + (u.cache_read_input_tokens ?? 0),
+  webSearches: (a.webSearches ?? 0) + (u.server_tool_use?.web_search_requests ?? 0),
 });
+
+/** Anthropic's server-side web search tool (TASK-049); Anthropic runs the searches and returns cited results. */
+export const WEB_SEARCH_TOOL = "web_search_20250305";
 
 export function createAnthropicClient(apiKey: string | undefined = process.env.ANTHROPIC_API_KEY): LlmClient {
   const client = apiKey ? new Anthropic({ apiKey, maxRetries: 2, timeout: 90_000 }) : null;
@@ -49,8 +53,10 @@ export function createAnthropicClient(apiKey: string | undefined = process.env.A
             ]
           : req.user,
       }];
-      const tools = [{ name: req.tool.name, description: req.tool.description, input_schema: req.tool.inputSchema as Anthropic.Tool.InputSchema }];
-      let usage: Usage = { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 };
+      const tools: Anthropic.ToolUnion[] = [{ name: req.tool.name, description: req.tool.description, input_schema: req.tool.inputSchema as Anthropic.Tool.InputSchema }];
+      if (req.webSearch) tools.push({ type: WEB_SEARCH_TOOL, name: "web_search", max_uses: req.webSearch.maxUses });
+      let usage: Usage = { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0, webSearches: 0 };
+      let pauses = 0;
       for (let turn = 0; turn < 2; turn++) {
         let res: Anthropic.Message;
         try {
@@ -64,6 +70,13 @@ export function createAnthropicClient(apiKey: string | undefined = process.env.A
         usage = add(usage, res.usage);
         const call = res.content.find((c) => c.type === "tool_use" && c.name === req.tool.name);
         if (call && call.type === "tool_use") return { input: call.input, usage };
+        // A long web search pauses the turn; it is continued as is (Anthropic resumes from the assistant content).
+        if (res.stop_reason === "pause_turn" && pauses < 3) {
+          pauses++;
+          turn--;
+          messages.push({ role: "assistant", content: res.content });
+          continue;
+        }
         if (res.stop_reason === "max_tokens" || res.stop_reason === "refusal") break;
         // Claude answered in text: ask once more, in the same conversation.
         messages.push({ role: "assistant", content: res.content }, { role: "user", content: `Now call the tool "${req.tool.name}" with the complete result.` });

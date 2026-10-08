@@ -65,11 +65,11 @@ describe("partner logo", () => {
   });
 
   it("matches only a text that is just the partner's name", () => {
-    const tpl = (footer: string) => templateSchema.parse({
+    const tpl = () => templateSchema.parse({
       ...cardDesign.templates[0], id: "match",
       elements: [{ type: "text", slot: "headline", x: 0, y: 0, w: 50, h: 10, color: "text", maxSize: 4, minSize: 2 }, { type: "text", slot: "footer", x: 0, y: 50, w: 50, h: 10, color: "text", maxSize: 4, minSize: 2 }],
     });
-    const at = (headline: string, footer: string) => partnerTextIndex(tpl(footer), { headline, footer }, "Polygon");
+    const at = (headline: string, footer: string) => partnerTextIndex(tpl(), { headline, footer }, "Polygon");
     expect(at("Nekaj", "Polygon")).toBe(1);
     expect(at("Nekaj", "× *POLYGON*")).toBe(1);
     expect(at("Nekaj", "with Polygon.")).toBe(1);
