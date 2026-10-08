@@ -35,6 +35,9 @@ Termin (dan in uro) spremeniš v razdelku **Iz plana**.
 Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
 
 1. Na objavi klikni **Ustvari slike**. Claude izbere predlogo, napiše tekst in opis ilustracije, Postaja nariše slike.
+   - **Besede na sliki** dopolnjujejo besedilo objave in ga ne ponavljajo: kratek naslov, ki pritegne k branju. Če plan določa besedilo za sliko, se uporabi to.
+   - Če ima objava v planu **Prompt za sliko**, je prva slika ilustracija točno po tem promptu, brez sprememb.
+   - Ilustracija je vedno brez besed in logotipa; logotip branda in besede Postaja nariše čez njo iz predloge.
 2. **Tekst na slikah**: popravi besede in klikni **Shrani in osveži**. Slike se izrišejo znova brez novih stroškov. Besede v \*zvezdicah\* so poudarjene.
 3. **Kaj naj AI popravi na slikah?**: opiši popravek z besedami in klikni **Popravi slike**. Plačajo se samo ilustracije, ki se spremenijo.
 4. **Nove slike** naredi vse znova.

@@ -77,3 +77,11 @@ animations of such a slide (`encodeFrames`) get `comment`/`description` metadata
 day's `pregled.csv` ("Oznaka AI"); the post page shows how to switch on the platform's label. Migration 0040 flags
 existing persona illustrations (made by the `image_ref` / `image_persona` models) and their slides.
 
+## Image words and the plan's image prompt (TASK-052, ADR-068)
+`postVisualRequest` asks for a short hook that complements the caption (never its sentences, steps or lists) and, when
+the plan has `imagePrompt`, an illustrated first image. `planVisual` then: puts the plan's image prompt on the first
+illustrated slide as written (`verbatim: true` → `generateIllustration` gets it unchanged, no brand style), and checks
+`repeatsCaption` (`src/server/images/repeat.ts`) for every slide unless the plan gives the image words itself
+(`overlayText`, `slides`); a repeat or a missing illustration sends Claude one correction round. Corrections in words
+(revise) keep Claude's descriptions.
+

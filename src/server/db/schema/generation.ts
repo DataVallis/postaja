@@ -58,7 +58,8 @@ export type MediaStatus = (typeof MEDIA_STATUSES)[number];
  *  what the illustration should show (null when the template has none). The owner can edit the words. */
 export type PostVisual = {
   designId: string;
-  slides: { templateId: string; slots: Record<string, string>; illustration: string | null }[];
+  /** `verbatim`: the illustration is the plan's image prompt, sent to the image model unchanged (TASK-052). */
+  slides: { templateId: string; slots: Record<string, string>; illustration: string | null; verbatim?: boolean }[];
   /** The owner's last correction in words (TASK-017 follow-up), shown on the post page. */
   revision?: string;
 };
