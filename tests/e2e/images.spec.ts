@@ -164,16 +164,23 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await anim.getByRole("button", { name: /^Animiraj · največ \d+\.\d\d €$/ }).click();
   await expect(p.getByTestId("animation-status")).toHaveText("Pripravljene", { timeout: 90_000 });
   // The test Chromium has no H.264 decoder (Chrome and Safari do), so the file itself is checked with ffprobe.
-  await expect(p.getByTestId("animation-video")).toHaveAttribute("src", /^\/api\/post-media\//);
+  await expect(anim.getByTestId("animation-videos").getByLabel("Animacija slike 1")).toHaveAttribute("src", /^\/api\/post-videos\//);
   expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falBeforeAnim);
-  const [mp4] = await Promise.all([p.waitForEvent("download"), anim.getByTestId("animation-download").click()]);
-  expect(mp4.suggestedFilename()).toMatch(/^cherr-.*-video-1\.mp4$/);
+  const [mp4] = await Promise.all([p.waitForEvent("download"), anim.getByTestId("animation-videos-download").click()]);
+  expect(mp4.suggestedFilename()).toMatch(/^cherr-.*-animacija-\d{8}-\d{4}\.mp4$/);
   const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height:format=duration", "-of", "json", (await mp4.path())!]).toString());
   expect(probe.streams).toEqual(expect.arrayContaining([
     expect.objectContaining({ codec_type: "video", codec_name: "h264", width: 1080, height: 1350 }), expect.objectContaining({ codec_type: "audio", codec_name: "aac" }),
   ]));
   expect(Number(probe.format.duration)).toBeGreaterThanOrEqual(3.9);
   await p.screenshot({ path: info.outputPath("animation.png"), fullPage: true });
+  // TASK-032: a second animation is added next to the first; one can be deleted on purpose.
+  await anim.getByRole("button", { name: /^Nova animacija/ }).click();
+  await expect(p.getByTestId("animation-videos-item")).toHaveCount(2, { timeout: 90_000 });
+  const second = p.getByTestId("animation-videos-item").first();
+  await second.getByText("Izbriši", { exact: true }).click();
+  await second.getByRole("button", { name: "Izbriši video" }).click();
+  await expect(p.getByTestId("animation-videos-item")).toHaveCount(1);
 
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
   await p.goto(`/app/plan?view=day&d=${today}`);

@@ -1,10 +1,11 @@
-import { Clapperboard, Download } from "lucide-react";
+import { Clapperboard } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, selectClass, textareaClass } from "@/components/ui";
 import { microToUsd } from "@/lib/money/usd";
 import type { MediaStatus } from "@/server/db/schema";
 import { requestAnimationAction } from "../actions";
+import { VideoList, type VideoItem } from "./video-list";
 
 const TONE: Record<MediaStatus, "neutral" | "signal" | "ok" | "danger"> = { none: "neutral", queued: "signal", rendering: "signal", ready: "ok", failed: "danger" };
 
@@ -15,7 +16,7 @@ const TONE: Record<MediaStatus, "neutral" | "signal" | "ok" | "danger"> = { none
 export async function AnimationSection(props: {
   postId: string; status: MediaStatus; error: string | null; requestError?: string;
   positions: number[]; position: number | null; motion: string | null;
-  video: { id: string; position: number; width: number; height: number } | null; maxCost: bigint | null;
+  videos: VideoItem[]; maxCost: bigint | null;
 }) {
   const t = await getTranslations("Animation");
   const ti = await getTranslations("Images");
@@ -35,15 +36,9 @@ export async function AnimationSection(props: {
       {props.requestError ? <p role="alert" className="text-sm text-danger">{errText(props.requestError)}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
 
-      {props.video && !working ? (
-        <div className="grid max-w-sm gap-2">
-          <video src={`/api/post-media/${props.video.id}`} controls muted loop playsInline preload="metadata" width={props.video.width} height={props.video.height}
-            className="h-auto w-full rounded-lg ring-1 ring-line" aria-label={t("videoLabel", { n: props.video.position + 1 })} data-testid="animation-video" />
-          <a href={`/api/post-media/${props.video.id}?download=1`} className={buttonClass("ghost", "sm")} data-testid="animation-download"><Download aria-hidden className="size-4" />{t("download")}</a>
-        </div>
-      ) : null}
+      <VideoList postId={props.postId} anchor="animation" videos={props.videos} testId="animation-videos" />
 
-      <form key={`${props.status}-${props.video?.id ?? ""}`} action={requestAnimationAction} className="grid gap-3">
+      <form key={`${props.status}-${props.videos[0]?.id ?? ""}`} action={requestAnimationAction} className="grid gap-3">
         <input type="hidden" name="postId" value={props.postId} />
         {props.positions.length > 1 ? (
           <div className="grid gap-1 sm:max-w-xs">
@@ -59,9 +54,9 @@ export async function AnimationSection(props: {
           <p id="anim-motion-hint" className="text-xs text-muted">{t("motionHint")}</p>
         </div>
         <div>
-          <button type="submit" disabled={working} className={buttonClass(props.video ? "secondary" : "primary")}>
+          <button type="submit" disabled={working} className={buttonClass(props.videos.length ? "secondary" : "primary")}>
             <Clapperboard aria-hidden className="size-4" />
-            {props.video ? t("again") : t("animate")}{props.maxCost !== null ? ` · ${t("atMost", { cost: `${microToUsd(props.maxCost)} €` })}` : ""}
+            {props.videos.length ? t("again") : t("animate")}{props.maxCost !== null ? ` · ${t("atMost", { cost: `${microToUsd(props.maxCost)} €` })}` : ""}
           </button>
         </div>
       </form>

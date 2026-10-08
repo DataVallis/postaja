@@ -20,6 +20,7 @@ import { forOrg } from "../tenancy/scoped";
 import { motionRequest } from "./ai";
 import { encodeFrames, VideoError } from "./ffmpeg";
 import { FPS, MAX_S, motionSpecSchema, specIssues, type MotionSpec } from "./motion";
+import { addPostVideo } from "./media";
 import { makePersonaVideo } from "./persona";
 
 export const POST_VIDEO_QUEUE = "post-video";
@@ -110,15 +111,9 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
 
   const k = key(ctx.orgId, postId);
   await deps.storage.put(k, bytes, "video/mp4");
-  const old = media.filter((m) => m.kind === "video" || m.kind === "keyframe");
-  await db.transaction(async (tx) => {
-    const s = forOrg(tx as unknown as Db, ctx);
-    if (old.length) await s.delete(postMedia, inArray(postMedia.id, old.map((m) => m.id)));
-    // The motion spec is kept with the video (prompt column), so it can be inspected or re-rendered later.
-    await s.insert(postMedia, { id: crypto.randomUUID(), postId, kind: "video", position, storageKey: k, contentType: "video/mp4", width: probe.width, height: probe.height, sizeBytes: bytes.byteLength, model: "postaja-motion", prompt: JSON.stringify(motion) });
-    await s.update(posts, { videoStatus: "ready", videoError: null, updatedAt: new Date() }, eq(posts.id, postId));
-  });
-  await Promise.all(old.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
+  // Added next to the post's earlier videos (TASK-032): nothing made before is removed.
+  await addPostVideo(db, ctx, { postId, kind: "animation", slidePosition: position, storageKey: k, width: probe.width, height: probe.height, sizeBytes: bytes.byteLength, model: "postaja-motion", spec: motion as unknown as Record<string, unknown> });
+  await forOrg(db, ctx).update(posts, { videoStatus: "ready", videoError: null, updatedAt: new Date() }, eq(posts.id, postId));
   return motion;
 }
 
@@ -152,11 +147,4 @@ export async function runVideoJob(db: Db, deps: Omit<ImageDeps, "images"> & { im
     await db.update(posts).set({ videoStatus: "queued" }).where(and(eq(posts.id, p.id), eq(posts.videoStatus, "rendering")));
     throw e;
   }
-}
-
-/** The post's video row (members of the org), or null. */
-export async function postVideo(db: Db, ctx: OrgContext, postId: string) {
-  const [m] = await db.select({ id: postMedia.id, position: postMedia.position, width: postMedia.width, height: postMedia.height, sizeBytes: postMedia.sizeBytes })
-    .from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "video")));
-  return m ?? null;
 }

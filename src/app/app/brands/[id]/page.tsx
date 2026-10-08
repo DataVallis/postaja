@@ -25,6 +25,7 @@ import { ModelSection } from "./model-section";
 import { listTextModels } from "@/server/brands/service";
 import { dnaEstimate, getBrandPersona, passportEstimate } from "@/server/personas/service";
 import { PersonaSection } from "./persona-section";
+import { postsWithVideo } from "@/server/video/media";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const { brand, profile, channels } = detail;
   const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
   const [adNets, adSetList, personaData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id)]);
+  const withPersonaVideo = tab === "persona" ? await postsWithVideo(db, org, recentPosts.map((x) => x.id), "persona") : new Set<string>();
   const [dnaCost, passport] = tab === "persona"
     ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
     : [null, null];
@@ -112,7 +114,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
       {tab === "persona" ? (
         <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
           data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport}
-          posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: x.videoMode === "persona" && x.videoStatus === "ready" }))} />
+          posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: withPersonaVideo.has(x.id) }))} />
       ) : null}
       {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
 

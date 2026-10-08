@@ -132,10 +132,11 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   expect(vcalls[0].prompt).toContain("SAME person as in the reference images");
   expect(vcalls[0].prompt).toContain("z dežnikom");
   expect(vcalls[1].duration).toBe("5");
-  await expect(p.getByTestId("persona-video-scene")).toContainText("Turns to the camera and smiles");
-  const player = p.getByTestId("persona-video-player");
-  await expect(player).toHaveAttribute("poster", /\/api\/post-media\//);
-  const [download] = await Promise.all([p.waitForEvent("download"), p.getByTestId("persona-video-download").click()]);
+  const items = p.getByTestId("persona-videos-item");
+  await expect(items).toHaveCount(1);
+  await expect(items.first()).toContainText("Turns to the camera and smiles");
+  await expect(items.first().getByLabel("Video s persono Mila")).toHaveAttribute("poster", /\/api\/post-videos\/.*\?poster=1$/);
+  const [download] = await Promise.all([p.waitForEvent("download"), p.getByTestId("persona-videos-download").click()]);
   expect(download.suggestedFilename()).toMatch(/\.mp4$/);
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("persona-video.png"), fullPage: true });

@@ -5,7 +5,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { isIsoDate } from "@/lib/dates";
 import { slugify } from "@/lib/slug";
 import type { Db } from "../db/client";
-import { brands, channels, postMedia, posts } from "../db/schema";
+import { brands, channels, postMedia, posts, postVideos } from "../db/schema";
 import sharp from "sharp";
 import { pdfFromJpegs } from "../files/pdf-writer";
 import type { Storage } from "../files/storage";
@@ -76,10 +76,11 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
         .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "slide"), inArray(postMedia.postId, rows.map((r) => r.id))))
         .orderBy(asc(postMedia.postId), asc(postMedia.position))
     : [];
-  // The post's animation (TASK-022), if it has one.
+  // Every video of the post (TASK-032): animations and persona videos, oldest first.
   const videos = rows.length
-    ? await db.select({ postId: postMedia.postId, key: postMedia.storageKey }).from(postMedia)
-        .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "video"), inArray(postMedia.postId, rows.map((r) => r.id))))
+    ? await db.select({ postId: postVideos.postId, key: postVideos.storageKey, kind: postVideos.kind }).from(postVideos)
+        .where(and(eq(postVideos.orgId, ctx.orgId), inArray(postVideos.postId, rows.map((r) => r.id))))
+        .orderBy(asc(postVideos.createdAt))
     : [];
   const out: ZipSource[] = [];
   rows.forEach((p, i) => {
@@ -91,7 +92,11 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
     for (const m of own) {
       out.push({ name: `${dir}/${m.position + 1}.${m.type === "image/png" ? "png" : "jpg"}`, bytes: () => storage.get(m.key) });
     }
-    for (const v of videos.filter((x) => x.postId === p.id)) out.push({ name: `${dir}/video.mp4`, bytes: () => storage.get(v.key) });
+    const count = { animation: 0, persona: 0 };
+    for (const v of videos.filter((x) => x.postId === p.id)) {
+      const n = ++count[v.kind];
+      out.push({ name: `${dir}/${v.kind === "persona" ? "persona-video" : "animacija"}-${n}.mp4`, bytes: () => storage.get(v.key) });
+    }
     if (wantsPdf(p.platform, own.length)) out.push({ name: `${dir}/karusel.pdf`, bytes: () => carouselPdf(storage, own.map((m) => m.key), p.plan?.topic || p.brandName) });
   });
   return out;

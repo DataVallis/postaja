@@ -10,6 +10,7 @@ import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
 import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
+import { deletePostVideo } from "@/server/video/media";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
@@ -200,4 +201,14 @@ export async function requestPersonaVideoAction(f: FormData): Promise<void> {
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?personaVideoError=${error}` : ""}#persona-video`);
+}
+
+/** "Izbriši video" (TASK-032): any member removes one video of the post. */
+export async function deletePostVideoAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const postId = String(f.get("postId") ?? "");
+  await deletePostVideo(getDb(), getStorage(), ctx, String(f.get("videoId") ?? "")).catch(() => undefined);
+  revalidatePath(`/app/posts/${postId}`);
+  redirect(`/app/posts/${postId}#${String(f.get("anchor") ?? "animation") === "persona-video" ? "persona-video" : "animation"}`);
 }

@@ -45,3 +45,8 @@ On a post of a brand whose persona has pictures (`src/server/video/persona.ts`, 
   up to 4 passport pictures; the prompt is `personaIllustrationPrompt` (identity fields, scene, the DNA's style). Words
   and logo are drawn by Postaja as always.
 - `estimateBulk` prices those illustrations with the reference model. Ad creatives keep the brand's style model.
+
+## Videos are kept (TASK-032, ADR-061)
+Finished videos are rows in `post_videos` (`src/server/video/media.ts`: `addPostVideo`, `listPostVideos`,
+`postVideoUrl` → `/api/post-videos/[id]` with `?poster=1` / `?download=1`, `deletePostVideo`). Nothing replaces or
+removes a video except an explicit delete; the post page lists them newest first (`video-list.tsx`).

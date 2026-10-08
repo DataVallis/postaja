@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
 import type { Db } from "../db/client";
-import { modelRegistry, postMedia, posts, usageLedger } from "../db/schema";
+import { modelRegistry, posts, usageLedger } from "../db/schema";
 import { issues as zodIssues } from "../design/ai";
 import { ImageError } from "../images/fal";
 import { ImageJobError, type ImageDeps } from "../images/service";
@@ -19,6 +19,7 @@ import { keyframePrompt, motionPrompt, sceneRequest, sceneSchema, type Scene } f
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { composeVideo, probeVideo } from "./ffmpeg";
+import { addPostVideo } from "./media";
 import { POST_VIDEO_QUEUE } from "./service";
 
 export const PERSONA_DURATIONS = [5, 10] as const;
@@ -119,32 +120,8 @@ export async function makePersonaVideo(db: Db, deps: ImageDeps, ctx: OrgContext,
   const kk = key(ctx.orgId, postId, "jpg");
   await deps.storage.put(kv, bytes, "video/mp4");
   await deps.storage.put(kk, keyframe, "image/jpeg");
-  const media = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
-  const old = media.filter((m) => m.kind === "video" || m.kind === "keyframe");
-  await db.transaction(async (tx) => {
-    const s = forOrg(tx as unknown as Db, ctx);
-    if (old.length) await s.delete(postMedia, inArray(postMedia.id, old.map((m) => m.id)));
-    await s.insert(postMedia, { id: crypto.randomUUID(), postId, kind: "keyframe", position: 0, storageKey: kk, contentType: "image/jpeg", width: VIDEO_SIZE.width, height: VIDEO_SIZE.height, sizeBytes: keyframe.byteLength, model: frame.model, prompt: scene.keyframe });
-    await s.insert(postMedia, { id: crypto.randomUUID(), postId, kind: "video", position: 0, storageKey: kv, contentType: "video/mp4", width: probe.width, height: probe.height, sizeBytes: bytes.byteLength, model: videoModel.modelKey, prompt: JSON.stringify(scene) });
-    await s.update(posts, { videoStatus: "ready", videoError: null, updatedAt: new Date() }, eq(posts.id, postId));
-  });
-  await Promise.all(old.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
+  // Added next to the post's earlier videos (TASK-032): nothing made before is removed.
+  await addPostVideo(db, ctx, { postId, kind: "persona", storageKey: kv, posterKey: kk, width: probe.width, height: probe.height, sizeBytes: bytes.byteLength, model: videoModel.modelKey, spec: scene });
+  await forOrg(db, ctx).update(posts, { videoStatus: "ready", videoError: null, updatedAt: new Date() }, eq(posts.id, postId));
   return scene;
-}
-
-/** The persona video's first frame (poster), or null. */
-export async function postKeyframe(db: Db, ctx: OrgContext, postId: string) {
-  const [m] = await db.select({ id: postMedia.id }).from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "keyframe")));
-  return m ?? null;
-}
-
-/** The persona video's shot as stored with it (for the post page), or null. */
-export async function personaVideoScene(db: Db, ctx: OrgContext, postId: string): Promise<Scene | null> {
-  const [m] = await db.select({ prompt: postMedia.prompt }).from(postMedia).where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "video")));
-  try {
-    const s = sceneSchema.safeParse(JSON.parse(m?.prompt ?? "null"));
-    return s.success ? s.data : null;
-  } catch {
-    return null;
-  }
 }

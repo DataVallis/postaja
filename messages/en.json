@@ -1425,5 +1425,12 @@
       "LIMIT_REACHED": "The plan allows no more members. Contact the Postaja administrator for more.",
       "LAST_OWNER": "The organization must keep at least one owner."
     }
+  },
+  "Videos": {
+    "made": "Made {when}",
+    "download": "Download (MP4)",
+    "delete": "Delete",
+    "deleteWarning": "The video will be deleted for good. A new one costs again.",
+    "deleteConfirm": "Delete video"
   }
 }

@@ -9,7 +9,7 @@ import { makeTestAuth } from "../../../tests/auth-helpers";
 import { resetAndMigrate } from "../../../tests/db";
 import { testClip } from "../../../tests/fixtures/video";
 import { createBrand, saveProfile } from "../brands/service";
-import { orgSettings, postMedia, posts, usageLedger, type PersonaDna } from "../db/schema";
+import { orgSettings, posts, usageLedger, type PersonaDna } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { ImageError, type ImageClient, type ImageRequest, type VideoRequest } from "../images/fal";
 import { createFakeLlm } from "../llm/fake";
@@ -17,8 +17,9 @@ import { createOrganization, inviteMember } from "../orgs/service";
 import { createPersonaManual, uploadPassportImage } from "../personas/service";
 import type { OrgContext } from "../tenancy/context";
 import { probeVideo } from "./ffmpeg";
-import { personaVideoEstimate, personaVideoScene, postKeyframe, requestPersonaVideo } from "./persona";
-import { postVideo, runVideoJob, type PostVideoJob } from "./service";
+import { listPostVideos, postVideoUrl } from "./media";
+import { personaVideoEstimate, requestPersonaVideo } from "./persona";
+import { runVideoJob, type PostVideoJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -120,13 +121,13 @@ describe("persona video", () => {
     expect(fal.videos[0].prompt).toContain(scene.motion);
     expect(fal.videos[0].image).toMatch(/^data:image\/jpeg;base64,/);
 
-    const video = (await postVideo(db, A, postA))!;
-    expect(video).toMatchObject({ width: 1080, height: 1920 });
-    const [row] = await db.select().from(postMedia).where(eq(postMedia.id, video.id));
-    const probe = await probeVideo(await storage.get(row.storageKey));
+    const [video] = await listPostVideos(db, A, postA, "persona");
+    expect(video).toMatchObject({ width: 1080, height: 1920, kind: "persona", spec: scene, model: "fal-ai/kling-video/v3/standard/image-to-video" });
+    const probe = await probeVideo(await storage.get(video.storageKey));
     expect(probe).toMatchObject({ width: 1080, height: 1920, codec: "h264" });
-    expect(await postKeyframe(db, A, postA)).not.toBeNull();
-    expect(await personaVideoScene(db, A, postA)).toEqual(scene);
+    expect(video.posterKey).not.toBeNull();
+    expect(await postVideoUrl(db, storage, A, video.id, { download: true, poster: true })).toContain(".jpg");
+    await expect(postVideoUrl(db, storage, B, video.id, { download: false, poster: false })).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect((await db.select().from(posts).where(eq(posts.id, postA)))[0]).toMatchObject({ videoStatus: "ready", videoError: null });
 
     const ledger = await db.select().from(usageLedger);
@@ -135,6 +136,18 @@ describe("persona video", () => {
     expect(ledger.map((l) => l.provider).sort()).toEqual(["anthropic", "fal", "fal"]);
     expect(ledger.map((l) => l.model)).toEqual(expect.arrayContaining(["fal-ai/kling-video/v3/standard/image-to-video", "fal-ai/nano-banana-pro/edit"]));
     expect(ledger.find((l) => l.model.includes("kling"))!.costMicroUsd).toBe(420_000n);
+  });
+
+  it("a second persona video is added next to the first (TASK-032: nothing made is removed)", async () => {
+    await uploadPassportImage(db, storage, A, personaA, { filename: "a.jpg", bytes: await jpeg() });
+    for (let i = 0; i < 2; i++) {
+      const q = queue();
+      await requestPersonaVideo(db, q, A, postA, { durationS: 5 });
+      expect(await runVideoJob(db, { llm: claude().client, storage, images: fakeFal().client }, q.sent[0].data)).toBe("done");
+    }
+    const all = await listPostVideos(db, A, postA);
+    expect(all).toHaveLength(2);
+    for (const v of all) expect(await storage.exists(v.storageKey)).toBe(true);
   });
 
   it("a provider failure on the clip releases its reservation and records the reason; the frame stays paid", async () => {
@@ -147,7 +160,7 @@ describe("persona video", () => {
     const ledger = await db.select().from(usageLedger);
     expect(ledger.some((l) => l.model.includes("kling"))).toBe(false);
     expect(ledger.some((l) => l.model.includes("nano-banana"))).toBe(true);
-    expect(await postVideo(db, A, postA)).toBeNull();
+    expect(await listPostVideos(db, A, postA)).toEqual([]);
   });
 
   it("the spend cap stops it before the first paid call", async () => {
