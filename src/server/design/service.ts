@@ -95,7 +95,7 @@ export async function brandAssetBytes(db: Db, storage: Storage, ctx: OrgContext,
   return { logo, font, fontFamily: fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
 }
 
-/** The brand's partner logos (TASK-035) by name, to choose one per post or ad. Any member. */
+/** The brand's partner logos (TASK-046) by name, to choose one per post or ad. Any member. */
 export async function listPartnerLogos(db: Db, ctx: OrgContext, brandId: string): Promise<{ id: string; name: string }[]> {
   const rows = (await forOrg(db, ctx).select(brandAssets, and(eq(brandAssets.brandId, brandId), eq(brandAssets.kind, "partner"))!)) as (typeof brandAssets.$inferSelect)[];
   return rows.map((r) => ({ id: r.id, name: r.meta.name ?? r.filename })).sort((a, b) => a.name.localeCompare(b.name, "sl"));

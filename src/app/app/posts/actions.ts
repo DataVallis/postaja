@@ -173,7 +173,7 @@ export async function saveSlidesAction(f: FormData): Promise<void> {
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
 }
 
-/** "Logotip partnerja" (TASK-035): saved on the post; existing images are redrawn with it for free. */
+/** "Logotip partnerja" (TASK-046): saved on the post; existing images are redrawn with it for free. */
 export async function setPartnerLogoAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();
   if (!ctx) return;

@@ -88,7 +88,7 @@ export async function requestAdImagesAction(f: FormData) {
 }
 
 /** Corrected words on the creatives (per variant and slot), redrawn on the same illustrations for free. */
-/** "Logotip partnerja" (TASK-035): saved on the ad set; existing creatives are redrawn with it for free. */
+/** "Logotip partnerja" (TASK-046): saved on the ad set; existing creatives are redrawn with it for free. */
 export async function setAdPartnerLogoAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");

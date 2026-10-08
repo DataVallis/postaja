@@ -331,7 +331,7 @@ describe("creatives (TASK-021b)", () => {
     await expect(restoreCreativeVersion(db, A, id, v.id)).rejects.toMatchObject({ code: "BAD_STATE" });
   });
 
-  it("partner logo (TASK-035): chosen per ad set, existing creatives redrawn for free; only this brand's partners", async () => {
+  it("partner logo (TASK-046): chosen per ad set, existing creatives redrawn for free; only this brand's partners", async () => {
     await giveDesign();
     const id = await adSet();
     const png = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#1428dc" } }).png().toBuffer());

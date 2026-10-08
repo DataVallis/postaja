@@ -14,7 +14,7 @@ import { unzip, type ZipEntry } from "../files/zip";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 
-/** "partner" = a partner's logo (TASK-035), named, chosen per post or ad; never the brand's own logo. */
+/** "partner" = a partner's logo (TASK-046), named, chosen per post or ad; never the brand's own logo. */
 export type Slot = "logo" | "partner" | "font" | "source";
 
 export class FileError extends Error {

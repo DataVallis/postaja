@@ -1,4 +1,4 @@
-// Partner logos (TASK-035): drawn next to the brand logo in the template's logo box (side by side when wide, stacked
+// Partner logos (TASK-046): drawn next to the brand logo in the template's logo box (side by side when wide, stacked
 // when tall), alone when the brand has no logo, and in the bottom-right corner when the template has no logo box.
 import sharp from "sharp";
 import { beforeAll, describe, expect, it } from "vitest";

@@ -170,7 +170,7 @@ export function FontSample({ id, sample }: { id: string; sample: string }) {
   );
 }
 
-/** Partner logos (TASK-035): the partner's name and its logo; chosen later per post or ad, never the brand's own logo. */
+/** Partner logos (TASK-046): the partner's name and its logo; chosen later per post or ad, never the brand's own logo. */
 export function AddPartnerLogo({ brandId }: { brandId: string }) {
   const t = useTranslations("Brands.files");
   const router = useRouter();

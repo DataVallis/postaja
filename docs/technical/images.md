@@ -56,7 +56,7 @@ it. `listImageVersions`, `restoreImageVersion` (archives the current images, un-
 `deleteImageVersion` (archived slides of the run + illustrations no other run draws on, + files). A run records the
 illustrations it reused in `post_image_runs.kept` (TASK-034), so restoring a word redraw brings its illustration back. UI: "Prejšnje verzije slik" in `images-section.tsx`.
 
-## Partner logos (TASK-035, ADR-064)
+## Partner logos (TASK-046, ADR-064)
 `RenderInput.partnerLogo`: in the template's logo box the brand logo and the partner's logo share the space (side by
 side in a wide box, stacked in a tall one, a gap of a quarter of the short side; the partner alone when the brand has no
 logo). A template without a logo box gets it in the bottom-right corner of the safe box. Post images, animations and ad

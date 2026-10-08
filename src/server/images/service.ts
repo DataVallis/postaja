@@ -68,7 +68,7 @@ export function illustrationShape(t: Template, size: { width: number; height: nu
 const STALE_MS = 10 * 60 * 1000;
 
 /**
- * Any member (TASK-035): the partner logo on this post's images (null = none). Images that exist are redrawn with it
+ * Any member (TASK-046): the partner logo on this post's images (null = none). Images that exist are redrawn with it
  * for free (same illustrations, a new version); otherwise it is used when the images are made.
  */
 export async function setPostPartnerLogo(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, partnerLogoId: string | null): Promise<"redrawn" | "saved"> {
@@ -93,7 +93,7 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
   if (mode === "revise" && !p.visual) throw new ImageJobError("BAD_STATE");
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
-  // TASK-035: the partner logo for this post's images (undefined = keep, null = none); only this brand's partners.
+  // TASK-046: the partner logo for this post's images (undefined = keep, null = none); only this brand's partners.
   if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, p.brandId, opts.partnerLogoId))) throw new ImageJobError("INVALID");
   const claimed = await forOrg(db, ctx).update(
     posts,

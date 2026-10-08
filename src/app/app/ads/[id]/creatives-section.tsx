@@ -18,7 +18,7 @@ const LONG = new Set(["headline", "body", "subhead"]);
 export async function CreativesSection(props: {
   adSetId: string; status: AdMediaStatus; error: string | null; requestError?: string; media: Media[]; visual: AdVisual | null;
   templates: TemplateInfo[] | null; placements: Placement[]; variants: number; estimate: { illustrations: number; max: bigint } | null; designHref: string;
-  /** TASK-035: the brand's partner logos and the one on these creatives. */
+  /** TASK-046: the brand's partner logos and the one on these creatives. */
   partners?: { options: { id: string; name: string }[]; selected: string | null };
 }) {
   const t = await getTranslations("Ads");

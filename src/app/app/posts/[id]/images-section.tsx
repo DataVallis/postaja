@@ -27,7 +27,7 @@ export async function ImagesSection(props: {
   requestError?: string;
   /** TASK-027/031: the brand's persona (with pictures) and whether this post's next images show it. */
   persona?: { name: string; checked: boolean } | null;
-  /** TASK-035: the brand's partner logos and the one on this post's images. */
+  /** TASK-046: the brand's partner logos and the one on this post's images. */
   partners?: { options: { id: string; name: string }[]; selected: string | null } | null;
   designHref: string;
   /** LinkedIn carousel: offer the images as one PDF (a document post). */

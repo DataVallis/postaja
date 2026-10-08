@@ -57,7 +57,7 @@ export const adSets = pgTable(
     issues: jsonb("issues").$type<AdCopyIssue[]>().notNull().default([]),
     model: text("model"),
     error: text("error"),
-    /** TASK-035: a partner's logo drawn next to the brand logo on the creatives (null = none). */
+    /** TASK-046: a partner's logo drawn next to the brand logo on the creatives (null = none). */
     partnerLogoId: text("partner_logo_id").references(() => brandAssets.id, { onDelete: "set null" }),
     visual: jsonb("visual").$type<AdVisual>(),
     mediaStatus: text("media_status").$type<AdMediaStatus>().notNull().default("none"),

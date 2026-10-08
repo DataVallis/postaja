@@ -42,7 +42,7 @@ export type RenderInput = {
   illustration?: Uint8Array | null;
   logo?: Uint8Array | null;
   /**
-   * A partner's logo chosen for this post or ad (TASK-035): drawn next to the brand logo, sharing the template's logo
+   * A partner's logo chosen for this post or ad (TASK-046): drawn next to the brand logo, sharing the template's logo
    * box; templates without a logo box get it in the bottom-right corner of the safe box.
    */
   partnerLogo?: Uint8Array | null;
@@ -161,7 +161,7 @@ async function fittedUncached(bytes: Uint8Array, w: number, h: number, fit: "cov
 }
 
 /**
- * The brand logo and a partner's logo in one box (TASK-035): side by side in a wide box, stacked in a tall one, each
+ * The brand logo and a partner's logo in one box (TASK-046): side by side in a wide box, stacked in a tall one, each
  * scaled to fit its half with a gap between; the partner alone fills the box when the brand has no logo.
  */
 async function logoPair(brand: Uint8Array | null, partner: Uint8Array, box: { x: number; y: number; w: number; h: number; opacity: number }, cache?: Map<string, string>): Promise<Node> {

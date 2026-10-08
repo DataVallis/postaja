@@ -96,7 +96,7 @@ export const posts = pgTable(
     publishedUrl: text("published_url"),
     /** TASK-031: this post's images with (true) or without (false) the brand's persona; null = the brand's default. */
     imagesWithPersona: boolean("images_with_persona"),
-    /** TASK-035: a partner's logo drawn next to the brand logo on this post's images (null = none). */
+    /** TASK-046: a partner's logo drawn next to the brand logo on this post's images (null = none). */
     partnerLogoId: text("partner_logo_id").references(() => brandAssets.id, { onDelete: "set null" }),
     ruleFailures: jsonb("rule_failures").$type<{ code: string; actual: number | string; limit: number | string; part?: number }[]>().notNull().default([]),
     fixAttempts: integer("fix_attempts").notNull().default(0),

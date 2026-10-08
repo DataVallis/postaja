@@ -399,7 +399,7 @@ describe("post images from the design", () => {
     await expect(setSlideTexts(db, B, id, [])).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("partner logo (TASK-035): chosen per post, drawn next to the brand logo; changing it redraws for free; never the brand logo", async () => {
+  it("partner logo (TASK-046): chosen per post, drawn next to the brand logo; changing it redraws for free; never the brand logo", async () => {
     const solid = async (hex: string) => new Uint8Array(await sharp({ create: { width: 300, height: 120, channels: 4, background: hex } }).png().toBuffer());
     // Uploaded before the brand logo: the brand logo is still the brand's own.
     const partner = await uploadBrandFile(db, storage, A, brandA, "partner", { filename: "polygon-logo.png", bytes: await solid("#1428dc"), name: "  Polygon \n Labs " });

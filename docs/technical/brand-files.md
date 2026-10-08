@@ -46,7 +46,7 @@ UI: section "Datoteke branda" on `/app/brands/<id>` (`files-section.tsx`): logos
 ## Env
 `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` (clear, `config/deploy.dev.yml`), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (secrets: GitHub env `dev` → deploy workflow → `.kamal/secrets.dev`), `S3_FORCE_PATH_STYLE=1` only for the local/CI stand-in. The client is created on first use, so the app starts without S3.
 
-## Partner logos (TASK-035, ADR-064)
+## Partner logos (TASK-046, ADR-064)
 `brand_assets.kind = 'partner'` with `meta.name` (the partner's name, one line, ≤ 60 chars; the file name by default).
 Upload slot `partner` (`?slot=partner`, form field `name`), re-encoded like logos, up to 30 per brand; never picked as
 the brand logo (`brandAssetBytes` reads only `logo`). Listed under *Partnerski logotipi* on the Datoteke tab. Chosen

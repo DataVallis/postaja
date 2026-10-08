@@ -77,7 +77,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
     { name: "objava-2.png", mimeType: "image/png", buffer: await past("#0a122a") },
   ]);
   await expect(p.getByText("objava-2.png").first()).toBeVisible();
-  // A partner's logo (TASK-035): named, kept apart from the brand logo.
+  // A partner's logo (TASK-046): named, kept apart from the brand logo.
   const partner = p.getByTestId("add-partner");
   await partner.getByLabel("Ime partnerja").fill("Polygon");
   await partner.getByLabel("Logotip (PNG, JPG ali WebP)").setInputFiles({ name: "polygon.png", mimeType: "image/png", buffer: await sharp({ create: { width: 600, height: 200, channels: 4, background: "#8247e5" } }).png().toBuffer() });

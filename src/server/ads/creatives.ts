@@ -44,7 +44,7 @@ export function copyForImage(v: AdSetRow["copy"][number]) {
 }
 
 /** Any member. Claims the ad set's images (a second request while one runs is refused) and queues the job. */
-/** Any member (TASK-035): the partner logo on the creatives; existing creatives are redrawn with it for free. */
+/** Any member (TASK-046): the partner logo on the creatives; existing creatives are redrawn with it for free. */
 export async function setAdPartnerLogo(db: Db, queue: Queue, ctx: OrgContext, id: string, partnerLogoId: string | null): Promise<"redrawn" | "saved"> {
   const a = await getAdSet(db, ctx, id);
   if (partnerLogoId && !(await isPartnerLogo(db, ctx, a.brandId, partnerLogoId))) throw new AdError("INVALID");
@@ -62,7 +62,7 @@ export async function requestAdImages(db: Db, queue: Queue, ctx: OrgContext, id:
   if (!a.copy.length) throw new AdError("BAD_STATE", "NO_COPY");
   if (!(await currentDesign(db, ctx, a.brandId))) throw new AdError("BAD_STATE", "NO_DESIGN");
   if (mode === "text" && !a.visual) throw new AdError("BAD_STATE");
-  // TASK-035: the partner logo on the creatives (undefined = keep, null = none); only this brand's partners.
+  // TASK-046: the partner logo on the creatives (undefined = keep, null = none); only this brand's partners.
   if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, a.brandId, opts.partnerLogoId))) throw new AdError("INVALID");
   const claimed = await forOrg(db, ctx).update(
     adSets,

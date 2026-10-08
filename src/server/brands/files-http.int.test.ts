@@ -69,7 +69,7 @@ describe("POST /api/brands/<id>/files", () => {
     expect(new Uint8Array(await (await fetch(loc)).arrayBuffer())).toEqual(bytes);
   });
 
-  it("a partner logo (TASK-035) is stored with the partner's name, apart from the brand logos", async () => {
+  it("a partner logo (TASK-046) is stored with the partner's name, apart from the brand logos", async () => {
     const png = new Uint8Array(await sharp({ create: { width: 200, height: 80, channels: 4, background: "#1428dc" } }).png().toBuffer());
     const res = await post(brandA, "partner", png, { name: "logo-polygon.png", partner: "Polygon" });
     expect(res.status).toBe(201);
