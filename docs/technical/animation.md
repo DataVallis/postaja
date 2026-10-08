@@ -40,3 +40,8 @@ compose, frame encoder size/length/audio, a failing frame stops it), `design/des
 (prompt inputs and wish, MP4 at the image size and length, spec stored, no video model paid, ZIP, stale removal, every
 carousel slide animatable, retry on a bad spec, failure after two, other org), E2E `images.spec.ts` (animate the cover
 with instructions, no fal call, ffprobe of the downloaded MP4; carousel offers all 4 images).
+
+## Videos are kept (TASK-032, ADR-061)
+Finished videos are rows in `post_videos` (`src/server/video/media.ts`: `addPostVideo`, `listPostVideos`,
+`postVideoUrl` → `/api/post-videos/[id]` with `?poster=1` / `?download=1`, `deletePostVideo`). Nothing replaces or
+removes a video except an explicit delete; the post page lists them newest first (`video-list.tsx`).

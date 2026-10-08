@@ -51,8 +51,8 @@ Vsako sliko objave lahko animiraš: Claude zasnuje gibanje (kdaj se pojavi naslo
 2. Po želji napiši **Navodila za animacijo** (npr. »naslov besedo za besedo, 5 sekund«).
 3. Klikni **Animiraj**. Na gumbu je največja cena.
 
-Rezultat je video MP4 (3–10 s), ki ga preneseš z **Prenesi video (MP4)**.
+Rezultat je video MP4 (3–10 s). Vsak ustvarjen video **ostane na objavi**: nova animacija se doda k prejšnjim (tudi k videom s persono), nove slike videov ne izbrišejo. Pri vsakem videu sta **Prenesi (MP4)** in **Izbriši**; brisanje je trajno.
 
 ## Prenos
 
-**Prenesi ZIP** na objavi vsebuje besedilo (`besedilo.txt`), prvi komentar, slike, video in PDF karusel, kar objava ima. Dnevni ZIP-i v planu in na nadzorni plošči vsebujejo vse objave dneva in `pregled.csv`.
+**Prenesi ZIP** na objavi vsebuje besedilo (`besedilo.txt`), prvi komentar, slike, vse videe (`animacija-1.mp4`, `persona-video-1.mp4` …) in PDF karusel, kar objava ima. Dnevni ZIP-i v planu in na nadzorni plošči vsebujejo vse objave dneva in `pregled.csv`.

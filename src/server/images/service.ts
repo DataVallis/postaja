@@ -253,15 +253,13 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   }
 
   // Swap in one transaction; the replaced objects are deleted afterwards (best effort — the rows decide access).
-  // A persona video (TASK-025) does not depend on the images and stays; an animation of them goes with them.
-  const replaced = old.filter((m) => !keptIllustrations.has(m.id) && m.kind !== "keyframe" && !(m.kind === "video" && p.videoMode === "persona"));
+  // Videos live in post_videos (TASK-032) and stay; only images and illustrations are replaced here.
+  const replaced = old.filter((m) => !keptIllustrations.has(m.id) && (m.kind === "slide" || m.kind === "background"));
   await db.transaction(async (tx) => {
     const t = forOrg(tx as unknown as Db, ctx);
     if (replaced.length) await t.delete(postMedia, inArray(postMedia.id, replaced.map((m) => m.id)));
     for (const r of newRows) await t.insert(postMedia, r);
-    // New images make the post's animation stale (its words or picture changed): it goes with them (TASK-022).
-    const videoGone = replaced.some((m) => m.kind === "video");
-    await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, ...(videoGone ? { videoStatus: "none" as const, videoError: null } : {}), updatedAt: new Date() }, eq(posts.id, postId));
+    await t.update(posts, { visual, mediaStatus: "ready", mediaError: null, updatedAt: new Date() }, eq(posts.id, postId));
   });
   await Promise.all(replaced.map((m) => deps.storage.delete(m.storageKey).catch(() => undefined)));
   return pngs.length;

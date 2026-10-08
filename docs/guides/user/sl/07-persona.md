@@ -42,4 +42,4 @@ Video nastane na **objavi**: odpri objavo branda s persono (zavihek **Objave** a
 2. Po želji napiši **Navodila za prizor** (kje je, kaj počne, kako se premika kamera). Video nima zvoka, zato persona ne govori.
 3. Klikni **Ustvari video s persono**. Video nastaja nekaj minut, stran se osveži sama.
 
-Claude napiše prizor iz objave, prvi kader nastane iz potnih slik (ista oseba), Kling 3.0 ga oživi v navpičen video 9:16 (1080×1920). Pod videom vidiš prizor in gibanje. Video je tudi v ZIP-u objave.
+Claude napiše prizor iz objave, prvi kader nastane iz potnih slik (ista oseba), Kling 3.0 ga oživi v navpičen video 9:16 (1080×1920). Ob videu vidiš prizor in gibanje. Vsak video ostane na objavi, nov se doda k prejšnjim; posamezen video izbrišeš z **Izbriši**. Vsi videi so tudi v ZIP-u objave.

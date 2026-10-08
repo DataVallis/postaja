@@ -16,8 +16,9 @@ import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
 import { ImagesSection } from "./images-section";
 import { AnimationSection } from "./animation-section";
-import { animatablePositions, animationEstimate, postVideo } from "@/server/video/service";
-import { PERSONA_DURATIONS, personaVideoEstimate, personaVideoScene, postKeyframe } from "@/server/video/persona";
+import { animatablePositions, animationEstimate } from "@/server/video/service";
+import { PERSONA_DURATIONS, personaVideoEstimate } from "@/server/video/persona";
+import { listPostVideos } from "@/server/video/media";
 import { getBrandPersona } from "@/server/personas/service";
 import { PersonaVideoSection } from "./persona-video-section";
 
@@ -47,15 +48,26 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
-  const [animatable, video, animCost] = await Promise.all([animatablePositions(db, org, post), postVideo(db, org, post.id), animationEstimate(db, post.brandId)]);
+  const [animatable, allVideos, animCost] = await Promise.all([animatablePositions(db, org, post), listPostVideos(db, org, post.id), animationEstimate(db, post.brandId)]);
+  const tv = await getTranslations("Animation");
+  const tpv = await getTranslations("PersonaVideo");
+  // Every video stays (TASK-032): animations and persona videos side by side, newest first.
+  const animations = allVideos.filter((v) => v.kind === "animation").map((v) => ({
+    id: v.id, width: v.width, height: v.height, createdAt: v.createdAt, poster: false, label: tv("videoLabel", { n: (v.slidePosition ?? 0) + 1 }),
+  }));
   const design = await currentDesign(db, org, post.brandId);
   // Persona video (TASK-025): offered when the brand has a persona with at least one passport picture.
   const persona = await getBrandPersona(db, org, post.brandId);
   const personaVideo = persona?.images.length
     ? {
         costs: await Promise.all(PERSONA_DURATIONS.map(async (d) => ({ durationS: d, maxCost: await personaVideoEstimate(db, post.brandId, d) }))),
-        keyframe: post.videoMode === "persona" ? await postKeyframe(db, org, post.id) : null,
-        scene: post.videoMode === "persona" && video ? await personaVideoScene(db, org, post.id) : null,
+        videos: allVideos.filter((v) => v.kind === "persona").map((v) => {
+          const scene = v.spec as { keyframe?: string; motion?: string };
+          return {
+            id: v.id, width: v.width, height: v.height, createdAt: v.createdAt, poster: !!v.posterKey, label: tpv("videoLabel", { name: persona!.persona.name }),
+            details: [scene.keyframe ? { term: tpv("sceneFrame"), text: scene.keyframe } : null, scene.motion ? { term: tpv("sceneMotion"), text: scene.motion } : null].filter((d): d is { term: string; text: string } => !!d),
+          };
+        }),
       }
     : null;
   const isPersonaVideo = post.videoMode === "persona";
@@ -149,13 +161,13 @@ export default async function PostPage({ params, searchParams }: { params: Promi
           postId={post.id} brandId={post.brandId} personaName={persona.persona.name}
           status={isPersonaVideo ? post.videoStatus : "none"} error={isPersonaVideo ? post.videoError : null} requestError={personaVideoError}
           wish={isPersonaVideo ? post.videoMotion : null} durationS={isPersonaVideo ? post.videoDurationS : null} costs={personaVideo.costs}
-          video={isPersonaVideo && video ? video : null} keyframeId={personaVideo.keyframe?.id ?? null} scene={personaVideo.scene}
+          videos={personaVideo.videos}
         />
       ) : null}
-      {animatable.length || (video && !isPersonaVideo) ? (
+      {animatable.length || animations.length ? (
         <AnimationSection
           postId={post.id} status={isPersonaVideo ? "none" : post.videoStatus} error={isPersonaVideo ? null : post.videoError} requestError={videoError}
-          positions={animatable} position={post.videoPosition} motion={isPersonaVideo ? null : post.videoMotion} video={isPersonaVideo ? null : video}
+          positions={animatable} position={post.videoPosition} motion={isPersonaVideo ? null : post.videoMotion} videos={animations}
           maxCost={animCost}
         />
       ) : null}

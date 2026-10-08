@@ -1425,5 +1425,12 @@
       "LIMIT_REACHED": "Paket ne dovoli več članov. Za več članov se obrni na skrbnika Postaje.",
       "LAST_OWNER": "Organizacija mora imeti vsaj enega lastnika."
     }
+  },
+  "Videos": {
+    "made": "Ustvarjeno {when}",
+    "download": "Prenesi (MP4)",
+    "delete": "Izbriši",
+    "deleteWarning": "Video bo trajno izbrisan. Nov video stane znova.",
+    "deleteConfirm": "Izbriši video"
   }
 }

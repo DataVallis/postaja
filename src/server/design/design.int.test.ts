@@ -19,6 +19,7 @@ import { listPostMedia, requestImages, runImageJob, setSlideTexts, type PostImag
 import { postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
+import { deletePostVideo, listPostVideos } from "../video/media";
 import { LlmError, type LlmClient, type StructuredRequest } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
@@ -523,21 +524,32 @@ describe("animation by Claude (TASK-023)", () => {
     expect(claude.calls[0].user).toContain('"slot":"headline","text":"Daš. *Zaklenjeno je.*"');
     expect(claude.calls[0].system[0].text).toContain(cardDesign.summary);
     expect((await sql`select video_status, video_error from posts where id = ${id}`)[0]).toEqual({ video_status: "ready", video_error: null });
-    const [v] = await sql`select width, height, storage_key, prompt, model from post_media where post_id = ${id} and kind = 'video'`;
-    expect(v).toMatchObject({ width: 1080, height: 1350, model: "postaja-motion" });
-    expect(JSON.parse(v.prompt)).toMatchObject({ durationS: 4, background: { motion: "zoom_in" } });
+    const [v] = await sql`select width, height, storage_key, spec, model, kind, slide_position from post_videos where post_id = ${id}`;
+    expect(v).toMatchObject({ width: 1080, height: 1350, model: "postaja-motion", kind: "animation", slide_position: 0 });
+    expect(v.spec).toMatchObject({ durationS: 4, background: { motion: "zoom_in" } });
     const probe = await probeVideo(await storage.get(v.storage_key));
     expect(probe.durationS).toBeGreaterThan(3.8);
     expect(probe.durationS).toBeLessThan(4.3);
     expect(await sql`select 1 from usage_ledger where post_id = ${id} and model like 'fal-ai/%video%'`).toHaveLength(0); // no video model is paid
-    expect((await postArchive(db, storage, A, id)).entries.map((e) => e.name)).toContain("video.mp4");
+    expect((await postArchive(db, storage, A, id)).entries.map((e) => e.name)).toContain("animacija-1.mp4");
 
-    // New images make the video stale: it is removed with them.
+    // TASK-032: what was made stays — new images keep the video, a second animation is added next to the first.
     const { q: iq, jobs: ij } = memoryQueue();
     await requestImages(db, iq, A, id, "new");
     await runImages(ij, fakeClaude(), fakeImages().client);
-    expect((await sql`select video_status from posts where id = ${id}`)[0].video_status).toBe("none");
+    expect(await storage.exists(v.storage_key)).toBe(true);
+    const { q: q2, jobs: j2 } = videoQueue();
+    await requestAnimation(db, q2, A, id, { position: 0, motion: "" });
+    expect(await runVideoJob(db, { llm: motionClaude([goodSpec]).client, storage }, j2[0])).toBe("done");
+    const all = await listPostVideos(db, A, id);
+    expect(all).toHaveLength(2);
+    expect((await postArchive(db, storage, A, id)).entries.map((e) => e.name).filter((n) => n.endsWith(".mp4"))).toEqual(["animacija-1.mp4", "animacija-2.mp4"]);
+    // Deleted only on purpose, only within the org.
+    await expect(deletePostVideo(db, storage, B, all[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await deletePostVideo(db, storage, editorA, all[1].id);
+    expect((await listPostVideos(db, A, id)).map((x) => x.id)).toEqual([all[0].id]);
     expect(await storage.exists(v.storage_key)).toBe(false);
+    expect(await listPostVideos(db, B, id)).toEqual([]);
   }, 120_000);
 
   it("any image can move, text-only slides too; a spec naming missing elements is retried, twice is a failure; other orgs refused", async () => {
