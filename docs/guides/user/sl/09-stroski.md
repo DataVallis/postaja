@@ -17,7 +17,7 @@ Organizacija ima mesečni limit, ki ga nastavi skrbnik. Postaja pred vsakim klic
 - Besedilo objave: nekaj centov.
 - AI ilustracija za sliko: 0,04–0,06 €.
 - Animacija slike: en klic Claude, nekaj centov.
-- Passport slika persone: 0,15 €.
+- Passport slika persone in ilustracija s persono: 0,15 €.
 - Video s persono: 5 s do približno 0,62 €, 10 s do približno 1,05 €.
 
 Cene so okvirne; točno ceno vidiš na gumbu pred zagonom.

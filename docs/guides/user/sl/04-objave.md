@@ -35,6 +35,8 @@ Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
 
 Za LinkedIn karusel je na voljo **Prenesi PDF karusel**.
 
+Pri brandu s persono ilustracije prikazujejo persono. Glej [Persona](/app/help/persona#persona-na-slikah-objav).
+
 ## Animacija
 
 Vsako sliko objave lahko animiraš: Claude zasnuje gibanje (kdaj se pojavi naslov, besedilo, črte, logotip, kako se premika ilustracija), Postaja nariše vsako sličico.

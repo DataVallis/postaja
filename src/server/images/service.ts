@@ -21,6 +21,8 @@ import { LlmError, type ImageBlock, type LlmClient } from "../llm/types";
 import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { billedMegapixels, generationSize, ImageError, type ImageClient } from "./fal";
+import { passportReferences, personaPicture, postPersona } from "../personas/service";
+import { personaIllustrationPrompt } from "../personas/scene";
 
 export const POST_IMAGE_QUEUE = "post-image";
 /** new: plan and draw again; text: redraw the stored plan; revise: Claude applies the owner's words to the current images. */
@@ -179,7 +181,9 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const assets = await brandAssetBytes(db, deps.storage, ctx, p.brandId);
 
   const old = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
-  const where = { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages) };
+  // TASK-027: a persona brand's illustrations show the persona, made from its passport pictures.
+  const persona = await postPersona(db, ctx, p.brandId);
+  const where = { brandName: brand.name, platform: channel?.platform ?? null, language: postLanguage(channel?.language, brand.languages), persona: persona ? { name: persona.name } : null };
   // A correction in words: Claude sees the current plan and images and changes only what was asked.
   const revising = mode === "revise" && !!p.visual && p.visual.designId === design.id && !!instruction?.trim();
   // Re-plan for new images, or when the words were planned for another design version.
@@ -223,9 +227,17 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         illustration = await deps.storage.get(prev.storageKey);
         keptIllustrations.add(prev.id);
       } else {
-        references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
-        const prompt = illustrationPrompt(slide.illustration ?? p.brief, spec);
-        const out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
+        let prompt: string;
+        let out: Awaited<ReturnType<typeof generateIllustration>>;
+        if (persona) {
+          references ??= await passportReferences(db, deps.storage, ctx, persona.id, 4);
+          prompt = personaIllustrationPrompt(persona.dna, slide.illustration ?? p.brief);
+          out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
+        } else {
+          references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
+          prompt = illustrationPrompt(slide.illustration ?? p.brief, spec);
+          out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
+        }
         illustration = out.bytes;
         const k = key(ctx.orgId, postId, "jpg");
         await deps.storage.put(k, out.bytes, "image/jpeg");

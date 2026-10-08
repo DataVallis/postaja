@@ -80,6 +80,14 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("persona.png"), fullPage: true });
 
+  // Persona in post images (TASK-027): on by default once there is a picture; the owner can switch it off and on.
+  const inPosts = p.getByTestId("persona-in-posts");
+  await expect(inPosts).toContainText("vklopljeno");
+  await inPosts.getByRole("button", { name: "Izklopi" }).click();
+  await expect(p.getByTestId("persona-in-posts")).toContainText("izklopljeno");
+  await p.getByTestId("persona-in-posts").getByRole("button", { name: "Vklopi" }).click();
+  await expect(p.getByTestId("persona-in-posts")).toContainText("vklopljeno");
+
   // The owner edits a field; uploads a picture of their own and makes it the primary.
   await dna.getByLabel("Hair Colour *").fill("Platinum blonde");
   await p.getByRole("button", { name: "Shrani DNK" }).click();
@@ -104,6 +112,7 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await expect(p).toHaveURL(/\/app\/posts\//);
   const pv = p.getByTestId("persona-video");
   await expect(pv.getByRole("heading")).toContainText("Video s persono (Mila)");
+  await expect(p.getByTestId("images-persona")).toHaveText("Ilustracije prikazujejo persono Mila (iz potnih slik).");
   await expect(pv.getByLabel("Dolžina").locator("option")).toHaveText([/^5 s · največ [\d.]+ €$/, /^10 s · največ [\d.]+ €$/]);
   await pv.getByLabel("Navodila za prizor (neobvezno)").fill("z dežnikom");
   const falBefore = (await falLog()).length;

@@ -29,6 +29,8 @@ export const personas = pgTable(
     name: text("name").notNull(),
     handle: text("handle").notNull().default(""),
     dna: jsonb("dna").$type<PersonaDna>().notNull(),
+    /** TASK-027: illustrations of the brand's post images show the persona (made from the passport pictures). */
+    useInPosts: boolean("use_in_posts").notNull().default(true),
     /** Generation of passport images in the background. */
     passportStatus: text("passport_status").$type<PassportStatus>().notNull().default("none"),
     passportError: text("passport_error"),

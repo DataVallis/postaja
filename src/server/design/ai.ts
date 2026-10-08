@@ -125,6 +125,8 @@ export type PostVisualInputs = {
   brief: string;
   plan: Record<string, unknown>;
   caption: string | null;
+  /** TASK-027: the brand's persona appears in the illustrations. */
+  persona?: { name: string } | null;
 };
 
 export const MAX_SLIDES = 20;
@@ -175,6 +177,7 @@ Rules:
       `<plan>${JSON.stringify(p.plan)}</plan>`,
       p.caption ? `<caption>${p.caption.slice(0, 3000)}</caption>` : "",
       "</post>",
+      p.persona ? `<persona name="${p.persona.name.replace(/"/g, "'")}">Every illustration shows this brand's persona, a real-looking person made from reference photos. Describe the scene as a photo: what she or he does, where, the framing and where the text has room — never the face, hair or body (they come from the photos).</persona>` : "",
       revise ? `<current_images>\n${JSON.stringify(revise.current)}\n</current_images>\nThe images above are these current images, in order.` : "",
       revise ? `<owner_request>\n${revise.instruction.trim()}\n</owner_request>` : "",
       revise

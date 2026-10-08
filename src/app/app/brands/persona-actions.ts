@@ -8,7 +8,7 @@ import { getStorage } from "@/server/files/storage";
 import { imageFailureCode } from "@/server/images/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 import { createAnthropicClient } from "@/server/llm/anthropic";
-import { createPersona, createPersonaManual, deletePassportImage, deletePersona, PersonaError, requestPassport, setPrimaryImage, updatePersona } from "@/server/personas/service";
+import { createPersona, createPersonaManual, deletePassportImage, deletePersona, PersonaError, requestPassport, setPersonaInPosts, setPrimaryImage, updatePersona } from "@/server/personas/service";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const back = (brandId: string, error?: string) => `/app/brands/${brandId}?tab=persona${error ? `&personaError=${error}` : ""}`;
@@ -91,4 +91,18 @@ export async function deletePassportImageAction(f: FormData) {
   await deletePassportImage(getDb(), getStorage(), ctx, str(f, "imageId")).catch(() => undefined);
   revalidatePath(`/app/brands/${brandId}`);
   redirect(back(brandId));
+}
+
+/** "Persona na slikah objav" on/off (TASK-027). */
+export async function setPersonaInPostsAction(f: FormData) {
+  const ctx = await ctxOrLogin();
+  const brandId = str(f, "brandId");
+  let error: string | undefined;
+  try {
+    await setPersonaInPosts(getDb(), ctx, str(f, "personaId"), str(f, "on") === "1");
+  } catch (e) {
+    error = code(e);
+  }
+  revalidatePath(`/app/brands/${brandId}`);
+  redirect(back(brandId, error));
 }

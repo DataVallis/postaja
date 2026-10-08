@@ -9,6 +9,7 @@ import { needsIllustration } from "../design/spec";
 import { billedMegapixels, generationSize } from "../images/fal";
 import { MAX_SLIDES } from "../design/ai";
 import { worstCaseMicroUsd, type Prices } from "../llm/cost";
+import { postPersona } from "../personas/service";
 import { textModelFor } from "../llm/call";
 import { monthToDate } from "../llm/spend";
 import { MAX_OUTPUT_TOKENS } from "../posts/generate";
@@ -72,7 +73,7 @@ async function brandFacts(db: Db, ctx: OrgContext, brandId: string): Promise<Bra
   };
 }
 
-async function imageModel(db: Db, kind: "image" | "image_style") {
+async function imageModel(db: Db, kind: "image" | "image_style" | "image_ref") {
   const [m] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, kind), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
   return m;
 }
@@ -113,7 +114,13 @@ export async function estimateBulk(db: Db, ctx: OrgContext, scope: BulkScope, st
   // With "text" and "image" together, posts written in this run get images too when their brand has a design.
   const imageIds = steps.includes("image") ? [...new Set([...ids.image, ...ids.text])] : [];
   const image = { posts: 0, images: 0, illustrations: 0, illustrationsMax: 0, expected: 0n, max: 0n, model: null as string | null, noDesign: 0 };
-  const [plain, styled] = imageIds.length ? await Promise.all([imageModel(db, "image"), imageModel(db, "image_style")]) : [undefined, undefined];
+  const [plain, styled, ref] = imageIds.length ? await Promise.all([imageModel(db, "image"), imageModel(db, "image_style"), imageModel(db, "image_ref")]) : [undefined, undefined, undefined];
+  // TASK-027: brands whose illustrations show their persona use the reference model.
+  const personaBrands = new Map<string, boolean>();
+  const showsPersona = async (brandId: string) => {
+    if (!personaBrands.has(brandId)) personaBrands.set(brandId, !!(await postPersona(db, ctx, brandId)));
+    return personaBrands.get(brandId)!;
+  };
   const mp = billedMegapixels(generationSize(1080, 1350).width, generationSize(1080, 1350).height);
   for (const id of imageIds) {
     const p = byId.get(id) ?? (await db.select({ id: posts.id, brandId: posts.brandId, plan: posts.plan, format: posts.format }).from(posts).where(eq(posts.id, id)))[0];
@@ -125,7 +132,7 @@ export async function estimateBulk(db: Db, ctx: OrgContext, scope: BulkScope, st
     const ill = Math.round(n.expected * f.illustrationShare);
     image.illustrations += ill;
     image.illustrationsMax += n.max;
-    const m = (f.hasExamples ? styled : undefined) ?? plain;
+    const m = (await showsPersona(p.brandId)) ? ref : ((f.hasExamples ? styled : undefined) ?? plain);
     const each = m ? m.perImage + BigInt(mp) * m.perMegapixel : 0n;
     if (m) image.model ??= m.label;
     if (f.prices) {

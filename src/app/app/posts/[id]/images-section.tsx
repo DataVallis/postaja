@@ -25,6 +25,8 @@ export async function ImagesSection(props: {
   templates: TemplateInfo[] | null;
   aiConfigured: boolean;
   requestError?: string;
+  /** TASK-027: the persona the illustrations show, if any. */
+  personaName?: string | null;
   designHref: string;
   /** LinkedIn carousel: offer the images as one PDF (a document post). */
   pdf?: boolean;
@@ -60,6 +62,7 @@ export async function ImagesSection(props: {
       {props.requestError ? <p role="alert" className="text-sm text-danger">{t(`errors.${props.requestError}`)}</p> : null}
       {props.templates && !props.aiConfigured ? <p className="text-sm text-muted">{t("noKey")}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
+      {props.personaName ? <p className="text-sm text-muted" data-testid="images-persona">{t("personaNote", { name: props.personaName })}</p> : null}
 
       {props.media.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="image-list">
