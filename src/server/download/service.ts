@@ -1,7 +1,7 @@
 // One-click download (TASK-016): a post, or every post of a day (all brands or one), as a ZIP ready to publish —
 // per post a folder with the text exactly as it is posted (hashtags included), the first comment, and the images in
 // order; a day also gets pregled.csv (an overview that opens in Excel). Members only, bounded by ctx.orgId.
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isIsoDate } from "@/lib/dates";
 import { slugify } from "@/lib/slug";
 import type { Db } from "../db/client";
@@ -73,7 +73,7 @@ async function carouselPdf(storage: Storage, keys: string[], title: string): Pro
 async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[], dirs: string[]): Promise<ZipSource[]> {
   const media = rows.length
     ? await db.select({ postId: postMedia.postId, position: postMedia.position, key: postMedia.storageKey, type: postMedia.contentType }).from(postMedia)
-        .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "slide"), inArray(postMedia.postId, rows.map((r) => r.id))))
+        .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "slide"), isNull(postMedia.archivedAt), inArray(postMedia.postId, rows.map((r) => r.id))))
         .orderBy(asc(postMedia.postId), asc(postMedia.position))
     : [];
   // Every video of the post (TASK-032): animations and persona videos, oldest first.
@@ -141,7 +141,7 @@ export async function postPdf(db: Db, storage: Storage, ctx: OrgContext, postId:
   const [p] = (await base(db, ctx).where(and(eq(posts.orgId, ctx.orgId), eq(posts.id, postId)))) as Row[];
   if (!p) throw new DownloadError("NOT_FOUND");
   const media = await db.select({ key: postMedia.storageKey }).from(postMedia)
-    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, p.id), eq(postMedia.kind, "slide"))).orderBy(asc(postMedia.position));
+    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, p.id), eq(postMedia.kind, "slide"), isNull(postMedia.archivedAt))).orderBy(asc(postMedia.position));
   if (!media.length) throw new DownloadError("EMPTY");
   const [dir] = folders([p], false);
   return { filename: `${p.brandSlug}-${p.scheduledOn ?? p.id.slice(0, 8)}-${dir}.pdf`, bytes: await carouselPdf(storage, media.map((m) => m.key), p.plan?.topic || p.brandName) };

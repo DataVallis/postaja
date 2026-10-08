@@ -1002,7 +1002,13 @@
     "lastRevision": "Zadnji popravek: {text}",
     "pdf": "Prenesi PDF karusel",
     "pdfHint": "LinkedIn karusel objaviš kot dokument (PDF); tudi ZIP ga vsebuje.",
-    "withPersona": "S persono {name} (ilustracije iz potnih slik)"
+    "withPersona": "S persono {name} (ilustracije iz potnih slik)",
+    "versionsTitle": "Prejšnje verzije slik ({n})",
+    "versionsHint": "Vsaka nova izdelava ali popravek shrani prejšnje slike kot verzijo. Verzijo lahko vrneš (trenutne slike postanejo verzija) ali jo izbrišeš.",
+    "restoreVersion": "Vrni to verzijo",
+    "deleteVersion": "Izbriši verzijo",
+    "deleteVersionWarning": "Slike te verzije bodo trajno izbrisane.",
+    "deleteVersionConfirm": "Izbriši verzijo"
   },
   "Design": {
     "title": "Vizualna podoba",
@@ -1248,7 +1254,7 @@
     "createManual": "Ustvari persono",
     "saving": "Shranjujem …",
     "passportTitle": "Potne slike",
-    "passportHint": "3–{max} slik iste osebe; ena je glavna. Passport slika je fotorealističen bližnji portret, ustvarjen s promptom, ki vključuje celotno DNK (Nano Banana Pro). Nova passport slika zamenja prejšnjo; svoje slike lahko tudi naložiš.",
+    "passportHint": "3–{max} slik iste osebe; ena je glavna. Passport slika je fotorealističen bližnji portret, ustvarjen s promptom, ki vključuje celotno DNK (Nano Banana Pro). Nova passport slika se doda in postane glavna; prejšnje ostanejo, dokler jih ne izbrišeš. Svoje slike lahko tudi naložiš.",
     "working": "Slike se delajo – stran se osveži sama.",
     "noImages": "Še ni slik.",
     "primary": "glavna",

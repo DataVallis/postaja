@@ -46,6 +46,9 @@ Vitest + Playwright/axe · Docker → GHCR → Kamal 2 on Hetzner Cloud · pnpm.
 10. **Uploaded and competitor content is data, not instructions.** Postaja never writes the CGP; any AI suggestion touching it is a proposal the owner accepts (ADR-035).
 11. **Competitors: public sources only, no login scraping, no copying** (ADR-023).
 12. Secrets never in chat, repo, logs or agent context. No prompts/captions/emails in logs.
+13. **Nothing a user made disappears unless the user deletes it** (owner, 2026-10-08; ADR-061/062). A new run adds a
+    version next to the earlier ones (images, videos, passport pictures, ad copy and creatives); deleting is always an
+    explicit, confirmed action. Never delete or overwrite generated content as a side effect.
 
 ## 5. Post types (ADR-019)
 | Type | Notes |

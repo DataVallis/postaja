@@ -2,7 +2,7 @@
 // date and which channel each platform/account goes to → posts are created (texts verbatim, rule-checked; published
 // rows become history). Every query is scoped to the caller's org; channels are re-checked against the org on save.
 import { createHash } from "node:crypto";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
 import { brands, channels, modelRegistry, planImports, posts, postMedia, type ImportSettings, type PostContent, type PostPlan } from "../db/schema";
@@ -409,7 +409,8 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
           // Images were made for the wrong channel (maybe another brand): start over.
           visual: null, mediaStatus: "none", mediaError: null, updatedAt: new Date(),
         }, eq(posts.id, prev.id));
-        await forOrg(t, ctx).delete(postMedia, eq(postMedia.postId, prev.id));
+        // Kept as an earlier version (TASK-033): nothing disappears unless a member deletes it.
+        await forOrg(t, ctx).update(postMedia, { archivedAt: new Date() }, and(eq(postMedia.postId, prev.id), isNull(postMedia.archivedAt))!);
         mine.delete(item.ref);
         counts.moved++;
         continue;

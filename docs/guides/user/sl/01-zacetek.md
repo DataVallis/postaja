@@ -45,6 +45,10 @@ Prva stran po prijavi pokaže:
 - **Današnji cilj po kanalih**: koliko objav kanal danes potrebuje, koliko jih manjka in niz zaporednih dni. Gumb **Ustvari** napiše manjkajoče, gumb **Predlagaj ideje** predlaga nove teme;
 - porabo AI ta mesec po brandih.
 
+## Nič se ne izgubi
+
+Kar ustvariš (slike, videi, potne slike, besedila oglasov), ostane, dokler sam ne izbrišeš. Nova izdelava ali popravek doda novo verzijo, prejšnje pa so še vedno dostopne. Brisanje je vedno ločen korak s potrditvijo.
+
 ## Jezik in tema
 
 Zgoraj desno preklopiš med slovenščino in angleščino ter med svetlo in temno temo.

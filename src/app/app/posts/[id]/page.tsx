@@ -10,7 +10,7 @@ import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
 import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishedUrlAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
-import { listPostMedia } from "@/server/images/service";
+import { listImageVersions, listPostMedia } from "@/server/images/service";
 import { currentDesign } from "@/server/design/service";
 import { templateSlots } from "@/server/design/spec";
 import { wantsPdf } from "@/server/download/service";
@@ -48,6 +48,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
+  const imageVersions = await listImageVersions(db, org, post.id);
   const [animatable, allVideos, animCost] = await Promise.all([animatablePositions(db, org, post), listPostVideos(db, org, post.id), animationEstimate(db, post.brandId)]);
   const tv = await getTranslations("Animation");
   const tpv = await getTranslations("PersonaVideo");
@@ -154,6 +155,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         requestError={imageError}
         designHref={`/app/brands/${post.brandId}?tab=design`}
         pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
+        versions={imageVersions}
         persona={persona?.images.length ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
       />
       {persona && personaVideo ? (

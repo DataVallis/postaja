@@ -213,7 +213,7 @@ describe("passport generation", () => {
     expect(await passportEstimate(db, A, id)).toEqual({ replaces: true, maxCost: 150_000n });
   });
 
-  it("a new passport picture replaces the previous generated one (primary stays with it); uploads stay", async () => {
+  it("a new passport picture is added and becomes primary; earlier ones and uploads stay (TASK-033)", async () => {
     const id = await manual();
     const q = queue();
     const images = fakeImages();
@@ -224,15 +224,19 @@ describe("passport generation", () => {
     await requestPassport(db, q, A, id);
     await runPassportJob(db, deps(images.client), q.sent[1].data);
     const imgs = (await getBrandPersona(db, A, brandA))!.images;
-    expect(imgs).toHaveLength(2);
-    expect(imgs.map((i) => i.id)).not.toContain(first.id);
+    expect(imgs).toHaveLength(3);
+    expect(imgs.map((i) => i.id)).toContain(first.id);
+    expect(await storage.exists(first.storageKey)).toBe(true);
     expect(imgs[0]).toMatchObject({ angle: "front", source: "generated", isPrimary: true });
-    expect(imgs[1]).toMatchObject({ id: up, isPrimary: false });
+    expect(imgs[0].id).not.toBe(first.id);
+    expect(imgs.find((i) => i.id === up)).toMatchObject({ isPrimary: false });
     // With the upload as primary, a new passport does not take it over.
     await setPrimaryImage(db, A, up);
     await requestPassport(db, q, A, id);
     await runPassportJob(db, deps(images.client), q.sent[2].data);
-    expect((await getBrandPersona(db, A, brandA))!.images.map((i) => [i.source, i.isPrimary])).toEqual([["uploaded", true], ["generated", false]]);
+    const after = (await getBrandPersona(db, A, brandA))!.images;
+    expect(after).toHaveLength(4);
+    expect(after.filter((i) => i.isPrimary).map((i) => i.id)).toEqual([up]);
   });
 
   it("a refusal is recorded with the provider's reason; the reservation is released", async () => {
