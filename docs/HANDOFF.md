@@ -1,4 +1,4 @@
-# Handoff — state as of 2026-10-07
+# Handoff — state as of 2026-10-08
 
 ## Working mode
 **Mode B (autonomous) — partially.** Owner granted push access to `DataVallis/postaja` on 2026-10-05
@@ -41,6 +41,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 | prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
 
 ## Done
+- 2026-10-08: **Business plan** `docs/business/BUSINESS-PLAN.sl.md` (Slovenian, owner's document): segment, offer, prices + credits, upsells, sales, automation; phase 3 tasks TASK-035…045 added to `tasks/README.md`, spec §12/§14 updated. Weekly lead-discovery scheduled task (Mondays 6:49) writes to Google Drive folder "Postaja — Prodaja". Docs only.
 - 2026-10-07: TASK-023 (owner): post animations are designed by Claude and drawn by Postaja frame by frame (any image, text-only too; optional instructions; one Claude call) — replaces image-to-video for posts. Kling 3.0 is only for AI-influencer videos once personas (DNA + passport, created or imported) exist (ADR-052).
 - 2026-10-07: TASK-024 (owner's DNA framework): brand tab **Persona** — DNA by hand or filled by Claude from a rough description / imported DNA; passport pictures generated (first from the whole DNA, then 3/4, profile, smile, full body with Nano Banana edit as reference model) or uploaded; primary picture (ADR-053). Next: TASK-025 persona video with Kling 3.0.
 - 2026-10-07: TASK-024 follow-up (owner): the passport is one photoreal close-up with the whole DNA by Nano Banana Pro ($0.15); a new one replaces the old; fal's refusal reason is shown (ADR-054).
@@ -124,7 +125,8 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 Owner's choices (2026-10-06): **next = post generation** (TASK-007: CGP + materials + rules → post text → rule check → one auto-fix → `needs_review`); CGP delivered **both** by pasting and by uploading a document copied verbatim (TASK-008, small).
 Owner (2026-10-06): Claude feeds Postaja over MCP (ADR-038); **posts are made only in Postaja, Claude fills the knowledge base and graphics** (ADR-039). Owner (2026-10-06, with real plan files): Postaja must plan, import any plan file (AI sorts it), create texts, images and hashtags, show tables/calendar/history, download in one click, and create in bulk per brand or for all brands of a day. Order: TASK-011 frame (PR #22, done) → TASK-012 plan import (PR #23, done) → TASK-013 plan view (PR #24, done) → TASK-014 bulk (PR #25) → TASK-013 plan/calendar/history → TASK-014 bulk → TASK-015 images (`FAL_KEY` set by owner) → TASK-016 download. Owner (2026-10-06): no locked templates — each brand's look is designed by Claude from its own inputs (TASK-017, ADR-044); everything runs inside Postaja. TASK-010b (files from Claude) done 2026-10-07. Bulk plan with cost preview done 2026-10-07 (ADR-047).
 **Owner's order (2026-10-08):** 1) before the first customer: owner invites members + plan limits (TASK-028), no-repeat for posts + published URL (TASK-029), production database backups to bucket `postaja-backup` at `fsn1.your-objectstorage.com` — **production data only, never dev** (TASK-030); 2) competitor research (§4.3); 3) everything needed to sell to others (phase 3: landing, self-serve signup, Stripe, …); 4) last: subtitles and voice in persona videos. English guide and PDF export of the guide: any time in between.
-Latest numbers: TASK-034 (done), ADR-063. Latest PR: #64.
+**Selling (2026-10-08):** business plan `docs/business/BUSINESS-PLAN.sl.md`; phase 3 = TASK-035…045 (planned). Before TASK-035/036 the owner decides prices, payment provider (MoR vs Stripe) and domain (plan §15).
+Latest numbers: TASK-045 (planned; last done TASK-034), ADR-063. Latest PR: see git log.
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.

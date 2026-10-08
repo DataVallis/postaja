@@ -337,7 +337,13 @@ Recognised columns: `date`, `channel`, `type`, `topic`, `prompt` (image prompt),
 
 - v1: no payments. Plans are set by the super admin. `comped` = never charged, limits as configured.
 - Phase 2: BYOK — an organization may use its own fal / LLM keys (encrypted at rest).
-- Phase 3: Stripe subscriptions, self-serve signup.
+- Phase 3 (proposed in `docs/business/BUSINESS-PLAN.sl.md` §4, owner to confirm): plans **Solo** (39 €/month, 2 brands,
+  1 member, 400 credits), **Studio** (99 €, 6 brands, 3 members, 1.500 credits, + ads, animation, competitor research),
+  **Agencija** (249 €, 20 brands, 10 members, 5.000 credits, + 1 persona), **Partner** (custom). No free plan; agency pilot
+  99 € / 30 days; 7-day trial for Solo. AI use is counted in **credits** (per-action price table as data, TASK-038); the €
+  spend cap stays as a hard safety limit. Add-ons: credit packs, extra brand, extra member, persona.
+- Billing provider: Merchant of Record (Paddle / Lemon Squeezy) or Stripe — owner decision. Self-serve signup, trial,
+  lifecycle e-mail events, referrals, client approval links: TASK-035…045.
 
 ---
 
@@ -357,7 +363,7 @@ Recognised columns: `date`, `channel`, `type`, `topic`, `prompt` (image prompt),
 | 1 — MVP for David | Auth, orgs, super admin basics, brand materials upload (done) + owner-provided CGP with versioning, rules, channels, **format presets**, text + single image + carousel (PNG + PDF), CSV/XLSX import, AI suggestions, no-repeat, dashboard, export, cost tracking and caps |
 | 1b | **Ads** (static, multi-placement, copy variants, `copy.csv`), **Animation** of images (§5.6), **competitor research** (§4.3) |
 | 2 | **Video posts** (§5.7), personas (DNA + passport, LoRA), persona video, brand knowledge retrieval, BYOK, consistency check |
-| 3 — selling | Landing page, self-serve signup, Stripe, onboarding, impersonation, direct publishing / scheduling / ad-manager upload where platform APIs allow |
+| 3 — selling | Production + own domain + landing, billing (plans, credits, add-ons), self-serve signup + trial, lifecycle e-mail events, demo from URL, client approval links, referrals + business metrics, direct publishing / scheduling where platform APIs allow, AI labels (TASK-035…045; business plan `docs/business/BUSINESS-PLAN.sl.md`) |
 
 ---
 
