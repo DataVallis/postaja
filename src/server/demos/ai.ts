@@ -43,7 +43,8 @@ website you prepare a sample brand so the company can see what Postaja would mak
   tone of voice, words to use and avoid. Only what the site says or clearly shows; never invent prices, awards, numbers or claims.
 - "pillars": 2–4 content pillars with shares adding up to 100.
 - "colors": the brand's colours as #rrggbb — prefer the page's own colours given below; leave out what you cannot tell.
-- "imageStyle": one or two sentences on the look of illustrations that would fit the brand (no text in pictures).
+- "imageStyle": one or two sentences on the look of illustrations that would fit the brand: objects, places, materials or
+  abstract shapes — never people, faces or hands, and no text in pictures.
 - "posts": exactly ${DEMO_POSTS} varied posts for Instagram that show the brand at its best (two single images and one carousel
   is a good mix). "topic" is what the post is about; "category" one of your pillar names; "overlayText" the few words on the
   image — they must complement the post, not repeat its first sentence; for a carousel, "slides" holds 3–5 short slide texts

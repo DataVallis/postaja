@@ -44,6 +44,9 @@ export const PASTED_MAX = 20_000;
 const PAGE_MAX_BYTES = 3 * 1024 * 1024;
 const PICTURE_MAX_BYTES = 8 * 1024 * 1024;
 const TEXT_MIN = 100;
+/** Demo pictures never show people: a made-up person next to a real company's name reads as that company's staff. */
+export const NO_PEOPLE = "people, person, human figures, faces, portraits, hands, silhouettes of people";
+const NO_PEOPLE_STYLE = "Illustrations never show people, faces, hands or human figures — only objects, places, materials and abstract shapes.";
 
 export class DemoError extends Error {
   constructor(public readonly code: "INVALID" | "NOT_FOUND" | "GONE" | "TOO_MANY") {
@@ -260,21 +263,15 @@ async function build(
   await saveProfile(db, ctx, brandId, {
     cgp: plan.cgp, pillars: pillarsOf(plan), note: "demo",
     rules: { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] },
-    visual: { colors: plan.colors, imageStyle: plan.imageStyle, negativePrompt: "" },
+    visual: { colors: plan.colors, imageStyle: `${plan.imageStyle} ${NO_PEOPLE_STYLE}`.slice(0, 1000), negativePrompt: NO_PEOPLE },
   });
   const { id: channelId } = await addChannel(db, ctx, brandId, {
     platform: "instagram", handle: `@${new URL(d.url).hostname.replace(/^www\./, "").split(".")[0]}`.slice(0, 80), language: plan.language,
     goal: { postsPerDay: 1, weekdays: [1, 2, 3, 4, 5] }, allowedTypes: ["single_image", "carousel"],
   });
   if (logo) await uploadBrandFile(db, deps.storage, ctx, brandId, "logo", { filename: "logo.png", bytes: logo }).catch((e) => warn("LOGO", e));
-  for (const [i, u] of site.imageUrls.entries()) {
-    try {
-      const f = await fetchFile(u, { maxBytes: PICTURE_MAX_BYTES, timeoutMs: 15_000 });
-      await uploadBrandFile(db, deps.storage, ctx, brandId, "source", { filename: `slika-${i + 1}.${/png/i.test(f.contentType ?? "") ? "png" : "jpg"}`, bytes: f.bytes });
-    } catch {
-      // A picture that cannot be fetched or read is simply left out.
-    }
-  }
+  // The site's photos are NOT used as style references: they are mostly portraits of real people, and the image model
+  // would draw a look-alike of them (owner, 2026-10-08). Demo illustrations show no people at all (NO_PEOPLE below).
   await uploadBrandFile(db, deps.storage, ctx, brandId, "source", { filename: "spletna-stran.md", bytes: new TextEncoder().encode(`# ${site.title || name}\n\n${d.url}\n\n${text}`) })
     .catch((e) => warn("TEXT", e));
 
@@ -283,7 +280,7 @@ async function build(
   let design = false;
   try {
     const q = inline<DesignJob>();
-    await requestDesign(db, q.queue, ctx, brandId, { brief: plan.imageStyle });
+    await requestDesign(db, q.queue, ctx, brandId, { brief: `${plan.imageStyle} ${NO_PEOPLE_STYLE}` });
     for (const j of q.jobs) design = (await runDesignJob(db, deps, j)) === "ready";
     if (!design) {
       const [row] = await db.select({ error: brandDesigns.error }).from(brandDesigns).where(eq(brandDesigns.brandId, brandId)).orderBy(desc(brandDesigns.createdAt)).limit(1);
