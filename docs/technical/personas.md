@@ -35,3 +35,12 @@ On a post of a brand whose persona has pictures (`src/server/video/persona.ts`, 
 3. Kling 3.0 Standard image-to-video, 5 or 10 s, no audio (reserved at full length, settled on delivery).
 4. ffprobe, then fitted to 1080×1920 H.264 + silent AAC. Stored as `post_media` `video` (shot JSON in `prompt`) and
    `keyframe` (poster). Runs on the `post-video` queue with `posts.video_mode = 'persona'`.
+
+## Persona in post images (TASK-027, ADR-057)
+- `personas.use_in_posts` (default on; owner toggles it on the Persona tab). `postPersona()` returns the persona when it
+  is on and has at least one picture.
+- `renderPostImages` then tells Claude (`<persona>` in `plan_post_images`) to describe each illustration as a photo
+  scene without the person's looks, and draws it with `personaPicture` (default `image_ref`, Nano Banana Pro edit) from
+  up to 4 passport pictures; the prompt is `personaIllustrationPrompt` (identity fields, scene, the DNA's style). Words
+  and logo are drawn by Postaja as always.
+- `estimateBulk` prices those illustrations with the reference model. Ad creatives keep the brand's style model.

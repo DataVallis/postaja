@@ -1,0 +1,1 @@
+ALTER TABLE "personas" ADD COLUMN "use_in_posts" boolean DEFAULT true NOT NULL;

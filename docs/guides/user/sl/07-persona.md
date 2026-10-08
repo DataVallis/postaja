@@ -26,6 +26,14 @@ Obvezna so Gender, Age, Ethnicity / Skin Tone in Hair Colour. V **Extra Notes** 
 
 Če ponudnik zahtevo zavrne, se pod napako izpiše razlog. Spremeni DNK in poskusi znova.
 
+## Persona na slikah objav
+
+Ko ima persona vsaj eno potno sliko, ilustracije slik objav tega branda prikazujejo persono. Claude opiše prizor (kje je, kaj počne, kadriranje, prostor za besedilo), slika nastane iz potnih slik, zato je vedno ista oseba. Besedila in logotip še vedno nariše Postaja po vizualni podobi branda.
+
+- Na objavi v razdelku **Slike** piše, katero persono ilustracije prikazujejo.
+- Ilustracija s persono stane 0,15 € (Nano Banana Pro); pregled stroškov pri množičnem ustvarjanju to upošteva.
+- V zavihku **Persona** lastnik to izklopi z **Izklopi** v razdelku **Persona na slikah objav**; ilustracije so nato spet v slogu vizualne podobe.
+
 ## Video s persono
 
 Na vsaki objavi branda s persono je razdelek **Video s persono**.

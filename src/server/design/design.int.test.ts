@@ -23,6 +23,8 @@ import { LlmError, type LlmClient, type StructuredRequest } from "../llm/types";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
+import { createPersonaManual, setPersonaInPosts, uploadPassportImage } from "../personas/service";
+import { estimateBulk } from "../bulk/estimate";
 import { activateDesign, currentDesign, listDesigns, requestDesign, runDesignJob, type DesignJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -246,6 +248,57 @@ describe("post images from the design", () => {
     const costs = await sql`select model, cost_micro_usd::text c from usage_ledger where post_id = ${id} order by model`;
     expect(costs.find((c) => c.model === "fal-ai/ideogram/v3")!.c).toBe("60000");
     expect(costs.some((c) => c.model.startsWith("claude"))).toBe(true);
+  });
+
+  it("a persona brand: illustrations show the persona from its passport pictures; switched off → the brand's style again (TASK-027)", async () => {
+    await withAssets();
+    await design();
+    const personaId = await createPersonaManual(db, A, brandA, { name: "Mila", handle: "", dna: {
+      gender: "Female", age: "26 years old", ethnicity: "Slovenian, fair skin", hairStyle: "Pixie cut", hairColour: "Jet black", clothing: "Yellow rain jacket",
+      mood: "Cheerful", environment: "Old town", camera: "Mid-shot", pose: "Walking", lighting: "Overcast", style: "Photorealistic street photography", extra: "Green eyes",
+    } });
+    // Without passport pictures the brand's style model is still used.
+    const id0 = await post();
+    let { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id0, "new");
+    let fal = fakeImages();
+    await runImages(jobs, fakeClaude(), fal.client);
+    expect(fal.calls.map((c) => c.model)).toEqual(["fal-ai/ideogram/v3"]);
+
+    await uploadPassportImage(db, storage, A, personaId, { filename: "mila.png", bytes: await png(800, 1000, "#334455") });
+    const id = await post();
+    ({ q, jobs } = memoryQueue());
+    await requestImages(db, q, editorA, id, "new");
+    const claude = fakeClaude();
+    fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls[0].user).toContain('<persona name="Mila">');
+    expect(fal.calls).toHaveLength(1);
+    expect(fal.calls[0].model).toBe("fal-ai/nano-banana-pro/edit");
+    expect(fal.calls[0].references).toHaveLength(1);
+    expect(fal.calls[0].prompt).toContain("SAME person as in the reference images");
+    expect(fal.calls[0].prompt).toContain("Scene: A dark glass vault with red light");
+    expect(fal.calls[0].prompt).toContain("Style: Photorealistic street photography");
+    expect(fal.calls[0].prompt).not.toContain(cardDesign.illustrationStyle);
+    const costs = await sql`select model, cost_micro_usd::text c from usage_ledger where post_id = ${id} and model like 'fal-%'`;
+    expect(costs).toEqual([{ model: "fal-ai/nano-banana-pro/edit", c: "150000" }]);
+    expect((await media(id)).map((m) => [m.kind, m.model])).toEqual([["background", "fal-ai/nano-banana-pro/edit"], ["slide", null]]);
+    // The bulk estimate prices persona illustrations with the reference model.
+    await post();
+    const est = await estimateBulk(db, A, { kind: "brand", brandId: brandA, from: "2026-10-01", to: null }, ["image"]);
+    expect(est.image.model).toBe("Nano Banana Pro edit (reference)");
+
+    await setPersonaInPosts(db, A, personaId, false);
+    await expect(setPersonaInPosts(db, editorA, personaId, true)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const id2 = await post();
+    ({ q, jobs } = memoryQueue());
+    await requestImages(db, q, A, id2, "new");
+    const claude2 = fakeClaude();
+    fal = fakeImages();
+    await runImages(jobs, claude2, fal.client);
+    expect(claude2.calls[0].user).not.toContain("<persona");
+    expect(fal.calls.map((c) => c.model)).toEqual(["fal-ai/ideogram/v3"]);
   });
 
   it("the words follow the brand's language even when the channel was left on another one", async () => {

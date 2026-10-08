@@ -7,7 +7,7 @@ import { microToUsd } from "@/lib/money/usd";
 import { DNA_FIELDS, type PassportStatus, type PersonaDna, type personaImages, type personas } from "@/server/db/schema";
 import { DNA_LABELS, DNA_TEXT_MAX, FIELD_MAX } from "@/server/personas/dna";
 import { MAX_PASSPORT } from "@/server/personas/service";
-import { createPersonaAction, deletePassportImageAction, deletePersonaAction, requestPassportAction, setPrimaryImageAction, updatePersonaAction } from "../persona-actions";
+import { createPersonaAction, deletePassportImageAction, deletePersonaAction, requestPassportAction, setPersonaInPostsAction, setPrimaryImageAction, updatePersonaAction } from "../persona-actions";
 import { DnaText, PassportUpload } from "../persona-uploads";
 
 type Persona = typeof personas.$inferSelect;
@@ -173,6 +173,21 @@ export async function PersonaSection(props: {
             ) : null}
             <PassportUpload personaId={persona.id} room={MAX_PASSPORT - images.length} />
           </div>
+        ) : null}
+      </Card>
+
+      <Card className="grid gap-3 p-5" data-testid="persona-in-posts">
+        <h3 className="flex items-center gap-3 font-semibold">
+          {t("inPostsTitle")}
+          <span className="text-sm font-normal"><Badge tone={persona.useInPosts ? "ok" : "neutral"} dot>{persona.useInPosts ? t("inPostsOn") : t("inPostsOff")}</Badge></span>
+        </h3>
+        <p className="max-w-2xl text-sm text-muted">{t("inPostsHint")}</p>
+        {canEdit ? (
+          <form action={setPersonaInPostsAction}>
+            <input type="hidden" name="brandId" value={props.brandId} /><input type="hidden" name="personaId" value={persona.id} />
+            <input type="hidden" name="on" value={persona.useInPosts ? "0" : "1"} />
+            <button type="submit" className={buttonClass("secondary", "sm")}>{persona.useInPosts ? t("inPostsDisable") : t("inPostsEnable")}</button>
+          </form>
         ) : null}
       </Card>
 

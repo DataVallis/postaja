@@ -981,7 +981,8 @@
     "revise": "Fix the images",
     "lastRevision": "Last correction: {text}",
     "pdf": "Download PDF carousel",
-    "pdfHint": "Post a LinkedIn carousel as a document (PDF); the ZIP has it too."
+    "pdfHint": "Post a LinkedIn carousel as a document (PDF); the ZIP has it too.",
+    "personaNote": "Illustrations show the persona {name} (from the passport pictures)."
   },
   "Design": {
     "title": "Visual identity",
@@ -1289,7 +1290,13 @@
       "BAD_ORIGIN": "Upload not allowed.",
       "UNAUTHORIZED": "Your session has expired."
     },
-    "generateAgain": "New passport picture"
+    "generateAgain": "New passport picture",
+    "inPostsTitle": "Persona in post images",
+    "inPostsOn": "on",
+    "inPostsOff": "off",
+    "inPostsHint": "When on, the illustrations of this brand's post images show the persona: Claude describes the scene, the picture is made from the passport pictures (same person, Nano Banana Pro edit, €0.15 per illustration). Words and logo are still drawn by Postaja from the visual identity.",
+    "inPostsEnable": "Turn on",
+    "inPostsDisable": "Turn off"
   },
   "PersonaVideo": {
     "title": "Video with the persona ({name})",

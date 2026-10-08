@@ -69,3 +69,18 @@ export function keyframePrompt(dna: PersonaDna, scene: Scene): string {
 export function motionPrompt(scene: Scene): string {
   return `${scene.motion}\nRealistic, natural motion and physics; the same person throughout, consistent face and identity; the person does not speak. No text, no captions, no logos.`;
 }
+
+/**
+ * A post illustration with the persona (TASK-027): the scene Claude described for the image, the same person from the
+ * reference pictures, the persona's photographic style; room for the template's words is part of the scene.
+ */
+export function personaIllustrationPrompt(dna: PersonaDna, subject: string): string {
+  return [
+    "The SAME person as in the reference images: keep exactly the same face, facial features, skin, eyes, hair and age.",
+    dnaBlock(dna, IDENTITY),
+    `Scene: ${subject.trim().slice(0, 1500)}`,
+    dna.style.trim() ? `Style: ${dna.style.trim()}` : "Style: photorealistic photography.",
+    "A real photograph: natural skin texture, realistic light, no retouching, no CGI, no illustration, no plastic skin.",
+    "No text, no letters, no numbers, no logos, no watermarks.",
+  ].join("\n");
+}

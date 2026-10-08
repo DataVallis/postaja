@@ -134,6 +134,20 @@ export async function updatePersona(db: Db, ctx: OrgContext, personaId: string, 
   await forOrg(db, ctx).update(personas, { name: data.data.name, handle: data.data.handle.replace(/^@/, ""), dna: data.data.dna as PersonaDna, updatedAt: new Date() }, eq(personas.id, personaId));
 }
 
+/** Owner: whether the brand's post illustrations show the persona (TASK-027). */
+export async function setPersonaInPosts(db: Db, ctx: OrgContext, personaId: string, on: boolean) {
+  requireOwner(ctx);
+  const p = await personaById(db, ctx, personaId);
+  await brandFor(db, ctx, p.brandId, true);
+  await forOrg(db, ctx).update(personas, { useInPosts: on, updatedAt: new Date() }, eq(personas.id, p.id));
+}
+
+/** The persona that post illustrations of the brand show, or null (none, switched off, or no pictures yet). */
+export async function postPersona(db: Db, ctx: OrgContext, brandId: string) {
+  const data = await getBrandPersona(db, ctx, brandId);
+  return data && data.persona.useInPosts && data.images.length ? data.persona : null;
+}
+
 /** Owner deletes the persona and its passport (rows first; the pictures afterwards, best effort). */
 export async function deletePersona(db: Db, storage: Storage, ctx: OrgContext, personaId: string) {
   requireOwner(ctx);

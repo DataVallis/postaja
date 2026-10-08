@@ -35,6 +35,7 @@ Status: Planned · In progress · PARTIAL (waits for owner step) · Done (merged
 | TASK-024 | **Persona** (phase 2): brand tab — DNA framework by hand or filled by Claude from a description/imported DNA; passport pictures (first from the whole DNA, other angles with a reference model; uploads; primary) (ADR-053) | TASK-015 | Done |
 | TASK-025 | **Persona video**: Claude writes the shot, first frame 9:16 from the passport (Nano Banana Pro edit), Kling 3.0 image-to-video 5/10 s, 1080×1920 MP4, cost preview (ADR-055) | TASK-024 | Done |
 | TASK-026 | **User guide**: customer guide in Slovenian (9 chapters) in `docs/guides/user/sl`, shown in the app under Pomoč; kept current in every PR (ADR-056) | — | Done |
+| TASK-027 | **Persona in post images**: illustrations of persona brands show the persona (reference model from the passport); owner toggle; bulk estimate (ADR-057) | TASK-024 | Done |
 | TASK-010b | ~~MCP post tools~~ → **Files from Claude** into the brand (logo, past-post images, PDFs, fonts, ZIP) by URL or base64, upload link for the rest, brand created when missing (ADR-046) | TASK-010a | Done |
 
 Order and scope beyond TASK-003 may change; the next free numbers are always checked here first.

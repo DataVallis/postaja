@@ -981,7 +981,8 @@
     "revise": "Popravi slike",
     "lastRevision": "Zadnji popravek: {text}",
     "pdf": "Prenesi PDF karusel",
-    "pdfHint": "LinkedIn karusel objaviš kot dokument (PDF); tudi ZIP ga vsebuje."
+    "pdfHint": "LinkedIn karusel objaviš kot dokument (PDF); tudi ZIP ga vsebuje.",
+    "personaNote": "Ilustracije prikazujejo persono {name} (iz potnih slik)."
   },
   "Design": {
     "title": "Vizualna podoba",
@@ -1289,7 +1290,13 @@
       "BAD_ORIGIN": "Nalaganje ni dovoljeno.",
       "UNAUTHORIZED": "Prijava je potekla."
     },
-    "generateAgain": "Nova passport slika"
+    "generateAgain": "Nova passport slika",
+    "inPostsTitle": "Persona na slikah objav",
+    "inPostsOn": "vklopljeno",
+    "inPostsOff": "izklopljeno",
+    "inPostsHint": "Ko je vklopljeno, ilustracije slik objav tega branda prikazujejo persono: Claude opiše prizor, slika nastane iz potnih slik (ista oseba, Nano Banana Pro edit, 0,15 € na ilustracijo). Besedila in logotip še vedno nariše Postaja po vizualni podobi.",
+    "inPostsEnable": "Vklopi",
+    "inPostsDisable": "Izklopi"
   },
   "PersonaVideo": {
     "title": "Video s persono ({name})",
