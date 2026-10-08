@@ -16,7 +16,7 @@ import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
 import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
-import { postArchive } from "../download/service";
+import { aiPersonPosts, postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
 import { deletePostVideo, listPostVideos } from "../video/media";
@@ -286,6 +286,27 @@ describe("post images from the design", () => {
     const costs = await sql`select model, cost_micro_usd::text c from usage_ledger where post_id = ${id} and model like 'fal-%'`;
     expect(costs).toEqual([{ model: "fal-ai/nano-banana-pro/edit", c: "150000" }]);
     expect((await media(id)).map((m) => [m.kind, m.model])).toEqual([["background", "fal-ai/nano-banana-pro/edit"], ["slide", null]]);
+    // TASK-045: the persona is disclosed — flagged, IPTC "digital source type" in the PNG, a note in the exported text;
+    // a post without the persona has none of it, and a free word redraw keeps the flag.
+    const slideRow = async (postId: string) => (await sql`select storage_key, ai_person from post_media where post_id = ${postId} and kind = 'slide' and archived_at is null`)[0];
+    const marked = await slideRow(id);
+    expect(marked.ai_person).toBe(true);
+    const xmp = (await sharp(await storage.get(marked.storage_key)).metadata()).xmp?.toString() ?? "";
+    expect(xmp).toContain("compositeWithTrainedAlgorithmicMedia");
+    expect([...(await aiPersonPosts(db, A, [id, id0]))]).toEqual([id]);
+    expect((await sharp(await storage.get((await slideRow(id0)).storage_key)).metadata()).xmp).toBeUndefined();
+    await sql`update posts set content = ${sql.json({ caption: "Zaklenjeno je." })} where id in (${id}, ${id0})`;
+    const zip = await postArchive(db, storage, A, id);
+    const caption = new TextDecoder().decode(await zip.entries.find((e) => e.name === "besedilo.txt")!.bytes());
+    expect(caption.trimEnd().endsWith("Oseba na sliki ali videu je ustvarjena z umetno inteligenco.")).toBe(true);
+    const zip0 = await postArchive(db, storage, A, id0);
+    expect(new TextDecoder().decode(await zip0.entries.find((e) => e.name === "besedilo.txt")!.bytes())).not.toContain("umetno inteligenco");
+    await setSlideTexts(db, A, id, [{ headline: "Drugače", label: "" }]);
+    ({ q, jobs } = memoryQueue());
+    await requestImages(db, q, A, id, "text");
+    await runImages(jobs, fakeClaude(), fakeImages().client);
+    expect((await slideRow(id)).ai_person).toBe(true);
+    ({ q, jobs } = memoryQueue());
     // The bulk estimate prices persona illustrations with the reference model.
     await post();
     const est = await estimateBulk(db, A, { kind: "brand", brandId: brandA, from: "2026-10-01", to: null }, ["image"]);

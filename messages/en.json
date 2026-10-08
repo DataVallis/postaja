@@ -545,7 +545,18 @@
     "statusErrors": {
       "BAD_URL": "The link must be a web address (https://…).",
       "FAILED": "The change could not be saved."
-    }
+    },
+    "aiLabelTitle": "This post shows an AI-generated person — label it when you publish.",
+    "aiLabelHow": {
+      "instagram": "Instagram: when posting, open Advanced settings and turn on the AI label (\"Add AI label\").",
+      "facebook": "Facebook: when posting, turn on the AI label (\"Add AI label\") in the post options.",
+      "tiktok": "TikTok: when posting, turn on \"AI-generated content\" under More options.",
+      "youtube": "YouTube: when uploading, answer \"Yes\" to \"Altered or synthetic content\".",
+      "linkedin": "LinkedIn has no AI label switch; the note at the end of the text tells readers.",
+      "x": "X has no AI label switch; the note at the end of the text tells readers.",
+      "other": "If the network has an AI label switch, turn it on; the note at the end of the text tells readers."
+    },
+    "aiLabelExport": "The EU AI Act (Article 50) requires a realistic AI-generated person to be disclosed. The export (ZIP) therefore adds a note at the end of the text, and images and videos carry an AI label in their file data."
   },
   "Connect": {
     "title": "Claude",

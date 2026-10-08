@@ -22,6 +22,7 @@ import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/con
 import { forOrg } from "../tenancy/scoped";
 import { billedMegapixels, generationSize, ImageError, type ImageClient } from "./fal";
 import { passportReferences, personaPicture, postPersona } from "../personas/service";
+import { markAiPng } from "./ai-label";
 import { personaIllustrationPrompt } from "../personas/scene";
 
 export const POST_IMAGE_QUEUE = "post-image";
@@ -242,6 +243,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const newRows: MediaRow[] = [];
   const keptIllustrations = new Set<string>();
   const pngs: Uint8Array[] = [];
+  const aiSlides = new Set<number>();
   for (const [i, slide] of visual.slides.entries()) {
     const t = spec.templates.find((x) => x.id === slide.templateId)!;
     let illustration: Uint8Array | null = null;
@@ -250,6 +252,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
       if (prev && reuse(i, slide)) {
         illustration = await deps.storage.get(prev.storageKey);
         keptIllustrations.add(prev.id);
+        if (prev.aiPerson) aiSlides.add(i);
       } else {
         let prompt: string;
         let out: Awaited<ReturnType<typeof generateIllustration>>;
@@ -265,15 +268,18 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         illustration = out.bytes;
         const k = key(ctx.orgId, postId, "jpg");
         await deps.storage.put(k, out.bytes, "image/jpeg");
-        newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt });
+        newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt, aiPerson: !!persona });
+        if (persona) aiSlides.add(i);
       }
     }
-    pngs.push(await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font }));
+    const png = await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font });
+    // TASK-045: a slide showing the persona says so in its metadata (IPTC digital source type).
+    pngs.push(aiSlides.has(i) ? await markAiPng(png) : png);
   }
   for (const [i, png] of pngs.entries()) {
     const k = key(ctx.orgId, postId, "png");
     await deps.storage.put(k, png, "image/png");
-    newRows.push({ id: crypto.randomUUID(), postId, kind: "slide", position: i, storageKey: k, contentType: "image/png", width: size.width, height: size.height, sizeBytes: png.byteLength });
+    newRows.push({ id: crypto.randomUUID(), postId, kind: "slide", position: i, storageKey: k, contentType: "image/png", width: size.width, height: size.height, sizeBytes: png.byteLength, aiPerson: aiSlides.has(i) });
   }
 
   // A new version (TASK-033, ADR-062): the replaced images are archived, never deleted — the member restores or deletes
