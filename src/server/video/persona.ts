@@ -103,7 +103,7 @@ export async function makePersonaVideo(db: Db, deps: ImageDeps, ctx: OrgContext,
   const keyframe = new Uint8Array(await sharp(frame.bytes).resize({ ...VIDEO_SIZE, fit: "cover" }).jpeg({ quality: 90 }).toBuffer());
 
   // 3. The clip: reserved at the full length, released if the provider fails, settled once delivered.
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: videoModel.provider, model: videoModel.modelKey, estimate: videoModel.perSecond * BigInt(durationS), now: deps.now });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: videoModel.provider, model: videoModel.modelKey, estimate: videoModel.perSecond * BigInt(durationS), now: deps.now, action: durationS <= 5 ? "persona_video_5s" : "persona_video_10s" });
   let clip: Uint8Array;
   try {
     clip = (await deps.images.video({ model: videoModel.modelKey, prompt: motionPrompt(scene), image: `data:image/jpeg;base64,${Buffer.from(keyframe).toString("base64")}`, durationS })).bytes;

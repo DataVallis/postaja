@@ -4,13 +4,16 @@ import { microToUsd } from "@/lib/money/usd";
 import { requireSuperadmin } from "@/server/admin/guard";
 import { getOrganizationDetail } from "@/server/admin/queries";
 import { getDb } from "@/server/db/client";
+import { creditStatus, listPacks } from "@/server/credits/service";
+import Link from "next/link";
 import { InviteForm, SettingsForm } from "../../forms";
 
 export default async function OrgPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireSuperadmin();
+  const actor = await requireSuperadmin();
   const { id } = await params;
   const detail = await getOrganizationDetail(getDb(), id);
   if (!detail) notFound();
+  const [credits, packs] = await Promise.all([creditStatus(getDb(), id), listPacks(getDb(), actor, id)]);
   const { org, members, invites } = detail;
   const t = await getTranslations("Admin");
   const f = await getFormatter();
@@ -23,6 +26,24 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
       <section aria-labelledby="settings-h">
         <h2 id="settings-h" className="mb-4 text-lg font-semibold">{t("settings")}</h2>
         <SettingsForm orgId={org.id} plan={org.plan} status={org.status} capUsd={microToUsd(org.spendCapMicroUsd)} limits={org.limits} />
+      </section>
+      <section aria-labelledby="credits-h" data-testid="org-credits">
+        <h2 id="credits-h" className="mb-2 text-lg font-semibold">{t("credits.title")}</h2>
+        <p className="text-sm">
+          {credits.allowance === null
+            ? t("credits.unlimited", { used: credits.usedThisMonth })
+            : t("credits.status", { used: credits.usedThisMonth, allowance: credits.allowance, packs: credits.packsLeft, available: credits.available ?? 0 })}
+        </p>
+        {packs.length ? (
+          <ul className="mt-2 grid gap-1 text-sm">
+            {packs.map((p) => (
+              <li key={p.id} className={p.remaining === 0 || p.expiresAt < new Date() ? "text-muted" : ""}>
+                {t("credits.packLine", { remaining: p.remaining, credits: p.credits, until: f.dateTime(p.expiresAt, { dateStyle: "medium" }), source: t(`credits.sources.${p.source}`) })}{p.note ? ` · ${p.note}` : ""}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Link href="/admin/credits" className="mt-2 inline-block text-sm underline underline-offset-4">{t("credits.manage")}</Link>
       </section>
       <section aria-labelledby="members-h">
         <h2 id="members-h" className="mb-4 text-lg font-semibold">{t("members")}</h2>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { createMailerFromEnv } from "@/server/email/mailer";
+import { CreditError, requestCredits } from "@/server/credits/service";
 import { cancelInvitation, inviteToTeam, removeMember, setMemberRole, TeamError } from "@/server/orgs/team";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -14,8 +15,9 @@ async function run(fn: () => Promise<unknown>, ok: string) {
   try {
     await fn();
   } catch (e) {
-    if (!(e instanceof TeamError)) console.error("team action failed", e);
-    q = `?error=${e instanceof TeamError ? e.code : "FAILED"}`;
+    const known = e instanceof TeamError || e instanceof CreditError;
+    if (!known) console.error("team action failed", e);
+    q = `?error=${known ? (e as TeamError | CreditError).code : "FAILED"}`;
   }
   revalidatePath("/app/team");
   redirect(back(q));
@@ -44,4 +46,11 @@ export async function removeMemberAction(f: FormData) {
   const ctx = await orgContextForAction();
   if (!ctx) redirect("/login");
   await run(() => removeMember(getDb(), ctx, str(f, "memberId")), "removed");
+}
+
+/** "Kupi kredite" (TASK-038): a request for a pack; the super admin adds it once paid (until checkout, TASK-036). */
+export async function requestCreditsAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  await run(() => requestCredits(getDb(), ctx, str(f, "pack")), "creditsRequested");
 }

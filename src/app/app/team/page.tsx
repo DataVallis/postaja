@@ -5,7 +5,9 @@ import { microToUsd } from "@/lib/money/usd";
 import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { listTeam, orgUsage } from "@/server/orgs/team";
-import { cancelInvitationAction, inviteAction, removeMemberAction, setRoleAction } from "./actions";
+import { creditStatus, orgCreditRequests } from "@/server/credits/service";
+import { CREDIT_PACKS } from "@/server/db/schema";
+import { cancelInvitationAction, inviteAction, removeMemberAction, requestCreditsAction, setRoleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const { org, user } = await requireOrgPage();
   const sp = await searchParams;
   const db = getDb();
-  const [{ members, invites }, usage] = await Promise.all([listTeam(db, org), orgUsage(db, org)]);
+  const [{ members, invites }, usage, credits, requests] = await Promise.all([listTeam(db, org), orgUsage(db, org), creditStatus(db, org.orgId), orgCreditRequests(db, org)]);
   const t = await getTranslations("Team");
   const f = await getFormatter();
   const isOwner = org.role === "owner";
@@ -34,6 +36,38 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <Stat label={t("spend")} value={`${microToUsd(usage.spentMicroUsd)} €`} hint={t("ofCap", { cap: `${microToUsd(usage.capMicroUsd)} €` })} />
         </div>
         <p className="text-xs text-muted">{t("limitsHint")}</p>
+      </section>
+
+      <section aria-labelledby="credits-h" className="mb-8 grid gap-3" data-testid="team-credits">
+        <h2 id="credits-h" className="text-base font-semibold">{t("credits.title")}</h2>
+        {credits.allowance === null ? <p className="text-sm text-muted">{t("credits.unlimited", { used: credits.usedThisMonth })}</p> : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Stat label={t("credits.month")} value={t("of", { n: String(credits.allowance - (credits.monthlyLeft ?? 0)), max: credits.allowance })} hint={t("thisMonth")} />
+              <Stat label={t("credits.packs")} value={String(credits.packsLeft)} hint={credits.packs[0] ? t("credits.packsUntil", { at: f.dateTime(credits.packs[0].expiresAt, { dateStyle: "medium" }) }) : undefined} />
+              <Stat label={t("credits.available")} value={String(credits.available ?? 0)} />
+            </div>
+            {credits.level !== "ok" ? <p role="status" className="rounded-lg border border-signal/50 p-3 text-sm">{t(`credits.${credits.level}`)}</p> : null}
+          </>
+        )}
+        <p className="text-xs text-muted">{t("credits.hint")}</p>
+        {isOwner ? (
+          <form action={requestCreditsAction} className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium">{t("credits.buy")}</span>
+            {(Object.keys(CREDIT_PACKS) as (keyof typeof CREDIT_PACKS)[]).map((k) => (
+              <button key={k} type="submit" name="pack" value={k} className={buttonClass("secondary", "sm")}>
+                {t("credits.packButton", { credits: CREDIT_PACKS[k].credits.toLocaleString("sl-SI"), price: CREDIT_PACKS[k].priceEur })}
+              </button>
+            ))}
+          </form>
+        ) : null}
+        {requests.length ? (
+          <ul className="grid gap-1 text-sm text-muted" data-testid="credit-request-list">
+            {requests.map((r) => (
+              <li key={r.id}>{t("credits.requestLine", { credits: CREDIT_PACKS[r.pack].credits.toLocaleString("sl-SI"), at: f.dateTime(r.createdAt, { dateStyle: "medium" }), status: t(`credits.statuses.${r.status}`) })}</li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       <section aria-labelledby="members-h" className="mb-8 grid gap-3">

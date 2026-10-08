@@ -91,7 +91,7 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
   let motion: MotionSpec | null = null;
   let invalid: { draft: unknown; errors: string } | undefined;
   for (let attempt = 0; attempt < 2 && !motion; attempt++) {
-    const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now },
+    const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, now: deps.now, action: attempt === 0 ? "animation" : "assist" },
       motionRequest({ spec, template: t, slots: slide.slots, instruction: p.videoMotion ?? "", platform }, invalid));
     const parsed = motionSpecSchema.safeParse(out.input);
     if (!parsed.success) { invalid = { draft: out.input, errors: zodIssues(parsed.error) }; continue; }

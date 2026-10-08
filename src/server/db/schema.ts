@@ -18,3 +18,4 @@ export * from "./schema/personas";
 export * from "./schema/competitors";
 export * from "./schema/reviews";
 export * from "./schema/demos";
+export * from "./schema/credits";

@@ -8,9 +8,28 @@ Postaja plača AI storitve (Claude za besedila in oblikovanje, fal.ai za slike i
 - **Objava**: strošek objave na dnu strani.
 - **Gumbi**: pri dražjih dejanjih (množično ustvarjanje, animacija, potna slika, video s persono) je na gumbu **največja cena** pred zagonom.
 
+## Krediti
+
+Če ima tvoj paket mesečne kredite, vsako plačljivo dejanje AI porabi kredite:
+
+| Dejanje | Krediti |
+| --- | --- |
+| Besedilo objave ali oglasni copy | 1 |
+| AI ilustracija (slika, slide) | 2 |
+| Animacija slike | 1 |
+| Slika s persono ali potna slika | 5 |
+| Video s persono 5 s / 10 s | 25 / 40 |
+| Raziskava konkurence (iskanje ali analiza) | 5 |
+
+Samodejni popravek besedila in pomožni klici (načrt slik, dizajn, ideje, uvoz plana) kreditov ne porabijo. Cenik lahko skrbnik spremeni; velja vedno trenutni.
+
+Najprej se porabijo **mesečni krediti** (vsak mesec znova), nato **dokupljeni paketi**, ki veljajo 12 mesecev. Stanje vidiš v **Ekipa in paket** → **Krediti**. Ko porabiš 80 % kreditov, Postaja to pokaže na vrhu strani; ko jih zmanjka, novih besedil, slik in videov ne ustvari do novega meseca ali dokupa.
+
+**Dokup:** lastnik v **Ekipa in paket** klikne paket (500 kreditov za 25 € ali 2.000 za 80 €). Zahteva gre k nam; ko je plačilo potrjeno, se krediti prikažejo na isti strani.
+
 ## Mesečni limit
 
-Organizacija ima mesečni limit porabe in lahko tudi omejitev števila **AI generacij** na mesec (generacija je en plačljiv klic AI: besedilo, slika ali video). Oboje nastavi skrbnik, porabo vidiš v **Ekipa in paket**.
+Poleg kreditov ima organizacija varnostni mesečni limit porabe v € in lahko tudi omejitev števila **AI generacij** na mesec (generacija je en plačljiv klic AI: besedilo, slika ali video). Oboje nastavi skrbnik, porabo vidiš v **Ekipa in paket**.
 
 Postaja pred vsakim klicem rezervira največji možni strošek; če bi limit presegla, klic ne steče in vidiš sporočilo o limitu. Neuspeli klici se ne zaračunajo.
 

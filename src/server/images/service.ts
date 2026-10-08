@@ -198,7 +198,7 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   if (!model) throw new ImageError("IMAGE_PROVIDER");
   const gen = generationSize(shape.width, shape.height);
   const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action: "illustration" });
   let out;
   try {
     out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: "text, letters, words, watermark, logo" });

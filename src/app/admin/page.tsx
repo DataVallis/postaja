@@ -3,17 +3,24 @@ import { getTranslations } from "next-intl/server";
 import { microToUsd } from "@/lib/money/usd";
 import { requireSuperadmin } from "@/server/admin/guard";
 import { listOrganizations } from "@/server/admin/queries";
+import { pendingCreditRequests } from "@/server/credits/service";
 import { getDb } from "@/server/db/client";
 import { countDueForReverification } from "@/server/rules/repo";
 import { ReverifyBanner } from "./reverify-banner";
 
 export default async function AdminHome() {
-  await requireSuperadmin();
+  const actor = await requireSuperadmin();
   const t = await getTranslations("Admin");
-  const [orgs, due] = await Promise.all([listOrganizations(getDb()), countDueForReverification(getDb())]);
+  const [orgs, due, requests] = await Promise.all([listOrganizations(getDb()), countDueForReverification(getDb()), pendingCreditRequests(getDb(), actor)]);
   return (
     <div className="grid gap-6">
       <ReverifyBanner rules={due.rules} presets={due.presets} link />
+      {requests.length ? (
+        <p role="status" className="rounded-lg border border-signal/50 p-3 text-sm" data-testid="credit-requests-banner">
+          {t("credits.pendingBanner", { n: requests.length })}{" "}
+          <Link href="/admin/credits" className="font-semibold underline underline-offset-4">{t("credits.open")}</Link>
+        </p>
+      ) : null}
       <div>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{t("organizations")}</h1>

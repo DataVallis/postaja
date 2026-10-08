@@ -131,7 +131,7 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
     const chars = prompt.system.reduce((n, b) => n + b.text.length, 0) + prompt.user.length + JSON.stringify(prompt.tool).length;
     let ledgerId: string;
     try {
-      ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: r.brand.id, postId, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, MAX_OUTPUT_TOKENS, model), now: deps.now });
+      ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: r.brand.id, postId, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, MAX_OUTPUT_TOKENS, model), now: deps.now, action: attempt === 0 ? "text" : "assist" });
     } catch (e) {
       if (e instanceof SpendCapError) {
         await finish({ status: "failed", error: "SPEND_CAP", fixAttempts: attempt });

@@ -118,7 +118,7 @@ export async function runFindJob(db: Db, deps: FindDeps, job: CompetitorFindJob)
   const req = findRequest({ brandName: brand.name, website: brand.website, languages: brand.languages, cgp: profile?.cgp ?? "", hint: run.hint, known });
   let out;
   try {
-    out = await cappedCall(db, deps.llm, { orgId: run.orgId, brandId: run.brandId, postId: null, now: deps.now }, req);
+    out = await cappedCall(db, deps.llm, { orgId: run.orgId, brandId: run.brandId, postId: null, now: deps.now, action: "research" }, req);
   } catch (e) {
     if (e instanceof SpendCapError) return fail("SPEND_CAP");
     if (e instanceof LlmError) return fail(e.message && e.message !== e.code ? `AI_FAILED:${e.message}` : "AI_FAILED");
