@@ -39,6 +39,8 @@ Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
 3. **Kaj naj AI popravi na slikah?**: opiši popravek z besedami in klikni **Popravi slike**. Plačajo se samo ilustracije, ki se spremenijo.
 4. **Nove slike** naredi vse znova.
 
+Nič se ne izgubi: vsaka nova izdelava, popravek ali osvežitev besed shrani prejšnje slike kot verzijo. V razdelku **Prejšnje verzije slik** verzijo vrneš (**Vrni to verzijo**; trenutne slike postanejo verzija) ali jo trajno izbrišeš (**Izbriši verzijo**).
+
 Za LinkedIn karusel je na voljo **Prenesi PDF karusel**.
 
 Pri brandu s persono ob gumbu **Ustvari slike** izbereš, ali naj ilustracije prikazujejo persono (**S persono …**) ali ne. Glej [Persona](/app/help/persona#persona-na-slikah-objav).

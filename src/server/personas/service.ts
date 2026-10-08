@@ -285,10 +285,10 @@ const priceOf = (m: typeof modelRegistry.$inferSelect, width: number, height: nu
   return m.perImage + BigInt(billedMegapixels(g.width, g.height)) * m.perMegapixel;
 };
 
-/** The generated passport picture that a new one replaces (the owner's uploads are never replaced). */
-const generatedPassport = (imgs: ImageRow[]) => imgs.find((i) => i.angle === "front" && i.source === "generated");
+/** The newest generated passport picture (the list is primary-first, then oldest first). */
+const generatedPassport = (imgs: ImageRow[]) => [...imgs].filter((i) => i.angle === "front" && i.source === "generated").sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
-/** At most what a new passport picture costs; `replaces` when one already exists. */
+/** At most what a new passport picture costs; `replaces` = one was generated before (the new one is added). */
 export async function passportEstimate(db: Db, ctx: OrgContext, personaId: string): Promise<{ replaces: boolean; maxCost: bigint | null }> {
   const imgs = await passportImages(db, ctx, personaId);
   const m = await defaultModel(db, "image_persona");
@@ -301,7 +301,8 @@ export async function requestPassport(db: Db, queue: Queue, ctx: OrgContext, per
   const p = await personaById(db, ctx, personaId);
   await brandFor(db, ctx, p.brandId, true);
   const imgs = await passportImages(db, ctx, p.id);
-  if (imgs.length >= MAX_PASSPORT && !generatedPassport(imgs)) throw new PersonaError("LIMIT_REACHED");
+  // A new passport picture is added (TASK-033: nothing disappears unless deleted), so it needs room.
+  if (imgs.length >= MAX_PASSPORT) throw new PersonaError("LIMIT_REACHED");
   if (!(await defaultModel(db, "image_persona"))) throw new PersonaError("NO_REF_MODEL");
   const claimed = await forOrg(db, ctx).update(
     personas,
@@ -349,19 +350,17 @@ export async function personaPicture(db: Db, deps: Pick<ImageDeps, "images" | "n
   return { ...out, model: model.modelKey };
 }
 
-/** Makes the passport picture; it replaces the previous generated one (and takes its place as primary). */
+/**
+ * Makes a passport picture and adds it to the passport (TASK-033: the earlier ones stay until the owner deletes them).
+ * It becomes primary when the previous generated passport was primary, or when it is the first picture.
+ */
 export async function generatePassport(db: Db, deps: ImageDeps, ctx: OrgContext, personaId: string): Promise<string> {
   const p = await personaById(db, ctx, personaId);
   const prompt = passportPrompt(p.dna);
   const out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: null }, prompt, PASSPORT_SHAPE, []);
-  const old = generatedPassport(await passportImages(db, ctx, p.id));
-  if (old) {
-    await forOrg(db, ctx).delete(personaImages, eq(personaImages.id, old.id));
-    await deps.storage.delete(old.storageKey).catch(() => undefined);
-  }
+  const before = await passportImages(db, ctx, p.id);
   const id = await addImage(db, deps.storage, ctx, p, { angle: "front", source: "generated", bytes: out.bytes, contentType: out.contentType, width: out.width, height: out.height, model: out.model, prompt });
-  // The new passport is primary when the old one was, or when nothing else is.
-  if (old?.isPrimary) await setPrimaryImage(db, ctx, id);
+  if (generatedPassport(before)?.isPrimary) await setPrimaryImage(db, ctx, id);
   return id;
 }
 

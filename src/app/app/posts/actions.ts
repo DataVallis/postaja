@@ -9,7 +9,7 @@ import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
-import { ImageJobError, requestImages, setSlideTexts } from "@/server/images/service";
+import { ImageJobError, requestImages, setSlideTexts, deleteImageVersion, restoreImageVersion } from "@/server/images/service";
 import { deletePostVideo } from "@/server/video/media";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
@@ -211,4 +211,25 @@ export async function deletePostVideoAction(f: FormData): Promise<void> {
   await deletePostVideo(getDb(), getStorage(), ctx, String(f.get("videoId") ?? "")).catch(() => undefined);
   revalidatePath(`/app/posts/${postId}`);
   redirect(`/app/posts/${postId}#${String(f.get("anchor") ?? "animation") === "persona-video" ? "persona-video" : "animation"}`);
+}
+
+/** "Vrni to verzijo" (TASK-033): an earlier version of the images becomes current again; nothing is deleted. */
+export async function restoreImageVersionAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const postId = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  await restoreImageVersion(getDb(), ctx, postId, String(f.get("runId") ?? "")).catch((e) => { error = e instanceof ImageJobError ? e.code : "FAILED"; });
+  revalidatePath(`/app/posts/${postId}`);
+  redirect(`/app/posts/${postId}${error ? `?imageError=${error}` : ""}#images`);
+}
+
+/** "Izbriši verzijo" (TASK-033): an earlier version is deleted for good, on purpose. */
+export async function deleteImageVersionAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const postId = String(f.get("postId") ?? "");
+  await deleteImageVersion(getDb(), getStorage(), ctx, postId, String(f.get("runId") ?? "")).catch(() => undefined);
+  revalidatePath(`/app/posts/${postId}`);
+  redirect(`/app/posts/${postId}#images`);
 }

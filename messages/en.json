@@ -1002,7 +1002,13 @@
     "lastRevision": "Last correction: {text}",
     "pdf": "Download PDF carousel",
     "pdfHint": "Post a LinkedIn carousel as a document (PDF); the ZIP has it too.",
-    "withPersona": "With the persona {name} (illustrations from the passport pictures)"
+    "withPersona": "With the persona {name} (illustrations from the passport pictures)",
+    "versionsTitle": "Earlier image versions ({n})",
+    "versionsHint": "Every new run or correction keeps the earlier images as a version. Restore one (the current images become a version) or delete it.",
+    "restoreVersion": "Restore this version",
+    "deleteVersion": "Delete version",
+    "deleteVersionWarning": "This version's images will be deleted for good.",
+    "deleteVersionConfirm": "Delete version"
   },
   "Design": {
     "title": "Visual identity",
@@ -1248,7 +1254,7 @@
     "createManual": "Create persona",
     "saving": "Saving …",
     "passportTitle": "Passport pictures",
-    "passportHint": "3–{max} pictures of the same person; one is primary. The passport picture is a photoreal close-up made with a prompt that includes the whole DNA (Nano Banana Pro). A new passport picture replaces the previous one; you can also upload your own.",
+    "passportHint": "3–{max} pictures of the same person; one is primary. The passport picture is a photoreal close-up made with a prompt that includes the whole DNA (Nano Banana Pro). A new passport picture is added and becomes primary; earlier ones stay until you delete them. You can also upload your own.",
     "working": "Pictures are being made – the page refreshes itself.",
     "noImages": "No pictures yet.",
     "primary": "primary",

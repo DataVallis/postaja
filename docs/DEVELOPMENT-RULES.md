@@ -188,6 +188,13 @@ and applied in one pass at the end of the phase.
 
 ---
 
+### No silent loss (owner rule, ADR-062)
+Nothing a user made — or paid an AI call for — disappears unless the user deletes it. "New", "again", "regenerate",
+"correct" and re-imports **add a version**; the earlier one stays reachable (restore or delete). Deleting is a
+separate, confirmed action. Code review checks every `delete`/overwrite of generated content against this rule.
+
+---
+
 ## 8. Security and secrets
 
 - Secrets live only in: the owner's own secret store, server secret files (mode 600, outside the repo),

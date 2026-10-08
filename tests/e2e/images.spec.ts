@@ -155,6 +155,15 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await revise.getByRole("button", { name: "Popravi slike" }).click();
   await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 1);
   await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  // TASK-033: every earlier run is kept as a version; the oldest one can be restored and the words come back with it.
+  const imgVersions = images.getByTestId("image-versions");
+  await expect(imgVersions.getByText(/^Prejšnje verzije slik \(\d+\)$/)).toBeVisible();
+  await imgVersions.getByText(/^Prejšnje verzije slik/).click();
+  const count = await imgVersions.getByTestId("image-version").count();
+  expect(count).toBeGreaterThanOrEqual(3);
+  await imgVersions.getByTestId("image-version").last().getByRole("button", { name: "Vrni to verzijo" }).click();
+  await expect(p.getByTestId("image-versions").getByText(`Prejšnje verzije slik (${count})`)).toBeVisible();
+  await expect(images.getByTestId("slide-texts").getByLabel("Naslov")).not.toHaveValue("Krajši naslov.");
 
   // Animation (TASK-023): Claude designs the motion, Postaja draws every frame — no video model, nothing from fal.
   const anim = p.getByTestId("animation");

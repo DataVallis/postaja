@@ -47,3 +47,10 @@ Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 `design/design.test.ts` (spec rules, fitting, emphasis, rendering at 3 shapes, fonts, prompts), `images/fal.test.ts`,
 `design/design.int.test.ts` (Claude inputs, retry, versions, cap, post flow with style references, free word edits,
 access, bulk, HTTP, corrections: words only reuse the illustration, a picture change redraws one, refusals), E2E `tests/e2e/images.spec.ts` (design, revision, versions, post images, word edits, corrections in words, bulk carousel).
+
+## Versions (TASK-033, ADR-062)
+Every run of `renderPostImages` creates a `post_image_runs` row (with the words it drew) and tags its new `post_media`
+rows with `run_id`; the images it replaces get `archived_at` instead of being deleted (reused illustrations stay
+current). Current = `archived_at is null` (one per post/kind/position, partial unique index) — every reader filters on
+it. `listImageVersions`, `restoreImageVersion` (archives the current images, un-archives the run, restores its words),
+`deleteImageVersion` (archived rows of the run + files). UI: "Prejšnje verzije slik" in `images-section.tsx`.

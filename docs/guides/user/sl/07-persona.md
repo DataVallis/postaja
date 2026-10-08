@@ -20,7 +20,7 @@ Obvezna so Gender, Age, Ethnicity / Skin Tone in Hair Colour. V **Extra Notes** 
 ## Potne slike
 
 - **Ustvari passport sliko**: fotorealističen bližnji portret, ustvarjen s promptom, ki vključuje celotno DNK. Na gumbu je cena.
-- **Nova passport slika** zamenja prejšnjo ustvarjeno.
+- **Nova passport slika** naredi še eno passport sliko; doda se k prejšnjim in postane glavna. Prejšnje ostanejo, dokler jih ne izbrišeš (koš ob sliki).
 - **Naloži slike**: dodaš svoje slike iste osebe (PNG, JPG, WebP, do 15 MB) in izbereš kot.
 - Skupaj največ 10 slik. Z zvezdico izbereš **glavno** sliko, iz katere izhajajo vsi videi.
 

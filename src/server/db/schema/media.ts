@@ -4,7 +4,7 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { posts } from "./generation";
+import { posts, type PostVisual } from "./generation";
 import { organization } from "./org";
 
 /** "video": an animated image (TASK-022/023) or a persona video (TASK-025), MP4; "keyframe": the persona video's
@@ -27,11 +27,17 @@ export const postMedia = pgTable(
     /** Image model that made the background (null for slides). */
     model: text("model"),
     prompt: text("prompt"),
+    /** TASK-033: the image run (version) that made it. */
+    runId: text("run_id"),
+    /** TASK-033: set when a newer version replaced it on the post; kept until the member deletes that version. */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("post_media_org_idx").on(t.orgId),
-    uniqueIndex("post_media_post_kind_pos_uq").on(t.postId, t.kind, t.position),
+    // One current row per post, kind and position; earlier versions are archived next to it.
+    uniqueIndex("post_media_post_kind_pos_uq").on(t.postId, t.kind, t.position).where(sql`${t.archivedAt} is null`),
+    index("post_media_run_idx").on(t.postId, t.runId),
     uniqueIndex("post_media_key_uq").on(t.storageKey),
     check("post_media_kind_ck", sql`${t.kind} in ('slide','background','video','keyframe')`),
     check("post_media_size_ck", sql`${t.width} > 0 and ${t.height} > 0 and ${t.sizeBytes} > 0 and ${t.position} >= 0`),
@@ -70,4 +76,22 @@ export const postVideos = pgTable(
     check("post_videos_kind_ck", sql`${t.kind} in ('animation','persona')`),
     check("post_videos_size_ck", sql`${t.width} > 0 and ${t.height} > 0 and ${t.sizeBytes} > 0`),
   ],
+);
+
+/**
+ * One version of a post's images (TASK-033, ADR-062; owner: "nič ne izgine, če uporabnik sam ne izbriše"): every
+ * image run (new images, a correction, words re-drawn) is a version with the words it drew; earlier versions stay
+ * archived until a member restores or deletes them.
+ */
+export const postImageRuns = pgTable(
+  "post_image_runs",
+  {
+    id: text("id").primaryKey(),
+    orgId: text("org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    postId: text("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    visual: jsonb("visual").$type<PostVisual>(),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("post_image_runs_post_idx").on(t.orgId, t.postId, t.createdAt)],
 );

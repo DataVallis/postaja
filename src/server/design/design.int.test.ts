@@ -15,7 +15,7 @@ import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { ImageError, type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
-import { listPostMedia, requestImages, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
+import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setSlideTexts, type PostImageJob } from "../images/service";
 import { postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
@@ -127,7 +127,8 @@ const runImages = async (jobs: { data: unknown }[], claude: ReturnType<typeof fa
   }
 };
 const state = async (id: string) => (await sql`select media_status, media_error from posts where id = ${id}`)[0];
-const media = async (id: string) => sql`select kind, position, storage_key, model from post_media where post_id = ${id} order by kind, position`;
+/** The post's current images (earlier versions are archived — TASK-033). */
+const media = async (id: string) => sql`select kind, position, storage_key, model from post_media where post_id = ${id} and archived_at is null order by kind, position`;
 
 describe("brand design", () => {
   it("Claude sees the logo and past posts and the owner's words; the result becomes the current design", async () => {
@@ -367,7 +368,21 @@ describe("post images from the design", () => {
     const after = await media(id);
     expect(after[0].storage_key).toBe(before[0].storage_key);
     expect(after[1].storage_key).not.toBe(before[1].storage_key);
-    expect(await storage.exists(before[1].storage_key)).toBe(false);
+    // The earlier image is kept as a version (TASK-033), not deleted.
+    expect(await storage.exists(before[1].storage_key)).toBe(true);
+    const versions = await listImageVersions(db, A, id);
+    expect(versions).toHaveLength(1);
+    expect(versions[0].slides.map((x) => x.position)).toEqual([0]);
+    // Restoring it swaps the versions; deleting the other removes only that one.
+    await restoreImageVersion(db, A, id, versions[0].id);
+    expect((await media(id))[1].storage_key).toBe(before[1].storage_key);
+    const now = await listImageVersions(db, A, id);
+    expect(now).toHaveLength(1);
+    await expect(restoreImageVersion(db, B, id, now[0].id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await deleteImageVersion(db, storage, A, id, now[0].id);
+    expect(await listImageVersions(db, A, id)).toEqual([]);
+    expect(await storage.exists(after[1].storage_key)).toBe(false);
+    expect((await media(id)).map((m) => m.storage_key)).toEqual([before[0].storage_key, before[1].storage_key]);
     await expect(setSlideTexts(db, B, id, [])).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 

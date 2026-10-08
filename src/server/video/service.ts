@@ -3,7 +3,7 @@
 // Postaja renders it frame by frame with the same renderer as the still and encodes an MP4. No generative video model
 // touches a post, so every image can be animated and every letter stays exact. Kling 3.0 (model registry, kind video)
 // is kept for AI-influencer videos with a persona (phase 2).
-import { and, eq, inArray, lt, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
 import type { Db } from "../db/client";
@@ -34,7 +34,7 @@ type PostRow = typeof posts.$inferSelect;
 export async function animatablePositions(db: Db, ctx: OrgContext, p: Pick<PostRow, "id" | "visual">): Promise<number[]> {
   if (!p.visual) return [];
   const slides = await db.select({ position: postMedia.position }).from(postMedia)
-    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, p.id), eq(postMedia.kind, "slide")));
+    .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, p.id), eq(postMedia.kind, "slide"), isNull(postMedia.archivedAt)));
   const have = new Set(slides.map((s) => s.position));
   return p.visual.slides.map((_, i) => i).filter((i) => have.has(i));
 }
@@ -79,7 +79,7 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
   const slide = p.visual!.slides[position];
   const t = spec.templates.find((x) => x.id === slide.templateId);
   if (!t) throw new ImageJobError("NOT_ANIMATABLE");
-  const media = (await forOrg(db, ctx).select(postMedia, eq(postMedia.postId, postId))) as (typeof postMedia.$inferSelect)[];
+  const media = (await forOrg(db, ctx).select(postMedia, and(eq(postMedia.postId, postId), isNull(postMedia.archivedAt))!)) as (typeof postMedia.$inferSelect)[];
   const still = media.find((m) => m.kind === "slide" && m.position === position)!;
   const bg = media.find((m) => m.kind === "background" && m.position === position);
   const size = { width: still.width, height: still.height };

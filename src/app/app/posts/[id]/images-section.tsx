@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Download, FileText, ImageIcon, RefreshCw, Wand2 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, inputClass, textareaClass } from "@/components/ui";
 import type { MediaStatus, PostVisual } from "@/server/db/schema";
-import { requestImagesAction, reviseImagesAction, saveSlidesAction } from "../actions";
+import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, reviseImagesAction, saveSlidesAction } from "../actions";
 
 type Media = { id: string; position: number; width: number; height: number };
 type TemplateInfo = { id: string; name: string; slots: string[] };
@@ -30,8 +30,11 @@ export async function ImagesSection(props: {
   designHref: string;
   /** LinkedIn carousel: offer the images as one PDF (a document post). */
   pdf?: boolean;
+  /** TASK-033: earlier versions of the images (kept until deleted). */
+  versions?: { id: string; createdAt: Date; revision: string | null; slides: { id: string; position: number; width: number; height: number }[] }[];
 }) {
   const t = await getTranslations("Images");
+  const fmt = await getFormatter();
   const working = props.status === "queued" || props.status === "rendering";
   // New images → the forms mount again, so their fields show the words now on the images (uncontrolled fields keep old
   // values across a refresh otherwise).
@@ -100,6 +103,42 @@ export async function ImagesSection(props: {
             </label>
           ) : null}
         </form>
+      ) : null}
+
+      {props.versions?.length ? (
+        <details className="grid gap-3 border-t border-line pt-4" data-testid="image-versions">
+          <summary className="cursor-pointer text-sm font-semibold">{t("versionsTitle", { n: props.versions.length })}</summary>
+          <p className="mt-2 text-xs text-muted">{t("versionsHint")}</p>
+          <ul className="mt-3 grid gap-4">
+            {props.versions.map((v) => (
+              <li key={v.id} className="grid gap-2 rounded-lg border border-line p-3" data-testid="image-version">
+                <p className="text-xs text-muted">{fmt.dateTime(v.createdAt, { dateStyle: "medium", timeStyle: "short" })}{v.revision ? ` · ${t("lastRevision", { text: v.revision })}` : ""}</p>
+                <div className="flex flex-wrap gap-2">
+                  {v.slides.map((m) => (
+                    <a key={m.id} href={`/api/post-media/${m.id}`} target="_blank" rel="noopener" className="block w-24 overflow-hidden rounded ring-1 ring-line">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL behind an access-checked redirect */}
+                      <img src={`/api/post-media/${m.id}`} alt={t("imageAlt", { n: m.position + 1 })} width={m.width} height={m.height} loading="lazy" className="h-auto w-full" />
+                    </a>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-start gap-2">
+                  <form action={restoreImageVersionAction}>
+                    <input type="hidden" name="postId" value={props.postId} /><input type="hidden" name="runId" value={v.id} />
+                    <button type="submit" disabled={working} className={buttonClass("secondary", "sm")}>{t("restoreVersion")}</button>
+                  </form>
+                  <details className="text-sm">
+                    <summary className={`${buttonClass("ghost", "sm")} cursor-pointer list-none`}>{t("deleteVersion")}</summary>
+                    <form action={deleteImageVersionAction} className="mt-2 grid gap-2">
+                      <input type="hidden" name="postId" value={props.postId} /><input type="hidden" name="runId" value={v.id} />
+                      <p className="max-w-xs text-xs text-muted">{t("deleteVersionWarning")}</p>
+                      <button type="submit" className={buttonClass("secondary", "sm")}>{t("deleteVersionConfirm")}</button>
+                    </form>
+                  </details>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
 
       {props.visual && props.templates && props.media.length ? (
