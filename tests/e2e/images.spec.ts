@@ -121,7 +121,8 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.getByRole("button", { name: "Uvozi 2 objav" }).click();
   await expect(p).toHaveURL(/\/app\/posts\?import=/);
 
-  // The image post: Claude picks the template and words, fal makes the illustration with the examples as style reference.
+  // The image post: Claude picks the template and words; the plan's own image prompt ("Slika") is drawn as written,
+  // without the brand's past posts as style references (ADR-076: they were copied as made-up lettering).
   await p.getByRole("link", { name: /Zaklep|Daš/ }).first().click();
   const images = p.getByTestId("images");
   await expect(images.getByTestId("images-status")).toHaveText("Ni slik");
@@ -131,7 +132,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await expect(img).toHaveCount(1);
   await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth)).toBe(1080);
   const falLog = await (await fetch("http://127.0.0.1:3199/fal-log")).json();
-  expect(falLog.at(-1)).toMatchObject({ model: "fal-ai/ideogram/v3", references: 2 });
+  expect(falLog.at(-1)).toMatchObject({ model: "fal-ai/flux-pro/v1.1", references: 0 });
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("post-images.png"), fullPage: true });
   const [download] = await Promise.all([p.waitForEvent("download"), images.getByTestId("image-download").first().click()]);
