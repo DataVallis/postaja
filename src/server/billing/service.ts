@@ -4,10 +4,11 @@
 // event is processed once, and the subscription's plan sets the organization's plan and limits (brands, members,
 // monthly credits). An unpaid subscription keeps working for GRACE_DAYS, then — like a cancelled one or an ended
 // pilot — new AI work stops (`billingBlock`, checked in `reserve`); everything made stays readable and downloadable.
-import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { Db } from "../db/client";
-import { orgBilling, orgSettings, stripeEvents, user, type SubscriptionStatus } from "../db/schema";
+import { desc, eq, isNull } from "drizzle-orm";
+import { billingPayments, orgBilling, orgSettings, stripeEvents, user, type SubscriptionStatus } from "../db/schema";
+import type { Actor } from "../orgs/service";
 import { insertPack } from "../credits/service";
 import type { OrgContext } from "../tenancy/context";
 import { CREDIT_PACK_PRICES, lookupKey, PAID_PLANS, PILOT, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
@@ -63,7 +64,8 @@ export async function checkoutUrl(db: Db, stripe: Stripe | null, ctx: OrgContext
     client_reference_id: ctx.orgId,
     line_items: [{ price, quantity: 1 }],
     metadata,
-    ...(item.kind === "plan" ? { subscription_data: { metadata } } : { invoice_creation: { enabled: true, invoice_data: { metadata } }, payment_intent_data: { metadata } }),
+    // No Stripe invoices for one-off payments: the owner issues invoices in his own program (ADR-075).
+    ...(item.kind === "plan" ? { subscription_data: { metadata } } : { payment_intent_data: { metadata } }),
     automatic_tax: { enabled: automaticTax() },
     tax_id_collection: { enabled: true },
     billing_address_collection: "required",
@@ -142,6 +144,7 @@ async function onCheckout(db: Db, s: Stripe.Checkout.Session, now: Date): Promis
   if (customer) await db.insert(orgBilling).values({ orgId, stripeCustomerId: customer }).onConflictDoNothing();
   if (s.mode === "subscription") return { orgId, outcome: "checkout:subscription" }; // the subscription events carry the state
   if (s.payment_status !== "paid") return { orgId, outcome: `checkout:${s.payment_status}` };
+  if (s.metadata?.kind === "pilot" || s.metadata?.kind === "pack") await recordCheckoutPayment(db, orgId, s, now);
   if (s.metadata?.kind === "pilot") {
     await db.update(orgBilling).set({ plan: "pilot", pilotEndsAt: new Date(now.getTime() + PILOT.days * DAY), updatedAt: now }).where(eq(orgBilling.orgId, orgId));
     await applyPlan(db, orgId, "pilot");
@@ -166,10 +169,94 @@ export async function handleStripeEvent(db: Db, event: Stripe.Event, now = new D
     if (!fresh.length) return "duplicate" as const;
     let r: { orgId: string | null; outcome: string } = { orgId: null, outcome: "ignored" };
     if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") r = await onCheckout(t, event.data.object as Stripe.Checkout.Session, now);
+    else if (event.type === "invoice.paid") r = await onInvoicePaid(t, event.data.object as Stripe.Invoice, now);
     else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
       r = await onSubscription(t, event.data.object as Stripe.Subscription, now);
     }
     await tx.update(stripeEvents).set({ orgId: r.orgId, outcome: r.outcome }).where(eq(stripeEvents.id, event.id));
     return "processed" as const;
   });
+}
+
+// ---- Payments for manual invoicing (ADR-075) -------------------------------------------------------------------------
+
+const EU = new Set(["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK"]);
+type Addr = Stripe.Address | null | undefined;
+const addressLine = (a: Addr) => (a ? [a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(" "), a.state, a.country].filter(Boolean).join(", ") : "");
+const vatIdOf = (ids: { type: string; value: string }[] | null | undefined) => (ids?.find((x) => x.type === "eu_vat") ?? ids?.[0])?.value ?? "";
+const reverse = (country: string, vatId: string, tax: number) => tax === 0 && !!vatId && country !== "SI" && EU.has(country);
+
+/** A paid pilot or credit pack (Checkout, one-off): what the invoice needs. Kept once per session. */
+async function recordCheckoutPayment(db: Db, orgId: string, s: Stripe.Checkout.Session, now: Date) {
+  const c = s.customer_details;
+  const country = c?.address?.country ?? "";
+  const vatId = vatIdOf(c?.tax_ids as { type: string; value: string }[] | undefined);
+  const total = s.amount_total ?? 0;
+  const tax = s.total_details?.amount_tax ?? 0;
+  const kind = s.metadata?.kind === "pilot" ? "pilot" : "pack";
+  const pack = s.metadata?.pack as keyof typeof CREDIT_PACK_PRICES | undefined;
+  const description = kind === "pilot" ? `Postaja – ${PILOT.name} (${PILOT.days} dni)` : `Postaja – ${pack && pack in CREDIT_PACK_PRICES ? CREDIT_PACK_PRICES[pack].credits : "?"} kreditov`;
+  await db.insert(billingPayments).values({
+    id: s.id, orgId, kind, description, paidAt: s.created ? new Date(s.created * 1000) : now, currency: (s.currency ?? "eur").toUpperCase(),
+    netCents: total - tax, taxCents: tax, totalCents: total, buyerName: c?.name ?? "", buyerEmail: c?.email ?? "", buyerAddress: addressLine(c?.address),
+    buyerCountry: country, buyerVatId: vatId, reverseCharge: reverse(country, vatId, tax), stripeCustomerId: idOf(s.customer),
+  }).onConflictDoNothing();
+}
+
+/** A paid subscription invoice (first payment and every renewal): recorded for the owner's own invoice. */
+async function onInvoicePaid(db: Db, inv: Stripe.Invoice, now: Date): Promise<{ orgId: string | null; outcome: string }> {
+  const x = inv as Stripe.Invoice & { subscription?: string | { id: string } | null; total_excluding_tax?: number | null; parent?: { subscription_details?: { subscription?: string | { id: string } } } | null };
+  const sub = idOf(x.subscription ?? x.parent?.subscription_details?.subscription ?? null);
+  if (!sub) return { orgId: null, outcome: "invoice:not-subscription" }; // one-offs are recorded from Checkout
+  const orgId = await orgOfCustomer(db, idOf(inv.customer));
+  const total = inv.total ?? 0;
+  if (total <= 0) return { orgId, outcome: "invoice:zero" };
+  const net = x.total_excluding_tax ?? inv.subtotal ?? total;
+  const tax = total - net;
+  const country = inv.customer_address?.country ?? "";
+  const vatId = vatIdOf(inv.customer_tax_ids as { type: string; value: string }[] | null | undefined);
+  const line = inv.lines?.data?.[0] as (Stripe.InvoiceLineItem & { price?: { lookup_key?: string | null } | null }) | undefined;
+  const found = planFromLookupKey(line?.price?.lookup_key ?? (line as unknown as { pricing?: { price_details?: { price?: string } } })?.pricing?.price_details?.price);
+  const description = found ? `Postaja ${PLAN_CATALOG[found.plan].name} – ${found.interval === "year" ? "letna" : "mesečna"} naročnina` : line?.description ?? "Postaja – naročnina";
+  await db.insert(billingPayments).values({
+    id: inv.id!, orgId, kind: "plan", description,
+    paidAt: inv.status_transitions?.paid_at ? new Date(inv.status_transitions.paid_at * 1000) : now,
+    periodStart: line?.period?.start ? new Date(line.period.start * 1000) : null, periodEnd: line?.period?.end ? new Date(line.period.end * 1000) : null,
+    currency: (inv.currency ?? "eur").toUpperCase(), netCents: net, taxCents: tax, totalCents: total,
+    buyerName: inv.customer_name ?? "", buyerEmail: inv.customer_email ?? "", buyerAddress: addressLine(inv.customer_address), buyerCountry: country,
+    buyerVatId: vatId, reverseCharge: reverse(country, vatId, tax), stripeCustomerId: idOf(inv.customer),
+  }).onConflictDoNothing();
+  return { orgId, outcome: `payment:${(total / 100).toFixed(2)}` };
+}
+
+const superadmin = (a: Actor) => { if (a.role !== "superadmin") throw new BillingError("FORBIDDEN"); };
+
+/** Super admin: payments, newest first; `open` = no invoice number yet. */
+export async function listPayments(db: Db, actor: Actor, opts: { open?: boolean; limit?: number } = {}) {
+  superadmin(actor);
+  return db.select().from(billingPayments).where(opts.open ? isNull(billingPayments.invoiceNumber) : undefined)
+    .orderBy(desc(billingPayments.paidAt)).limit(opts.limit ?? 500);
+}
+
+/** Super admin: the number of the invoice issued for a payment (empty = not issued yet). */
+export async function setInvoiceNumber(db: Db, actor: Actor, id: string, number: string, now = new Date()) {
+  superadmin(actor);
+  const n = number.trim().slice(0, 60);
+  const done = await db.update(billingPayments).set({ invoiceNumber: n || null, invoicedAt: n ? now : null }).where(eq(billingPayments.id, id)).returning({ id: billingPayments.id });
+  if (!done.length) throw new BillingError("INVALID");
+}
+
+const euro = (c: number) => (c / 100).toFixed(2).replace(".", ",");
+const cell = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
+
+/** Super admin: the payments as CSV (semicolon, decimal comma — opens in Excel with Slovenian settings). */
+export async function paymentsCsv(db: Db, actor: Actor, opts: { open?: boolean } = {}) {
+  const rows = await listPayments(db, actor, { ...opts, limit: 5000 });
+  const head = ["placano", "opis", "obdobje_od", "obdobje_do", "kupec", "naslov", "drzava", "id_za_ddv", "obrnjena_davcna_obveznost", "e_posta", "neto", "ddv", "skupaj", "valuta", "racun", "stripe"];
+  const lines = rows.map((r) => [
+    day(r.paidAt), r.description, day(r.periodStart), day(r.periodEnd), r.buyerName, r.buyerAddress, r.buyerCountry, r.buyerVatId, r.reverseCharge ? "da" : "ne",
+    r.buyerEmail, euro(r.netCents), euro(r.taxCents), euro(r.totalCents), r.currency, r.invoiceNumber ?? "", r.id,
+  ].map((v) => cell(String(v))).join(";"));
+  return [head.join(";"), ...lines].join("\r\n") + "\r\n";
 }

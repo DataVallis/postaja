@@ -18,7 +18,7 @@ In **Team and plan** → **Plan and payment** the owner picks a plan (prices exc
 | Studio | €99 | €990 | 6 | 3 | 1500 |
 | Agency | €249 | €2490 | 20 | 10 | 5000 |
 
-Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT number and the invoice arrives by email. Card, invoices, plan changes and cancelling are under **Manage subscription**.
+Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT id. We email you the invoice. Card, plan changes and cancelling are under **Manage subscription**.
 
 If a payment fails, Postaja keeps working for 7 days; after that, or when the subscription or pilot ends, creating new content stops. Everything already made stays viewable and downloadable.
 

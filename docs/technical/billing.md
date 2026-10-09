@@ -29,13 +29,20 @@ Status: **Built** (TASK-036). Decision: ADR-073. Owner: prices from business pla
 
 ## Owner setup (Stripe dashboard, test mode first)
 1. API secret key → GitHub environment `dev` secret `STRIPE_SECRET_KEY`.
-2. Webhook endpoint `https://dev-postaja.inzenirji.si/api/stripe/webhook` with the events above → its signing secret
-   → `STRIPE_WEBHOOK_SECRET`.
-3. Customer portal: allow plan changes (the three plans, both intervals) and cancelling.
+2. Webhook endpoint `https://dev-postaja.inzenirji.si/api/stripe/webhook` with the events above **and `invoice.paid`** →
+   its signing secret → `STRIPE_WEBHOOK_SECRET`.
+3. Customer portal: allow plan changes (the three plans, both intervals) and cancelling; invoice history off (ADR-075).
+   Settings → Customer emails: Stripe invoice e-mails off (the owner sends his own invoices).
 4. Stripe Tax (seller is a VAT payer, ADR-074; `STRIPE_TAX: "1"` already in `config/deploy.dev.yml`): Settings → Tax →
    origin address and the Slovenian registration (SI36130800); Settings → Billing → Invoices → account tax id; products
    get tax code `txcd_10103001`.
 5. /admin/billing → *Pripravi cenik v Stripe*.
+
+## Invoices (ADR-075)
+The owner issues invoices in his own program. `billing_payments` keeps every payment (Checkout one-offs, `invoice.paid`
+for subscriptions) with buyer, address, country, VAT id, net / VAT / total, period, reverse-charge flag;
+`/admin/billing` → *Plačila za račun* lists those without an invoice number, *Prenesi CSV*
+(`/admin/billing/payments.csv`, `?open=1`), and the number field per payment (`setInvoiceNumber`).
 
 ## Tests
 `billing.int.test.ts` (checkout: owners only, one customer, lookup keys, one subscription, one pilot; webhooks once;
