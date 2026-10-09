@@ -185,6 +185,8 @@ http
         const slides = [cover, ...(plan.slides ?? []).map((x, i) => ({ templateId: "points", slots: { number: `0${i + 1}`, headline: x }, illustration: null }))];
         return reply(tool, { slides });
       }
+      // ADR-076: drawn illustrations are checked for made-up writing; the stand-in pictures are plain colours.
+      if (tool === "check_illustration") return reply(tool, { hasText: false, what: "" });
       // Competitors (TASK-049): the web search tool is offered next to ours; three competitors, the wish in the reason.
       if (tool === "submit_competitors") {
         const searching = r.tools.some((t) => t.type?.startsWith("web_search") && t.max_uses > 0);

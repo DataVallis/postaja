@@ -163,7 +163,7 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
           return { templateId: s.templateId, slots, illustration: owner, verbatim: true };
         }
         const illustration = s.illustration?.trim() || owner || p.plan.topic || p.brief;
-        return { templateId: s.templateId, slots, illustration, ...(owner && illustration === owner ? { verbatim: true } : {}) };
+        return { templateId: s.templateId, slots, illustration, ...(owner && illustration === owner ? { verbatim: true } : {}), ...(revise && s.redraw ? { redraw: true } : {}) };
       });
       const problems: string[] = [];
       if (owner && !revise && !slides.some((s) => s.illustration !== null) && spec.templates.some(needsIllustration)) {
@@ -192,6 +192,37 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
  */
 export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], opts: { verbatim?: boolean } = {}) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
+  // ADR-076: the owner's own image prompt is the picture they decided — the brand's past posts as style references
+  // (layout, logo, headings, motifs) override it, so it goes to the default image model without references.
+  const refs = opts.verbatim ? [] : references;
+  const first = await drawIllustration(db, deps, ctx, who, prompt, shape, refs, opts, "illustration");
+  // Style references are past posts full of words and logos, and the style model copies them as made-up letters.
+  // Claude looks at every picture drawn with references; one with text is drawn once more without them, at no credit.
+  if (!refs.length || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
+  return drawIllustration(db, deps, ctx, who, `${prompt}\n${NO_TEXT_AGAIN}`, shape, [], opts, "assist");
+}
+
+const NO_TEXT_AGAIN = "Absolutely no text of any kind: no letters, words, numbers, logos, signs, labels, captions or watermarks anywhere in the picture.";
+
+/** Claude's look at a drawn illustration: does it contain letters, numbers or logos? Errors count as "no" (best effort). */
+export async function hasDrawnText(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, jpeg: Uint8Array): Promise<boolean> {
+  try {
+    const small = new Uint8Array(await sharp(jpeg).resize(768, 768, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer());
+    const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, now: deps.now, action: "assist" }, {
+      system: [{ text: "You check background illustrations for social media posts. The post's words are added later by software, so the illustration itself must not contain any writing.", cache: true }],
+      user: "Does this illustration contain any letters, words, numbers, logos, wordmarks, signs or label-like text (also blurry, garbled or made-up lettering)? Ignore abstract shapes that do not look like writing.",
+      images: [toBlock(small)],
+      tool: { name: "check_illustration", description: "Report whether the illustration contains any writing or logos.", inputSchema: { type: "object", properties: { hasText: { type: "boolean" }, what: { type: "string", description: "What writing or logo is visible, briefly; empty when none." } }, required: ["hasText"], additionalProperties: false } },
+      maxTokens: 200,
+    });
+    return (out.input as { hasText?: unknown } | null)?.hasText === true;
+  } catch {
+    return false;
+  }
+}
+
+async function drawIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], opts: { verbatim?: boolean }, action: "illustration" | "assist") {
+  if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
   // The brand's "avoid" list (profile → visual → negativePrompt): sent as the model's negative prompt and, unless the
   // owner's prompt is used word for word (TASK-052), also said in the prompt (not every model reads negative prompts).
   const [prof] = await db.select({ visual: brandProfileVersions.visual }).from(brands)
@@ -205,7 +236,7 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   if (!model) throw new ImageError("IMAGE_PROVIDER");
   const gen = generationSize(shape.width, shape.height);
   const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action: "illustration" });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action });
   let out;
   try {
     out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references: model.kind === "image_style" ? references : undefined, negativePrompt: ["text, letters, words, watermark, logo", avoid].filter(Boolean).join(", ") });
@@ -265,8 +296,11 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
     const [x, y] = [illustrationShape(ta, size), illustrationShape(tb, size)];
     return Math.abs(x.width / x.height - y.width / y.height) < 0.02;
   };
+  // ADR-076: a correction may ask for a picture to be drawn again with the same description (made-up letters, a logo).
+  const redraw = new Set(visual.slides.flatMap((s, i) => (s.redraw ? [i] : [])));
+  visual = { ...visual, slides: visual.slides.map((s) => { const c = { ...s }; delete c.redraw; return c; }) };
   const reuse = (i: number, slide: PostVisual["slides"][number]) =>
-    !replan || (revising && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
+    !replan || (revising && !redraw.has(i) && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
 
   const oldIllustrations = new Map(old.filter((m) => m.kind === "background").map((m) => [m.position, m]));
   let references: string[] | null = null;
