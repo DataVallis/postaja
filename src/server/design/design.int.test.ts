@@ -36,10 +36,11 @@ const profile = { cgp: "Ton: jasen, brez pretiravanja.", rules: { bannedWords: [
 const usage = { inputTokens: 5000, outputTokens: 3000, cacheWriteTokens: 0, cacheReadTokens: 0 };
 
 /** A fake Claude: answers by tool; `designs` are returned in order for submit_brand_design. */
-function fakeClaude(o: { designs?: unknown[]; plans?: unknown[] } = {}) {
+function fakeClaude(o: { designs?: unknown[]; plans?: unknown[]; textInPicture?: boolean[] } = {}) {
   const calls: StructuredRequest[] = [];
   const designs = [...(o.designs ?? [cardDesign])];
   const plans = [...(o.plans ?? [])];
+  const textInPicture = [...(o.textInPicture ?? [])];
   const client: LlmClient = {
     async structured(req) {
       calls.push(req);
@@ -52,6 +53,8 @@ function fakeClaude(o: { designs?: unknown[]; plans?: unknown[] } = {}) {
           : [{ templateId: "cover", slots: { headline: plan.overlayText ?? plan.topic, label: plan.category, footer: "Polygon" }, illustration: "A dark glass vault with red light" }];
         return { input: JSON.parse(JSON.stringify({ slides })), usage }; // like real JSON: no undefined values
       }
+      // ADR-076: Claude looks at illustrations drawn with style references.
+      if (req.tool.name === "check_illustration") return { input: { hasText: textInPicture.shift() ?? false, what: "" }, usage };
       throw new Error(`unexpected tool ${req.tool.name}`);
     },
   };
@@ -236,7 +239,8 @@ describe("post images from the design", () => {
     const fal = fakeImages();
     await runImages(jobs, claude, fal.client);
     expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
-    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images"]);
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration"]);
+    expect(claude.calls[1].images).toHaveLength(1); // the drawn illustration, checked for made-up letters (ADR-076)
     expect(claude.calls[0].user).toContain('"overlayText":"Daš. *Zaklenjeno je.*"');
     expect(fal.calls).toHaveLength(1);
     expect(fal.calls[0].model).toBe("fal-ai/ideogram/v3"); // style references → the style model
@@ -495,6 +499,68 @@ describe("post images from the design", () => {
     const fal2 = fakeImages();
     await runImages(j2.jobs, fakeClaude(), fal2.client);
     expect(fal2.calls[0].prompt).toContain(`Style: ${cardDesign.illustrationStyle}`);
+  });
+
+  it("ADR-076: the owner's image prompt is drawn without style references; letters in a referenced picture → drawn again without them, no credits", async () => {
+    await withAssets();
+    await design();
+    // 1) The plan's own image prompt: no past posts as references (they bring their logo, headings and motifs), no check.
+    const imagePrompt = "Plain dark charcoal background with subtle film grain, bottom third empty. Square 1:1. No text, no logos.";
+    const id = await post({ plan: { topic: "Build update", imagePrompt } });
+    let j = memoryQueue();
+    await requestImages(db, j.q, A, id, "new");
+    let claude = fakeClaude({ plans: [{ slides: [{ templateId: "cover", slots: { headline: "241 tests." }, illustration: imagePrompt }] }] });
+    let fal = fakeImages();
+    await runImages(j.jobs, claude, fal.client);
+    expect(fal.calls).toHaveLength(1);
+    expect(fal.calls[0].references).toBeUndefined();
+    expect(fal.calls[0].model).not.toBe("fal-ai/ideogram/v3");
+    expect(fal.calls[0].prompt).toBe(imagePrompt);
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images"]);
+
+    // 2) Claude's description with style references: the picture has made-up letters → once more without references.
+    const id2 = await post({ plan: { topic: "Vault" } });
+    j = memoryQueue();
+    await requestImages(db, j.q, A, id2, "new");
+    claude = fakeClaude({ textInPicture: [true] });
+    fal = fakeImages();
+    await runImages(j.jobs, claude, fal.client);
+    expect(await state(id2)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration"]);
+    expect(fal.calls).toHaveLength(2);
+    expect(fal.calls[0].model).toBe("fal-ai/ideogram/v3");
+    expect(fal.calls[1].references).toBeUndefined();
+    expect(fal.calls[1].model).not.toBe("fal-ai/ideogram/v3");
+    expect(fal.calls[1].prompt).toContain("Absolutely no text of any kind");
+    expect((await media(id2)).filter((m) => m.kind === "background")).toHaveLength(1);
+    const rows = await sql`select model, action from usage_ledger where post_id = ${id2} and model like 'fal-ai/%' order by created_at`;
+    expect(rows.map((r) => r.action)).toEqual(["illustration", "assist"]); // the second drawing costs no credits
+    const checks = await sql`select action from usage_ledger where post_id = ${id2} and model like 'claude%' and action = 'assist'`;
+    expect(checks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("ADR-076: a correction can ask for the same picture to be drawn again (made-up letters); the flag is never stored", async () => {
+    await design();
+    const imagePrompt = "Plain dark charcoal background. No text, no logos.";
+    const id = await post({ plan: { topic: "Build update", imagePrompt } });
+    const { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id, "new");
+    const first = [{ templateId: "cover", slots: { headline: "241 tests." }, illustration: imagePrompt }];
+    await runImages(jobs, fakeClaude({ plans: [{ slides: first }] }), fakeImages().client);
+    const before = (await media(id)).find((m) => m.kind === "background")!;
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Na sliki so izmišljeni napisi, odstrani jih.");
+    const claude = fakeClaude({ plans: [{ slides: [{ ...first[0], redraw: true }] }] });
+    const fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(claude.calls[0].user).toContain("set redraw=true");
+    expect(fal.calls).toHaveLength(1);
+    expect(fal.calls[0].prompt).toBe(imagePrompt);
+    const after = (await media(id)).find((m) => m.kind === "background")!;
+    expect(after.storage_key).not.toBe(before.storage_key);
+    const [{ visual }] = await sql`select visual from posts where id = ${id}`;
+    expect(visual.slides[0]).not.toHaveProperty("redraw");
+    expect(visual.slides[0]).toMatchObject({ illustration: imagePrompt, verbatim: true });
   });
 
   it("a correction in words: Claude sees the images and the request; only changed illustrations are drawn again (owner, 2026-10-07)", async () => {

@@ -139,6 +139,8 @@ export function postVisualSchema(spec: DesignSpec) {
       templateId: z.enum(ids),
       slots: nullableSlotTexts(600),
       illustration: z.string().max(1500).nullable(),
+      /** Corrections only (ADR-076): draw this image's illustration again even when its description stays the same. */
+      redraw: z.boolean().optional(),
     })).min(1).max(MAX_SLIDES),
   });
 }
@@ -185,7 +187,7 @@ Rules:
       revise ? `<current_images>\n${JSON.stringify(revise.current)}\n</current_images>\nThe images above are these current images, in order.` : "",
       revise ? `<owner_request>\n${revise.instruction.trim()}\n</owner_request>` : "",
       revise
-        ? `Apply the owner's request to the current images and submit all images again. Change only what the request asks for (and what it implies); keep every other image, template, word and illustration description exactly as it is — identical text — so unchanged illustrations are reused at no cost. If the request is about the picture itself (subject, colours, mood, composition), rewrite that image's illustration description; if it is about words, change the slots; if it is about layout, pick another of the brand's templates. Adding or removing images only when asked.`
+        ? `Apply the owner's request to the current images and submit all images again. Change only what the request asks for (and what it implies); keep every other image, template, word and illustration description exactly as it is — identical text — so unchanged illustrations are reused at no cost. If the request is about the picture itself (subject, colours, mood, composition), rewrite that image's illustration description; if it is about words, change the slots; if it is about layout, pick another of the brand's templates. If the owner says something is wrong in a picture that its description did not ask for (letters, logos, made-up text, objects or people that should not be there), set redraw=true for that image — also when its description stays the same, e.g. the plan's imagePrompt. Adding or removing images only when asked.`
         : "",
       invalid ? `Your previous answer did not validate. Fix:\n${invalid.errors}\n<previous>${JSON.stringify(invalid.draft).slice(0, 8000)}</previous>` : "",
     ].filter(Boolean).join("\n"),

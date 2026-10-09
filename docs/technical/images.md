@@ -85,3 +85,12 @@ illustrated slide as written (`verbatim: true` → `generateIllustration` gets i
 (`overlayText`, `slides`); a repeat or a missing illustration sends Claude one correction round. Corrections in words
 (revise) keep Claude's descriptions.
 
+
+## No made-up writing in illustrations (ADR-076)
+`generateIllustration` → `drawIllustration` (reserve, fal, settle). A `verbatim` slide (the plan's image prompt) gets no
+style references, so the default `image` model draws it. When references were used, `hasDrawnText` (Claude,
+`check_illustration`, 768 px JPEG, action `assist`) looks for letters/logos; on yes the picture is drawn once more
+without references, the prompt ending in `NO_TEXT_AGAIN`, booked as `assist` (0 credits). Any check error = no text.
+Corrections: `plan_post_images` accepts `redraw` per slide in revise mode; `renderPostImages` takes it out of the visual
+before saving and never reuses that slide's illustration. Tests: `design.int.test.ts` ("ADR-076" cases; the fake Claude
+answers `check_illustration` from `textInPicture`).

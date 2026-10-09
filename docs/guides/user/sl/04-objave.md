@@ -36,10 +36,10 @@ Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
 
 1. Na objavi klikni **Ustvari slike**. Claude izbere predlogo, napiše tekst in opis ilustracije, Postaja nariše slike.
    - **Besede na sliki** dopolnjujejo besedilo objave in ga ne ponavljajo: kratek naslov, ki pritegne k branju. Če plan določa besedilo za sliko, se uporabi to.
-   - Če ima objava v planu **Prompt za sliko**, je prva slika ilustracija točno po tem promptu, brez sprememb.
-   - Ilustracija je vedno brez besed in logotipa; logotip branda in besede Postaja nariše čez njo iz predloge.
+   - Če ima objava v planu **Prompt za sliko**, je prva slika ilustracija točno po tem promptu, brez sprememb (pretekle objave branda se pri njej ne uporabijo kot vzor).
+   - Ilustracija je vedno brez besed in logotipa; logotip branda in besede Postaja nariše čez njo iz predloge. Ilustracije, narisane po vzoru preteklih objav, Claude pregleda; če model vanje nariše izmišljene črke ali logotip, se ilustracija samodejno nariše znova, brez porabe kreditov.
 2. **Tekst na slikah**: popravi besede in klikni **Shrani in osveži**. Slike se izrišejo znova brez novih stroškov. Besede v \*zvezdicah\* so poudarjene.
-3. **Kaj naj AI popravi na slikah?**: opiši popravek z besedami in klikni **Popravi slike**. Plačajo se samo ilustracije, ki se spremenijo.
+3. **Kaj naj AI popravi na slikah?**: opiši popravek z besedami in klikni **Popravi slike**. Plačajo se samo ilustracije, ki se spremenijo. Če napišeš, da je na sliki kaj odveč (npr. »na sliki so izmišljeni napisi«), se ta ilustracija nariše na novo, tudi če ostane isti prompt.
 4. **Nove slike** naredi vse znova.
 
 Nič se ne izgubi: vsaka nova izdelava, popravek ali osvežitev besed shrani prejšnje slike kot verzijo. V razdelku **Prejšnje verzije slik** verzijo vrneš (**Vrni to verzijo**; trenutne slike postanejo verzija) ali jo trajno izbrišeš (**Izbriši verzijo**).
