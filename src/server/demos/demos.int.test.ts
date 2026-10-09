@@ -134,7 +134,7 @@ describe("starting a demo", () => {
     expect(d.tokenHash).not.toContain(token);
     expect(d.expiresAt!.toISOString()).toBe("2026-10-22T10:00:00.000Z");
     const orgs = await sql`select o.id, o.name, s.plan, s.spend_cap_micro_usd from organization o join org_settings s on s.org_id = o.id where o.slug = ${SALES_ORG.slug}`;
-    expect(orgs).toEqual([{ id: d.orgId, name: "Data Vallis – prodaja", plan: "comped", spend_cap_micro_usd: "30000000" }]);
+    expect(orgs).toEqual([{ id: d.orgId, name: "Postaja – prodaja", plan: "comped", spend_cap_micro_usd: "30000000" }]);
     expect((await db.select().from(member).where(eq(member.organizationId, d.orgId))).map((m) => [m.userId, m.role])).toEqual([[boss.userId, "owner"]]);
     expect((await db.select().from(auditLog).where(eq(auditLog.action, "demo.create"))).map((a) => a.target).sort()).toHaveLength(2);
     // A second super admin joins as owner; the org is not made twice.

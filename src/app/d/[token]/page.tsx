@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Card } from "@/components/ui";
+import { SELLER } from "@/lib/seller";
 import { getDb } from "@/server/db/client";
 import { DemoError, demoView } from "@/server/demos/service";
 
@@ -103,7 +104,7 @@ export default async function DemoPage({ params }: { params: Promise<{ token: st
       ) : null}
 
       <footer className="grid gap-1 border-t border-line pt-4 text-xs text-muted">
-        <p>{t("footer")}</p>
+        <p>{t("footer", { seller: SELLER.name })}</p>
         <p>{t("aiNote")}</p>
         <p>{t("until", { until: f.dateTime(view.expiresAt, { dateStyle: "medium" }) })}</p>
       </footer>

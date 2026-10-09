@@ -1,5 +1,5 @@
 // Demo from a website (TASK-040, ADR-070). A super admin enters a prospect's website (and, when the site cannot be read,
-// pastes its text). The demo is built in the background in the sales organization "Data Vallis – prodaja" (its own spend
+// pastes its text). The demo is built in the background in the sales organization "Postaja – prodaja" (its own spend
 // cap): Claude reads the home page as data and drafts a brand (CGP, pillars, colours, 3 posts, 1 ad concept); Postaja
 // stores the logo, pictures and page text as the brand's files, makes the brand design, writes the posts, draws their
 // images and writes and draws the ad set — with the same services members use. A public read-only link (only its hash
@@ -35,7 +35,7 @@ import { readSite } from "./site";
 
 export const DEMO_QUEUE = "demo-build";
 export type DemoJob = { demoId: string };
-export const SALES_ORG = { slug: "data-vallis-prodaja", name: "Data Vallis – prodaja" } as const;
+export const SALES_ORG = { slug: "postaja-prodaja", name: "Postaja – prodaja" } as const;
 /** The sales organization's own monthly spend cap (micro-USD); the super admin can change it on its admin page. */
 export const SALES_SPEND_CAP_MICRO_USD = 30_000_000n;
 export const DEMO_LINK_DAYS = 14;

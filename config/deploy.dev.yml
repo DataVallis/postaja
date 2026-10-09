@@ -27,8 +27,8 @@ env:
     S3_BUCKET: postaja-dev
     # Background jobs (ADR-042): the web container also runs the pg-boss workers on dev.
     RUN_WORKER: "1"
-    # Payments (TASK-036, ADR-073): Stripe test mode on dev. "1" once Stripe Tax is switched on in the Stripe account.
-    STRIPE_TAX: "0"
+    # Payments (TASK-036, ADR-073/074): Stripe test mode on dev; the seller is a VAT payer → Stripe Tax computes VAT.
+    STRIPE_TAX: "1"
   secret:
     - DATABASE_URL
     - BETTER_AUTH_SECRET
