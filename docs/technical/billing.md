@@ -32,7 +32,9 @@ Status: **Built** (TASK-036). Decision: ADR-073. Owner: prices from business pla
 2. Webhook endpoint `https://dev-postaja.inzenirji.si/api/stripe/webhook` with the events above → its signing secret
    → `STRIPE_WEBHOOK_SECRET`.
 3. Customer portal: allow plan changes (the three plans, both intervals) and cancelling.
-4. Optional: Stripe Tax on → `STRIPE_TAX: "1"` in `config/deploy.dev.yml`.
+4. Stripe Tax (seller is a VAT payer, ADR-074; `STRIPE_TAX: "1"` already in `config/deploy.dev.yml`): Settings → Tax →
+   origin address and the Slovenian registration (SI36130800); Settings → Billing → Invoices → account tax id; products
+   get tax code `txcd_10103001`.
 5. /admin/billing → *Pripravi cenik v Stripe*.
 
 ## Tests

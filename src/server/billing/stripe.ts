@@ -35,6 +35,9 @@ export async function pricesByLookupKey(stripe: Stripe, keys: string[]): Promise
   return out;
 }
 
+/** Stripe Tax product category: "Software as a service (SaaS) – business use" (TASK-036, ADR-074). */
+export const TAX_CODE = "txcd_10103001";
+
 /** Creates the products and prices that are missing (by lookup key); returns what exists afterwards. Idempotent. */
 export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: string[]; existing: string[] }> {
   const want = catalogPrices();
@@ -45,7 +48,7 @@ export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: st
     if (have.has(w.key)) continue;
     let product = products.get(w.product);
     if (!product) {
-      product = (await stripe.products.create({ name: w.product, metadata: { postaja: "1" } })).id;
+      product = (await stripe.products.create({ name: w.product, tax_code: TAX_CODE, metadata: { postaja: "1" } })).id;
       products.set(w.product, product);
     }
     await stripe.prices.create({
@@ -53,6 +56,16 @@ export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: st
       ...(w.interval ? { recurring: { interval: w.interval } } : {}),
     });
     created.push(w.key);
+  }
+  // Products made before Stripe Tax was on get their tax category now.
+  const existing = await stripe.prices.list({ lookup_keys: [...have.keys()].slice(0, 10), expand: ["data.product"], limit: 100 }).catch(() => null);
+  const more = have.size > 10 ? await stripe.prices.list({ lookup_keys: [...have.keys()].slice(10), expand: ["data.product"], limit: 100 }).catch(() => null) : null;
+  const seen = new Set<string>();
+  for (const p of [...(existing?.data ?? []), ...(more?.data ?? [])]) {
+    const prod = p.product as { id: string; tax_code?: string | { id: string } | null } | string;
+    if (typeof prod === "string" || seen.has(prod.id)) continue;
+    seen.add(prod.id);
+    if (!prod.tax_code) await stripe.products.update(prod.id, { tax_code: TAX_CODE });
   }
   return { created, existing: [...have.keys()] };
 }

@@ -1877,7 +1877,7 @@
     "creativeAlt": "Ad image, variant {n}",
     "variant": "Variant {n}",
     "cta": "Button: {cta}",
-    "footer": "Prepared by Postaja (Data Vallis) from the public website. A read-only preview.",
+    "footer": "Prepared by Postaja ({seller}) from the public website. A read-only preview.",
     "aiNote": "Texts and images were made by artificial intelligence.",
     "until": "The link is valid until {until}.",
     "pendingTitle": "The sample is being prepared",

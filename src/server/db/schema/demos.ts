@@ -1,5 +1,5 @@
 // Demo from a website (TASK-040, ADR-070): a super admin enters a prospect's website; Postaja builds a demo brand in the
-// sales organization ("Data Vallis – prodaja", its own spend cap) with 3 posts and 1 ad set, shown through a public
+// sales organization ("Postaja – prodaja", its own spend cap) with 3 posts and 1 ad set, shown through a public
 // read-only link that expires after 14 days. Only a hash of the link's token is stored.
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";

@@ -1,6 +1,6 @@
 # Postaja — poslovni načrt
 
-Verzija 1 · 2026-10-08 · Lastnik: David Tacer (Data Vallis)
+Verzija 1 · 2026-10-08 · Lastnik in prodajalec: David Tacer s.p.
 Status: **predlog** — cene, garancija in prvi segment čakajo potrditev lastnika (§15).
 Jezik: slovenščina (lastnikov dokument, kot `guides/user/sl`). Tehnični del za razvoj je v angleščini v
 `docs/tasks/README.md` (TASK-035…045) in `docs/01-PRODUCT-SPEC.md` §12.
@@ -308,7 +308,7 @@ kar gre ven pod njegovim imenom ali stane denar.
 - Nič ne gre ven pod lastnikovim imenom brez njegove potrditve (prva 2 meseca); ko je odstotek popravkov < 10 %,
   follow-upi (4) tečejo samodejno.
 - Vsak avtomatski korak piše v Sheet »Prodaja« (status, datum, naslednji korak) — to je CRM, dokler ni preveč vrstic.
-- Strošek vzorcev ima lasten limit v Postaji (organizacija »Data Vallis – prodaja«, npr. 50 €/mesec).
+- Strošek vzorcev ima lasten limit v Postaji (organizacija »Postaja – prodaja«, 30 USD/mesec, nastavljivo v /admin).
 
 **Že nastavljeno (2026-10-08):** proces #1. Mapa »Postaja — Prodaja« na Google Drive z glavnim Sheetom
 »Postaja — Prodaja (glavni CRM)« in tedensko načrtovano opravilo »Postaja — iskanje agencij (ponedeljek)«, ponedeljek
@@ -355,7 +355,7 @@ pravnik ali računovodja.
 - **AI oznake:** EU AI Act čl. 50 (preglednost sintetičnih vsebin; preveri aktualni rok) in pravila Meta/TikTok — posebej persona video.
 - **Operativa:** produkcija ločena od dev in asisto, varnostne kopije z vajo obnove (TASK-030), status stran, e-pošta
   z lastno domeno (SPF/DKIM), podpora na podpora@<domena>.
-- **Pravna oseba:** prodaja pod Data Vallis; računovodja potrdi knjiženje prihodkov prek MoR.
+- **Prodajalec (lastnik, 9. 10. 2026):** David Tacer s.p., Robindvor 39, 2370 Dravograd; davčna številka 36130800, ID za DDV SI36130800 (zavezanec za DDV), matična številka 6560024000. Plačila prek Stripe (ni MoR): DDV izračuna Stripe Tax (tudi v sandboxu), račune izda Stripe; računovodja potrdi OSS, obrnjeno davčno obveznost in davčno potrjevanje plačil s kartico.
 
 ## 14. Načrt za 90 dni
 

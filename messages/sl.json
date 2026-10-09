@@ -1877,7 +1877,7 @@
     "creativeAlt": "Oglasna slika, različica {n}",
     "variant": "Različica {n}",
     "cta": "Gumb: {cta}",
-    "footer": "Pripravila Postaja (Data Vallis) iz javne spletne strani. Predogled samo za ogled.",
+    "footer": "Pripravila Postaja ({seller}) iz javne spletne strani. Predogled samo za ogled.",
     "aiNote": "Besedila in slike je ustvarila umetna inteligenca.",
     "until": "Povezava velja do {until}.",
     "pendingTitle": "Primer je v pripravi",

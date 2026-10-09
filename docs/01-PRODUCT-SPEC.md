@@ -1,6 +1,6 @@
 # Postaja — Product Spec
 
-Version 0.3 · 2026-10-06 · Owner: David Tacer (Data Vallis) · Host: `postaja.inzenirji.si`
+Version 0.3 · 2026-10-06 · Owner and seller: David Tacer s.p. · Host: `postaja.inzenirji.si`
 Status of everything in this file: **Planned** unless marked otherwise.
 ADRs in `03-DECISIONS.md` override this file.
 
