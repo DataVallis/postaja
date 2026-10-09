@@ -309,9 +309,9 @@
     },
     "billing": {
       "title": "Payments",
-      "intro": "Subscriptions, the agency pilot and credit packs go through Stripe Checkout; invoices, cards and cancelling are handled by Stripe (customer portal). Postaja learns the state only from signed webhooks.",
+      "intro": "Subscriptions, the agency pilot and credit packs go through Stripe Checkout (VAT computed by Stripe Tax); cards and cancelling are handled by Stripe (customer portal). You issue invoices yourself in your own program from the payment list below. Postaja learns the state only from signed webhooks.",
       "setup": "Setup",
-      "webhookHint": "Stripe webhook: /api/stripe/webhook, events checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.created/updated/deleted. In the customer portal enable plan changes and cancelling.",
+      "webhookHint": "Stripe webhook: /api/stripe/webhook, events checkout.session.completed, checkout.session.async_payment_succeeded, invoice.paid, customer.subscription.created/updated/deleted. In the customer portal enable plan changes and cancelling; turn Stripe's invoice history off.",
       "present": "present",
       "missing": "missing",
       "ensure": "Create prices in Stripe",
@@ -331,7 +331,21 @@
       "errors": {
         "NOT_CONFIGURED": "Stripe is not configured (STRIPE_SECRET_KEY).",
         "STRIPE": "Stripe did not answer or refused. Check the key."
-      }
+      },
+      "payments": "Payments to invoice",
+      "paymentsHint": "Every payment (first subscription, each renewal, pilot, credits) with the data for the invoice. When you have issued the invoice in your program, enter its number.",
+      "onlyOpen": "Only without invoice",
+      "showAll": "Show all",
+      "csv": "Download CSV",
+      "invoiceSaved": "Invoice number saved.",
+      "noneOpen": "No payments without an invoice.",
+      "vatId": "VAT id",
+      "period": "period {from} – {to}",
+      "amounts": "net {net} · VAT {tax} · total {total}",
+      "reverseCharge": "reverse charge (no VAT)",
+      "invoiceNumber": "Invoice no.",
+      "invoiceNumberFor": "Invoice number for {buyer}",
+      "save": "Save"
     }
   },
   "Brands": {
@@ -1674,7 +1688,7 @@
       "pastDue": "The subscription payment failed. Update the card under Manage subscription.",
       "pilotUntil": "The agency pilot runs until {date}. Choose a plan any time; the pilot then ends.",
       "ended": "The subscription or pilot has ended. Everything made stays viewable and downloadable; choose a plan to create new posts, images and videos.",
-      "manage": "Manage subscription (card, invoices, change plan, cancel)",
+      "manage": "Manage subscription (card, change plan, cancel)",
       "limits": "{brands} brands · {members} members · {credits} credits a month",
       "buyMonth": "€{price} / month",
       "buyYear": "€{price} / year",
@@ -1682,7 +1696,7 @@
       "buyYearLabel": "{plan} yearly, €{price}",
       "pilot": "Agency pilot €{price}",
       "pilotHint": "{days} days of Studio for {brands} brands, paid once.",
-      "vatHint": "Prices exclude VAT. Stripe handles payment, invoice and cancelling; companies enter their VAT number.",
+      "vatHint": "Prices exclude VAT. Stripe handles payment and cancelling; companies enter their VAT id. We email you the invoice.",
       "intervals": {
         "month": "monthly",
         "year": "yearly"

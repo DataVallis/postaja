@@ -309,9 +309,9 @@
     },
     "billing": {
       "title": "Plačila",
-      "intro": "Naročnine, agencijski pilot in paketi kreditov gredo prek Stripe Checkout; račune, kartice in odpovedi ureja Stripe (portal za stranke). Postaja stanje izve samo iz podpisanih webhookov.",
+      "intro": "Naročnine, agencijski pilot in paketi kreditov gredo prek Stripe Checkout (DDV izračuna Stripe Tax); kartice in odpovedi ureja Stripe (portal za stranke). Račune izdaš sam v svojem programu iz seznama plačil spodaj. Postaja stanje izve samo iz podpisanih webhookov.",
       "setup": "Nastavitev",
-      "webhookHint": "Webhook v Stripe: /api/stripe/webhook, dogodki checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.created/updated/deleted. V portalu za stranke vklopi menjavo paketa in odpoved.",
+      "webhookHint": "Webhook v Stripe: /api/stripe/webhook, dogodki checkout.session.completed, checkout.session.async_payment_succeeded, invoice.paid, customer.subscription.created/updated/deleted. V portalu za stranke vklopi menjavo paketa in odpoved, zgodovino računov Stripe pa izklopi.",
       "present": "obstaja",
       "missing": "manjka",
       "ensure": "Pripravi cenik v Stripe",
@@ -331,7 +331,21 @@
       "errors": {
         "NOT_CONFIGURED": "Stripe ni nastavljen (STRIPE_SECRET_KEY).",
         "STRIPE": "Stripe ni odgovoril ali je zavrnil zahtevo. Preveri ključ."
-      }
+      },
+      "payments": "Plačila za račun",
+      "paymentsHint": "Vsako plačilo (prva naročnina, vsako podaljšanje, pilot, krediti) s podatki za račun. Ko račun izdaš v svojem programu, vpiši njegovo številko.",
+      "onlyOpen": "Samo brez računa",
+      "showAll": "Pokaži vsa",
+      "csv": "Prenesi CSV",
+      "invoiceSaved": "Številka računa je shranjena.",
+      "noneOpen": "Ni plačil brez računa.",
+      "vatId": "ID za DDV",
+      "period": "obdobje {from} – {to}",
+      "amounts": "neto {net} · DDV {tax} · skupaj {total}",
+      "reverseCharge": "obrnjena davčna obveznost (brez DDV)",
+      "invoiceNumber": "Št. računa",
+      "invoiceNumberFor": "Številka računa za {buyer}",
+      "save": "Shrani"
     }
   },
   "Brands": {
@@ -1674,7 +1688,7 @@
       "pastDue": "Plačilo naročnine ni uspelo. Posodobi kartico v upravljanju naročnine.",
       "pilotUntil": "Agencijski pilot velja do {date}. Paket izbereš kadar koli; pilot se takrat konča.",
       "ended": "Naročnina ali pilot je končan. Vse ustvarjeno ostane na voljo za ogled in prenos; za nove objave, slike in videe izberi paket.",
-      "manage": "Upravljaj naročnino (kartica, računi, menjava paketa, odpoved)",
+      "manage": "Upravljaj naročnino (kartica, menjava paketa, odpoved)",
       "limits": "{brands} brandov · {members} članov · {credits} kreditov na mesec",
       "buyMonth": "{price} € / mesec",
       "buyYear": "{price} € / leto",
@@ -1682,7 +1696,7 @@
       "buyYearLabel": "{plan} letno, {price} €",
       "pilot": "Agencijski pilot {price} €",
       "pilotHint": "{days} dni paketa Studio za {brands} brande, enkratno plačilo.",
-      "vatHint": "Cene so brez DDV. Plačilo, račun in odpoved ureja Stripe; podjetja vpišejo davčno številko.",
+      "vatHint": "Cene so brez DDV. Plačilo in odpoved ureja Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti.",
       "intervals": {
         "month": "mesečno",
         "year": "letno"

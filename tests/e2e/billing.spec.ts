@@ -79,7 +79,21 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   await p.getByRole("button", { name: /Upravljaj naročnino/ }).click();
   await expect(p).toHaveURL(/\/stripe-page\/portal-/);
 
+  // The paid invoice is listed for the owner's own invoice; he records its number.
+  expect(await webhook(p, "invoice.paid", {
+    id: `in_${stamp}`, object: "invoice", customer, subscription: `sub_${stamp}`, total: 12078, subtotal: 9900, total_excluding_tax: 9900, currency: "eur",
+    customer_name: `Plačnik ${stamp} d.o.o.`, customer_email: owner, customer_address: { line1: "Glavna 1", postal_code: "2000", city: "Maribor", country: "SI" },
+    customer_tax_ids: [], status_transitions: { paid_at: Math.floor(Date.now() / 1000) }, lines: { data: [{ price: { lookup_key: "postaja_studio_month" }, period: { start: Math.floor(Date.now() / 1000), end: Math.floor(Date.now() / 1000) + 30 * 86400 } }] },
+  })).toBe(200);
   await page.goto("/admin/billing");
+  const pay = page.getByTestId("billing-payment").filter({ hasText: `Plačnik ${stamp} d.o.o.` });
+  await expect(pay).toContainText("neto 99,00 € · DDV 21,78 € · skupaj 120,78 €");
+  await pay.getByLabel(`Številka računa za Plačnik ${stamp} d.o.o.`).fill(`R-${stamp}`);
+  await pay.getByRole("button", { name: "Shrani" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Številka računa je shranjena." })).toBeVisible();
+  await expect(page.getByTestId("billing-payment").filter({ hasText: `Plačnik ${stamp} d.o.o.` })).toHaveCount(0); // invoiced → not in the open list
+  const csv = await (await page.request.get("/admin/billing/payments.csv")).text();
+  expect(csv).toContain(`Plačnik ${stamp} d.o.o.;Glavna 1, 2000 Maribor, SI;SI;;ne;${owner};99,00;21,78;120,78;EUR;R-${stamp}`);
   await expect(page.getByTestId("billing-subs")).toContainText(`Plačila E2E ${stamp} · studio · active`);
   await expect(page.getByTestId("billing-events")).toContainText("subscription:active:studio");
   expect(await serious(page)).toEqual([]);

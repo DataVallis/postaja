@@ -355,7 +355,7 @@ pravnik ali računovodja.
 - **AI oznake:** EU AI Act čl. 50 (preglednost sintetičnih vsebin; preveri aktualni rok) in pravila Meta/TikTok — posebej persona video.
 - **Operativa:** produkcija ločena od dev in asisto, varnostne kopije z vajo obnove (TASK-030), status stran, e-pošta
   z lastno domeno (SPF/DKIM), podpora na podpora@<domena>.
-- **Prodajalec (lastnik, 9. 10. 2026):** David Tacer s.p., Robindvor 39, 2370 Dravograd; davčna številka 36130800, ID za DDV SI36130800 (zavezanec za DDV), matična številka 6560024000. Plačila prek Stripe (ni MoR): DDV izračuna Stripe Tax (tudi v sandboxu), račune izda Stripe; računovodja potrdi OSS, obrnjeno davčno obveznost in davčno potrjevanje plačil s kartico.
+- **Prodajalec (lastnik, 9. 10. 2026):** David Tacer s.p., Robindvor 39, 2370 Dravograd; davčna številka 36130800, ID za DDV SI36130800 (zavezanec za DDV), matična številka 6560024000. Plačila prek Stripe (ni MoR): DDV izračuna Stripe Tax (tudi v sandboxu); račune lastnik izdaja v svojem programu iz seznama plačil v /admin/billing (9. 10. 2026); računovodja potrdi OSS, obrnjeno davčno obveznost in davčno potrjevanje plačil s kartico.
 
 ## 14. Načrt za 90 dni
 

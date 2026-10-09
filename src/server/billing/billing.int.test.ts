@@ -12,7 +12,7 @@ import { BillingBlockedError, reserve } from "../llm/spend";
 import { createOrganization, inviteMember } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { billingBlock } from "./block";
-import { BillingError, checkoutUrl, handleStripeEvent, portalUrl } from "./service";
+import { BillingError, checkoutUrl, handleStripeEvent, listPayments, paymentsCsv, portalUrl, setInvoiceNumber } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -74,7 +74,8 @@ describe("checkout", () => {
       metadata: { orgId: orgA, kind: "plan", plan: "studio" }, subscription_data: { metadata: { orgId: orgA, kind: "plan", plan: "studio" } },
       tax_id_collection: { enabled: true }, billing_address_collection: "required", success_url: "https://app/app/team?billing=success",
     });
-    expect(pack).toMatchObject({ mode: "payment", metadata: { kind: "pack", pack: "small" }, invoice_creation: { enabled: true } });
+    expect(pack).toMatchObject({ mode: "payment", metadata: { kind: "pack", pack: "small" }, payment_intent_data: { metadata: { kind: "pack" } } });
+    expect(pack).not.toHaveProperty("invoice_creation"); // invoices come from the owner's own program (ADR-075)
     expect((await billing()).stripeCustomerId).toBe("cus_1");
     expect(await portalUrl(db, f.stripe, A, "https://app")).toBe("https://billing.stripe.test/p");
     await expect(portalUrl(db, f.stripe, editorA, "https://app")).rejects.toBeInstanceOf(BillingError);
@@ -141,6 +142,44 @@ describe("webhooks", () => {
     expect((await billing()).stripeCustomerId).toBe("cus_7");
     await spend(); // a customer who only bought credits is not stopped
     expect((await db.select().from(stripeEvents)).map((x) => x.outcome).sort()).toEqual(["checkout:unpaid", "pack:500", "unknown-org"]);
+  });
+});
+
+describe("payments for manual invoices", () => {
+  it("one-off payments from Checkout and every paid subscription invoice are recorded once with the buyer's data", async () => {
+    const boss = { userId: A.userId, role: "superadmin" as const };
+    await db.insert(orgBilling).values({ orgId: orgA, stripeCustomerId: "cus_1" });
+    await handleStripeEvent(db, event("checkout.session.completed", {
+      id: "cs_pack", mode: "payment", payment_status: "paid", customer: "cus_1", client_reference_id: orgA, metadata: { orgId: orgA, kind: "pack", pack: "large" },
+      created: Math.floor(NOW.getTime() / 1000), currency: "eur", amount_total: 9760, total_details: { amount_tax: 1760 },
+      customer_details: { name: "Agencija A d.o.o.", email: "racuni@a.si", address: { line1: "Glavna 1", postal_code: "2000", city: "Maribor", country: "SI" }, tax_ids: [{ type: "eu_vat", value: "SI12345678" }] },
+    }), NOW);
+    const inv = (id: string, o: Record<string, unknown> = {}) => ({
+      id, object: "invoice", customer: "cus_1", subscription: "sub_1", total: 9900, subtotal: 9900, total_excluding_tax: 9900, currency: "eur",
+      customer_name: "Agentur B GmbH", customer_email: "b@b.de", customer_address: { line1: "Hauptstr. 2", postal_code: "10115", city: "Berlin", country: "DE" },
+      customer_tax_ids: [{ type: "eu_vat", value: "DE123456789" }], status_transitions: { paid_at: Math.floor(NOW.getTime() / 1000) + 60 },
+      lines: { data: [{ description: "1 × Postaja Studio", price: { lookup_key: "postaja_studio_month" }, period: { start: Math.floor(NOW.getTime() / 1000), end: Math.floor((NOW.getTime() + 31 * DAY) / 1000) } }] }, ...o,
+    });
+    const e = event("invoice.paid", inv("in_1"));
+    await handleStripeEvent(db, e, NOW);
+    await handleStripeEvent(db, e, NOW); // once
+    await handleStripeEvent(db, event("invoice.paid", inv("in_0", { total: 0, subtotal: 0, total_excluding_tax: 0 })), NOW);
+    await handleStripeEvent(db, event("invoice.paid", inv("in_x", { subscription: null })), NOW);
+    const rows = await listPayments(db, boss, { open: true });
+    expect(rows.map((r) => [r.id, r.kind, r.description, r.netCents, r.taxCents, r.totalCents, r.buyerCountry, r.buyerVatId, r.reverseCharge])).toEqual([
+      ["in_1", "plan", "Postaja Studio – mesečna naročnina", 9900, 0, 9900, "DE", "DE123456789", true],
+      ["cs_pack", "pack", "Postaja – 2000 kreditov", 8000, 1760, 9760, "SI", "SI12345678", false],
+    ]);
+    expect(rows[1]).toMatchObject({ buyerName: "Agencija A d.o.o.", buyerAddress: "Glavna 1, 2000 Maribor, SI", orgId: orgA });
+    expect(rows[0].periodEnd!.toISOString()).toBe("2026-11-08T10:00:00.000Z");
+    await setInvoiceNumber(db, boss, "cs_pack", " 2026-0042 ", NOW);
+    expect((await listPayments(db, boss, { open: true })).map((r) => r.id)).toEqual(["in_1"]);
+    const csv = await paymentsCsv(db, boss);
+    expect(csv.split("\r\n")[0]).toBe("placano;opis;obdobje_od;obdobje_do;kupec;naslov;drzava;id_za_ddv;obrnjena_davcna_obveznost;e_posta;neto;ddv;skupaj;valuta;racun;stripe");
+    expect(csv).toContain("2026-10-08;Postaja – 2000 kreditov;;;Agencija A d.o.o.;Glavna 1, 2000 Maribor, SI;SI;SI12345678;ne;racuni@a.si;80,00;17,60;97,60;EUR;2026-0042;cs_pack");
+    expect(csv).toContain(";DE;DE123456789;da;");
+    await expect(setInvoiceNumber(db, { userId: A.userId, role: "user" }, "in_1", "1")).rejects.toBeInstanceOf(BillingError);
+    await expect(setInvoiceNumber(db, boss, "nope", "1")).rejects.toMatchObject({ code: "INVALID" });
   });
 });
 

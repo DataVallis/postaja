@@ -18,7 +18,7 @@ V **Ekipa in paket** → **Paket in plačilo** lastnik izbere paket (cene brez D
 | Studio | 99 € | 990 € | 6 | 3 | 1500 |
 | Agencija | 249 € | 2490 € | 20 | 10 | 5000 |
 
-Za agencije je na voljo **agencijski pilot**: 99 € enkratno, 30 dni paketa Studio za 3 brande (enkrat, pred prvo naročnino). Plačilo poteka prek Stripe; podjetja vpišejo davčno številko, račun pride po e-pošti. Kartico, račune, menjavo paketa in odpoved urediš z gumbom **Upravljaj naročnino**.
+Za agencije je na voljo **agencijski pilot**: 99 € enkratno, 30 dni paketa Studio za 3 brande (enkrat, pred prvo naročnino). Plačilo poteka prek Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti. Kartico, menjavo paketa in odpoved urediš z gumbom **Upravljaj naročnino**.
 
 Če plačilo ne uspe, Postaja deluje še 7 dni; nato, ali ko se naročnina ali pilot konča, se novo ustvarjanje ustavi. Vse, kar je bilo ustvarjeno, ostane na voljo za ogled in prenos.
 
