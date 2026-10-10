@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { Db } from "../db/client";
 import { brandAssets, brandDesigns, brandSources, brands } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
+import { staticInstance } from "../files/font";
 import { MAX_INPUT_PIXELS } from "../files/images";
 import type { Storage } from "../files/storage";
 import { cappedCall } from "../llm/call";
@@ -15,6 +16,7 @@ import { LlmError, type ImageBlock, type LlmClient } from "../llm/types";
 import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createDesignRequest, issues, reviseDesignRequest, type DesignInputs } from "./ai";
+import { fontRenderError } from "./font-check";
 import { renderTemplate } from "./render";
 import { designSpecSchema, type DesignSpec } from "./spec";
 
@@ -91,8 +93,25 @@ export async function brandAssetBytes(db: Db, storage: Storage, ctx: OrgContext,
   rows.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const logoRow = rows.find((a) => a.kind === "logo");
   const fontRow = rows.find((a) => a.kind === "font");
-  const [logo, font] = await Promise.all([logoRow ? storage.get(logoRow.storageKey) : null, fontRow ? storage.get(fontRow.storageKey) : null]);
-  return { logo, font, fontFamily: fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
+  const [logo, raw] = await Promise.all([logoRow ? storage.get(logoRow.storageKey) : null, fontRow ? storage.get(fontRow.storageKey) : null]);
+  const font = raw ? await renderableFont(raw) : null;
+  return { logo, font, fontFamily: font && fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
+}
+
+/**
+ * The brand font as the renderer can use it, or null (then the design uses a built-in family). Fonts stored before
+ * uploads were checked may be variable (incident 2026-10-10): they are reduced to their default instance here.
+ */
+async function renderableFont(raw: Uint8Array): Promise<Uint8Array | null> {
+  let font = raw;
+  try {
+    font = staticInstance(raw);
+  } catch {
+    return null;
+  }
+  const error = await fontRenderError(font);
+  if (error) console.warn(`[design] brand font skipped, renderer cannot read it: ${error}`);
+  return error ? null : font;
 }
 
 /** The brand's partner logos (TASK-046) by name, to choose one per post or ad. Any member. */
@@ -176,6 +195,8 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
     previews = previews.slice(0, 8);
   }
   let invalid: { draft: unknown; errors: string } | undefined;
+  // Why the last attempt was refused, kept with the failed version for diagnosis (the UI shows only the code).
+  let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const req = base ? reviseDesignRequest(inputs, base, d.instruction!, previews, invalid) : createDesignRequest(inputs, invalid);
     let out;
@@ -188,12 +209,15 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
       throw e;
     }
     const parsed = designSpecSchema.safeParse(out.input);
-    if (!parsed.success) { invalid = { draft: out.input, errors: issues(parsed.error) }; continue; }
+    if (!parsed.success) { invalid = { draft: out.input, errors: issues(parsed.error) }; reason = "schema"; continue; }
     // A design that cannot be rendered is not saved.
     try {
       for (const t of parsed.data.templates) await renderTemplate(parsed.data, t, SHAPES.square, { slots: t.sample, logo: assets.logo, brandFont: assets.font });
-    } catch {
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").slice(0, 120);
+      console.warn(`[design] ${d.id} attempt ${attempt + 1} could not be rendered: ${msg}`);
       invalid = { draft: out.input, errors: "- the design could not be rendered; simplify the templates" };
+      reason = `render ${msg}`;
       continue;
     }
     await db.transaction(async (tx) => {
@@ -202,5 +226,5 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
     });
     return "ready";
   }
-  return fail("INVALID_OUTPUT");
+  return fail(`INVALID_OUTPUT:${reason}`.slice(0, 200));
 }

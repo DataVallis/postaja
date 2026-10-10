@@ -503,6 +503,7 @@
         "UNSUPPORTED_TYPE": "te vrste datoteke ne sprejemamo (npr. SVG, stari .doc/.xls ali ZIP v ZIP-u).",
         "INVALID_FILE": "datoteka je poškodovana ali ni prave vrste.",
         "MISSING_GLYPHS": "font nima znakov {detail}.",
+        "FONT_UNSUPPORTED": "te pisave ne znamo izrisati. Naloži statično različico (npr. datoteko Regular ali Bold, TTF/OTF).",
         "DUPLICATE": "ta datoteka je že naložena.",
         "LIMIT_REACHED": "doseženo je največje število datotek te vrste.",
         "ARCHIVED": "brand je arhiviran.",

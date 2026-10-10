@@ -6,6 +6,7 @@ import satori from "satori";
 import { backgroundState, elementState, type MotionSpec } from "../video/motion";
 import sharp from "sharp";
 import { MAX_INPUT_PIXELS } from "../files/images";
+import { fontRenderError } from "./font-check";
 import { color, type DesignSpec, type Slot, type Template, type TextElement } from "./spec";
 
 type FontFace = { name: string; data: Buffer; weight: 400 | 700; style: "normal" };
@@ -212,13 +213,15 @@ async function logoPair(brand: Uint8Array | null, partner: Uint8Array, box: { x:
 export async function renderTemplate(spec: DesignSpec, t: Template, size: { width: number; height: number }, input: RenderInput): Promise<Uint8Array> {
   const W = size.width, H = size.height;
   const usesBrand = spec.typography.heading === "brand" || spec.typography.body === "brand";
-  const s: DesignSpec = usesBrand && !input.brandFont
+  // A brand font the renderer cannot read falls back to the built-in family instead of failing the image.
+  const brandFont = usesBrand && input.brandFont && !(await fontRenderError(input.brandFont)) ? input.brandFont : null;
+  const s: DesignSpec = usesBrand && !brandFont
     ? { ...spec, typography: { heading: spec.typography.heading === "brand" ? "sans" : spec.typography.heading, body: spec.typography.body === "brand" ? "sans" : spec.typography.body } }
     : spec;
   // Only the families this design uses (Satori parses every font it is given, on every render).
   const used = new Set<string>([s.typography.heading, s.typography.body]);
   const fonts = (await builtinFonts()).filter((f) => used.has(f.name) || f.name === "symbols");
-  if (input.brandFont && used.has("brand")) for (const weight of [400, 700] as const) fonts.push({ name: "brand", data: Buffer.from(input.brandFont), weight, style: "normal" });
+  if (brandFont && used.has("brand")) for (const weight of [400, 700] as const) fonts.push({ name: "brand", data: Buffer.from(brandFont), weight, style: "normal" });
 
   const b = t.background;
   const children: (Node | null)[] = [];

@@ -45,7 +45,7 @@ export const brandSources = pgTable(
   ],
 );
 
-export type AssetMeta = { width?: number; height?: number; family?: string | null; missingGlyphs?: string[]; /** Partner logos: the partner's name. */ name?: string };
+export type AssetMeta = { width?: number; height?: number; family?: string | null; missingGlyphs?: string[]; /** Fonts: uploaded as a variable font, stored as its default instance. */ variable?: boolean; /** Partner logos: the partner's name. */ name?: string };
 
 /** Files used when rendering: logos and fonts. */
 export const brandAssets = pgTable(

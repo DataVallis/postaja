@@ -149,6 +149,20 @@ describe("brand design", () => {
     expect(await currentDesign(db, B, brandA)).toBeNull();
   });
 
+  it("a brand font stored before uploads were checked (variable) no longer fails the design (incident 2026-10-10)", async () => {
+    const fs = await import("node:fs");
+    const { isVariableFont } = await import("../files/font");
+    const up = await uploadBrandFile(db, storage, A, brandA, "font", { filename: "TinySans.ttf", bytes: new Uint8Array(fs.readFileSync("tests/fixtures/fonts/TinySans.ttf")) });
+    const [{ storage_key }] = await sql`select storage_key from brand_assets where id = ${up.id}`;
+    await storage.put(storage_key, new Uint8Array(fs.readFileSync("tests/fixtures/fonts/TinySansVar.ttf")), "font/ttf"); // as stored before the fix
+    const assets = await brandAssetBytes(db, storage, A, brandA);
+    expect(isVariableFont(assets.font!)).toBe(false);
+    expect(assets.fontFamily).toBe("Tiny Sans");
+    const withBrandFont = { ...cardDesign, typography: { heading: "brand", body: "brand" } };
+    await design(fakeClaude({ designs: [withBrandFont] }));
+    expect((await currentDesign(db, A, brandA))!.spec!.typography).toEqual({ heading: "brand", body: "brand" });
+  });
+
   it("an invalid answer is retried with the errors; two invalid answers fail the version", async () => {
     const bad = { ...cardDesign, templates: [cardDesign.templates[0]] };
     const claude = fakeClaude({ designs: [bad, cardDesign] });
@@ -159,7 +173,7 @@ describe("brand design", () => {
     const { q } = memoryQueue();
     const id2 = await requestDesign(db, q, A, brandA, { brief: "x" });
     expect(await runDesignJob(db, { llm: fakeClaude({ designs: [bad] }).client, storage }, { designId: id2 })).toBe("failed");
-    expect((await listDesigns(db, A, brandA))[0]).toMatchObject({ version: 2, status: "failed", error: "INVALID_OUTPUT" });
+    expect((await listDesigns(db, A, brandA))[0]).toMatchObject({ version: 2, status: "failed", error: "INVALID_OUTPUT:schema" });
     expect((await currentDesign(db, A, brandA))!.version).toBe(1); // the failed one never becomes current
   });
 

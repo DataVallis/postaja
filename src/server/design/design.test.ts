@@ -5,7 +5,8 @@ import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { cardDesign, monoDesign } from "../../../tests/fixtures/design";
-import { inspectFont, woffToSfnt } from "../files/font";
+import { inspectFont, isVariableFont, staticInstance, woffToSfnt } from "../files/font";
+import { fontRenderError } from "./font-check";
 import { createDesignRequest, postVisualRequest, postVisualSchema, reviseDesignRequest, type DesignInputs } from "./ai";
 import { fitText, parseEmphasis, renderTemplate } from "./render";
 import { color, designJsonSchema, designSpecSchema, needsIllustration, templateSlots } from "./spec";
@@ -122,6 +123,26 @@ describe("render", () => {
   it("a design asking for the brand font falls back to a built-in one when none is uploaded", async () => {
     const spec = designSpecSchema.parse({ ...monoDesign, typography: { heading: "brand", body: "brand" } });
     const png = await renderTemplate(spec, spec.templates[1], { width: 1080, height: 1080 }, { slots: { body: "> čšž" } });
+    expect(png.byteLength).toBeGreaterThan(1000);
+  });
+
+  // Incident 2026-10-10: a variable brand font (Google Fonts) crashed Satori, so every design of the brand failed.
+  const variable = new Uint8Array(fs.readFileSync("tests/fixtures/fonts/TinySansVar.ttf"));
+
+  it("a variable font becomes a static default instance the renderer can read; a static font is left as is", async () => {
+    expect(await fontRenderError(variable)).toMatch(/./);
+    const fixed = staticInstance(variable);
+    expect(isVariableFont(fixed)).toBe(false);
+    expect(inspectFont(fixed)).toEqual(inspectFont(variable));
+    expect(await fontRenderError(fixed)).toBeNull();
+    const tiny = new Uint8Array(fs.readFileSync("tests/fixtures/fonts/TinySans.ttf"));
+    expect(staticInstance(tiny)).toBe(tiny);
+    expect(() => staticInstance(variable.subarray(0, 40))).toThrow(/FONT_/);
+  });
+
+  it("a brand font the renderer cannot read falls back to a built-in family instead of failing the image", async () => {
+    const spec = designSpecSchema.parse({ ...monoDesign, typography: { heading: "brand", body: "brand" } });
+    const png = await renderTemplate(spec, spec.templates[1], { width: 1080, height: 1080 }, { slots: { body: "> čšž" }, brandFont: variable });
     expect(png.byteLength).toBeGreaterThan(1000);
   });
 });

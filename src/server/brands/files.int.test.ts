@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import sharp from "sharp";
@@ -28,7 +29,10 @@ let editorA: OrgContext;
 let brandA: string;
 let brandB: string;
 
+/** Structurally valid but without outlines: passes the coverage checks, the renderer cannot draw it. */
 const font = (chars = `abc${REQUIRED_GLYPHS}`) => makeFont({ chars, family: "Brand Sans" });
+/** Real fonts from tests/fixtures/fonts (TinySans: full coverage; TinyPlain: no č š ž; TinySansVar: variable). */
+const realFont = (name: "TinySans" | "TinyPlain" | "TinySansVar") => new Uint8Array(fs.readFileSync(`tests/fixtures/fonts/${name}.ttf`));
 const fetchBytes = async (u: string) => {
   const r = await fetch(u);
   return { status: r.status, type: r.headers.get("content-type"), disposition: r.headers.get("content-disposition"), body: new Uint8Array(await r.arrayBuffer()) };
@@ -96,14 +100,32 @@ describe("upload → S3 → row", () => {
   });
 
   it("font: full coverage stored with family; missing č/š/ž refused for a Slovenian brand, kept with the gap for an English one", async () => {
-    const r = await uploadBrandFile(db, s3, A, brandA, "font", { filename: "BrandSans.ttf", bytes: font() });
+    const r = await uploadBrandFile(db, s3, A, brandA, "font", { filename: "TinySans.ttf", bytes: realFont("TinySans") });
     const [row] = await db.select().from(brandAssets).where(eq(brandAssets.id, r.id));
-    expect(row.meta).toEqual({ family: "Brand Sans", missingGlyphs: [] });
+    expect(row.meta).toEqual({ family: "Tiny Sans", missingGlyphs: [] });
     await expect(uploadBrandFile(db, s3, A, brandA, "font", { filename: "NoDiacritics.ttf", bytes: font("abc") }))
       .rejects.toMatchObject({ code: "MISSING_GLYPHS", detail: "č š ž ć đ Č Š Ž Ć Đ" });
-    const en = await uploadBrandFile(db, s3, B, brandB, "font", { filename: "NoDiacritics.ttf", bytes: font("abc") });
+    const en = await uploadBrandFile(db, s3, B, brandB, "font", { filename: "TinyPlain.ttf", bytes: realFont("TinyPlain") });
     const [enRow] = await db.select().from(brandAssets).where(eq(brandAssets.id, en.id));
     expect(enRow.meta.missingGlyphs).toHaveLength(10);
+  });
+
+  it("font: a variable font is stored as its static default instance; a font the renderer cannot draw is refused", async () => {
+    const { isVariableFont } = await import("../files/font");
+    const { fontRenderError } = await import("../design/font-check");
+    const variable = realFont("TinySansVar");
+    expect(isVariableFont(variable)).toBe(true);
+    expect(await fontRenderError(variable)).not.toBeNull(); // incident 2026-10-10: Satori cannot read variable fonts
+    const r = await uploadBrandFile(db, s3, A, brandA, "font", { filename: "TinySans[wght].ttf", bytes: variable });
+    const [row] = await db.select().from(brandAssets).where(eq(brandAssets.id, r.id));
+    expect(row.meta).toEqual({ family: "Tiny Sans Var", missingGlyphs: [], variable: true });
+    const stored = new Uint8Array(await (await fetch(await brandFileUrl(db, s3, A, "asset", r.id))).arrayBuffer());
+    expect(isVariableFont(stored)).toBe(false);
+    expect(await fontRenderError(stored)).toBeNull();
+
+    const before = await sql`select count(*)::int n from brand_assets`;
+    await expect(uploadBrandFile(db, s3, B, brandB, "font", { filename: "NoOutlines.ttf", bytes: font() })).rejects.toMatchObject({ code: "FONT_UNSUPPORTED" });
+    expect(await sql`select count(*)::int n from brand_assets`).toEqual(before);
   });
 
   it("wrong type for the slot, garbage and empty files are refused and nothing is stored", async () => {
@@ -137,7 +159,7 @@ describe("upload → S3 → row", () => {
     for (let i = 0; i < MAX_FILES.logo; i++) await uploadBrandFile(db, s3, A, brandA, "logo", { filename: `l${i}.png`, bytes: await image("png", 10 + i, 10) });
     await expect(uploadBrandFile(db, s3, A, brandA, "logo", { filename: "one-more.png", bytes: await image("png", 99, 10) })).rejects.toMatchObject({ code: "LIMIT_REACHED" });
     // fonts have their own limit
-    await expect(uploadBrandFile(db, s3, A, brandA, "font", { filename: "f.ttf", bytes: font() })).resolves.toBeDefined();
+    await expect(uploadBrandFile(db, s3, A, brandA, "font", { filename: "f.ttf", bytes: realFont("TinySans") })).resolves.toBeDefined();
   });
 
   it("archived brands take no uploads; editors read and download but cannot upload or delete", async () => {
@@ -319,7 +341,7 @@ describe("uploadAuto: drop anything, incl. a ZIP", () => {
   it("WOFF fonts without č/š/ž: refused for a Slovenian brand, accepted (gap recorded) for an English one", async () => {
     const { makeWoff } = await import("../../../tests/fixtures/files");
     const { uploadAuto } = await import("./files");
-    const woff = makeWoff(makeFont({ chars: "abc", family: "Plain" }));
+    const woff = makeWoff(realFont("TinyPlain"));
     expect(await uploadAuto(db, s3, A, brandA, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: false, error: "MISSING_GLYPHS" }]);
     expect(await uploadAuto(db, s3, B, brandB, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: true, slot: "font" }]);
   });
