@@ -1,6 +1,6 @@
 # Plan import
 
-Status: **Built** (TASK-012). Decision: ADR-041.
+Status: **Built** (TASK-012). Decisions: ADR-041, ADR-078 (reading in the background).
 
 The owner's content plans come in many shapes (see the four examples from 2026-10-06): an X-only sheet without a
 platform column (CHERR.IO), a 30-day sheet over three accounts with dates, times, formats and slide texts (AI
@@ -10,11 +10,19 @@ sections and one shared image style (LinkedIn). Postaja reads any of them into p
 ## Flow
 1. `/app/import` — drop one file (XLSX, CSV/TSV, DOCX, PDF, MD, TXT; ≤ 20 MB) → `POST /api/imports`
    (`src/server/plans/http.ts`: same-origin, signed in, size from the header) → `startImport`.
+   **The request only checks and stores the file** (type, size, sheets parsed / document text read — errors such as
+   `UNSUPPORTED_TYPE`, `NO_POSTS` for an empty document answer at once) and creates the import with status `reading`;
+   the AI part runs in the worker (`plan-read` queue, `runReadJob`, no retry, 10 min expiry) → `draft`, or `failed`
+   with `error` (`AI_FAILED:PROVIDER`, `SPEND_CAP`, …). The review page shows "Berem plan …" and refreshes every 2 s;
+   an import still `reading` after 15 min is shown as failed (`TIMEOUT`). Without a queue (tests, scripts)
+   `startImport` reads inline and AI errors throw (ADR-078).
 2. **Tables** (`table.ts`): every sheet → header (first row with ≥ 2 cells among the first 20) + rows (cells at their
    real column, from the cell reference). **The AI only names the columns** (`map_plan_columns`, ≤ 1,500 tokens, header
    + 6 sample rows); `guessMapping` (header words checked against sample values) is the fallback and the starting
    point. No platform column → the file/sheet name may say it (`platformFromName`: "…_X_posts" → X).
-   **Documents**: text via `materialText`; the AI lists the posts (`extract_plan_posts`), and every text is checked
+   **Documents**: text via `materialText` (≤ 80k characters); a text over 12k characters is split at Markdown headings
+   (a heading stays with its post; a longer section at blank lines, `splitDocument`) and the parts are read 3 at a time,
+   answers joined in document order with the first shared image style / platform any part found; the AI lists the posts (`extract_plan_posts`), and every text is checked
    against the document (whitespace-normalised) — a reworded text gets the `TEXT_CHANGED` warning. A shared image style
    is prepended to each image prompt.
 3. Every value is read by code (`mapping.ts`, verbatim): dates (Excel serials, ISO, d.m.yyyy), times (also Excel

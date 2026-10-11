@@ -330,6 +330,13 @@
       "when": 1791529301318,
       "tag": "0046_billing_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791698931850,
+      "tag": "0047_plan_import_reading",
+      "breakpoints": true
     }
   ]
 }

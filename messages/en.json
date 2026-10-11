@@ -878,6 +878,8 @@
       "document": "document"
     },
     "status": {
+      "reading": "reading",
+      "failed": "failed",
       "draft": "to review",
       "imported": "imported",
       "discarded": "discarded"
@@ -887,7 +889,7 @@
       "hint": "Excel (XLSX), CSV, Word (DOCX), PDF, MD or TXT, up to 20 MB. Several sheets and platforms in one file are fine.",
       "pick": "Pick a plan",
       "reading": "Reading …",
-      "readingHint": "Reading “{name}”. Word and PDF can take up to a minute.",
+      "readingHint": "Uploading “{name}” …",
       "errors": {
         "EMPTY": "The file is empty.",
         "TOO_LARGE": "The file is larger than 20 MB.",
@@ -898,7 +900,10 @@
         "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
         "NO_MODEL": "No AI model is set up.",
         "BAD_ORIGIN": "The request did not come from Postaja.",
-        "failed": "Upload failed. Try again."
+        "failed": "Upload failed. Try again.",
+        "TIMEOUT": "Reading took too long and was stopped. Upload the plan again.",
+        "FAILED": "Reading the plan failed. Upload it again.",
+        "FORBIDDEN": "The member who uploaded the plan no longer has access."
       }
     },
     "readByAi": "The structure was read by AI; values are read verbatim.",
@@ -1028,7 +1033,10 @@
     "handlesHint": "A channel is created only if the brand has none for that platform. Empty = do not create.",
     "applyBrand": "Use brand",
     "brandChosen": "The plan is for {brand}: only its channels are suggested.",
-    "noBrandYet": "No brand chosen yet: no channels are suggested, so posts do not land on the wrong brand."
+    "noBrandYet": "No brand chosen yet: no channels are suggested, so posts do not land on the wrong brand.",
+    "tryAgain": "Upload again",
+    "readingTitle": "Reading the plan …",
+    "readingHint": "Claude reads every post in the plan. A long Word or Markdown plan can take a few minutes; this page refreshes itself, and you can leave it."
   },
   "PostFormats": {
     "text": "text",

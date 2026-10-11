@@ -76,6 +76,8 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   expect(await serious(p)).toEqual([]);
   await p.getByLabel("Izberi plan").setInputFiles({ name: "AI-Builders-30-dni-objav.xlsx", mimeType: XLSX, buffer: Buffer.from(plan) });
   await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  // Read in the background (ADR-078): the page waits and refreshes itself until the plan is read.
+  await expect(p.getByTestId("import-stats")).toBeVisible({ timeout: 30_000 });
   await expect(p.getByRole("heading", { name: "AI-Builders-30-dni-objav.xlsx", level: 1 })).toBeVisible();
   await expect(p.getByText("Strukturo je prebral AI")).toBeVisible();
   await expect(p.getByTestId("import-stats")).toContainText("Objav v planu4");
@@ -122,6 +124,8 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   await p.goto("/app/import");
   await p.getByLabel("Izberi plan").setInputFiles({ name: "AI-Builders-30-dni-objav.xlsx", mimeType: XLSX, buffer: Buffer.from(plan) });
   await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  // Read in the background (ADR-078): the page waits and refreshes itself until the plan is read.
+  await expect(p.getByTestId("import-stats")).toBeVisible({ timeout: 30_000 });
   await p.getByTestId("import-groups").getByLabel("Kanal za LinkedIn · David (osebni profil)").selectOption({ label: "David Tacer · LinkedIn · david-tacer" });
   await p.getByRole("button", { name: /^Uvozi \d+ objav$/ }).click();
   await expect(p).toHaveURL(/\/app\/posts\?import=/);
@@ -139,6 +143,8 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   await p.goto("/app/import");
   await p.getByLabel("Izberi plan").setInputFiles({ name: "davidtacer-Linkedin-objave.docx", mimeType: DOCX, buffer: Buffer.from(doc) });
   await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  // Read in the background (ADR-078): the page waits and refreshes itself until the plan is read.
+  await expect(p.getByTestId("import-stats")).toBeVisible({ timeout: 30_000 });
   await expect(p.getByTestId("import-stats")).toContainText("Objav v planu2");
   await expect(p.getByTestId("import-groups").getByLabel("Kanal za LinkedIn")).toHaveValue(/.+/);
   await p.getByLabel("Začetni dan").fill("2026-11-02");
@@ -158,6 +164,8 @@ test("owner imports an Excel plan over three accounts and a Word plan; history, 
   await p.goto("/app/import");
   await p.getByLabel("Izberi plan").setInputFiles({ name: "CHERR.IO X posts 001 (1).xlsx", mimeType: XLSX, buffer: Buffer.from(cherr) });
   await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  // Read in the background (ADR-078): the page waits and refreshes itself until the plan is read.
+  await expect(p.getByTestId("import-stats")).toBeVisible({ timeout: 30_000 });
   await expect(p.getByTestId("import-brand")).toContainText("Brand še ni izbran");
   await expect(p.getByTestId("import-groups").getByLabel("Kanal za X")).toHaveValue("");
   const brandForm = p.getByTestId("import-brand-form");

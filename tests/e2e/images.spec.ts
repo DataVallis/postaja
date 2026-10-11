@@ -118,6 +118,7 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.goto("/app/import");
   await p.getByLabel("Izberi plan").setInputFiles({ name: "plan.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from(plan) });
   await expect(p).toHaveURL(/\/app\/import\/[^/]+$/);
+  await expect(p.getByTestId("import-stats")).toBeVisible({ timeout: 30_000 }); // read in the background (ADR-078)
   await p.getByRole("button", { name: "Uvozi 2 objav" }).click();
   await expect(p).toHaveURL(/\/app\/posts\?import=/);
 

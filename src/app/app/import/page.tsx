@@ -4,11 +4,12 @@ import { Badge, DataTable, PageHeader, Section, td } from "@/components/ui";
 import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { listImports } from "@/server/plans/service";
+import { AutoRefresh } from "../plan/auto-refresh";
 import { PlanUpload } from "./upload";
 
 export const dynamic = "force-dynamic";
 
-const TONE = { draft: "warn", imported: "ok", discarded: "neutral" } as const;
+const TONE = { reading: "neutral", failed: "danger", draft: "warn", imported: "ok", discarded: "neutral" } as const;
 
 export default async function ImportPage() {
   const { org } = await requireOrgPage();
@@ -17,6 +18,7 @@ export default async function ImportPage() {
   const f = await getFormatter();
   return (
     <>
+      <AutoRefresh active={list.some((i) => i.status === "reading")} />
       <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-8">
         <PlanUpload />

@@ -15,9 +15,9 @@ import { costMicroUsd, worstCaseMicroUsd } from "../llm/cost";
 import { release, reserve, settle, SpendCapError } from "../llm/spend";
 import { LlmError, type LlmClient, type StructuredRequest } from "../llm/types";
 import { checkPost, rulesFor } from "../posts/generate";
-import type { OrgContext } from "../tenancy/context";
+import { resolveOrgContext, TenancyError, type OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
-import { EXTRACT_MAX_TOKENS, extractRequest, MAPPING_MAX_TOKENS, mappingRequest, readExtraction, readMapping } from "./ai";
+import { DOC_MAX_CHARS, EXTRACT_MAX_TOKENS, extractRequest, MAPPING_MAX_TOKENS, mappingRequest, readExtraction, readMapping } from "./ai";
 import { extractHashtags, guessMapping, mapRows, mappingSchema, platformFromName, type ColumnMapping, type PlanItem } from "./mapping";
 import { tablesFromCsv, tablesFromXlsx, type PlanTable } from "./table";
 
@@ -56,16 +56,24 @@ async function callAi(db: Db, ctx: OrgContext, llm: LlmClient, req: Omit<Structu
   }
 }
 
-/** Reads an uploaded plan and stores it as a draft import. Tables never fail on the AI (headers are the fallback). */
-export async function startImport(db: Db, deps: Deps, ctx: OrgContext, file: { filename: string; bytes: Uint8Array }): Promise<string> {
+export const PLAN_READ_QUEUE = "plan-read";
+export type PlanReadJob = { importId: string };
+/** A plan still "reading" after this long is shown as failed (the worker died or the provider hung). */
+export const READ_STALE_MS = 15 * 60 * 1000;
+
+type Prepared =
+  | { kind: "table"; filename: string; tables: PlanTable[] }
+  | { kind: "document"; filename: string; text: string };
+type ReadResult = Pick<ImportRow, "kind" | "tables" | "mappings" | "items" | "reader">;
+
+/** Checks and parses an upload without the AI (fast; runs in the request). Throws ImportError. */
+async function prepare(file: { filename: string; bytes: Uint8Array }): Promise<{ prepared: Prepared; ext: string; isCsv: boolean }> {
   if (!file.bytes.byteLength) throw new ImportError("EMPTY");
   if (file.bytes.byteLength > IMPORT_MAX_BYTES) throw new ImportError("TOO_LARGE");
   const filename = (file.filename.split(/[\\/]/).pop() ?? "plan").normalize("NFC").replace(/[\u0000-\u001f]/g, "").slice(0, 200) || "plan";
   const type = sniff(file.bytes);
-  const id = crypto.randomUUID();
-  let row: Pick<ImportRow, "kind" | "tables" | "mappings" | "items" | "reader">;
-
   const isCsv = type === "text" && /\.(csv|tsv)$/i.test(filename);
+  const ext = type === "text" ? (isCsv ? "csv" : "txt") : type;
   if (type === "xlsx" || isCsv) {
     let tables: PlanTable[];
     try {
@@ -75,45 +83,153 @@ export async function startImport(db: Db, deps: Deps, ctx: OrgContext, file: { f
     }
     tables = tables.slice(0, MAX_SHEETS);
     if (!tables.length) throw new ImportError("NO_POSTS");
-    const mappings: ColumnMapping[] = [];
-    let reader: ImportRow["reader"] = { by: "headers" };
-    for (const t of tables) {
-      const guess = guessMapping(t.header, t.rows.slice(0, 8).map((r) => r.cells));
-      // No platform column: the file or sheet name may say it ("CHERR.IO_X_posts.xlsx").
-      if (!guess.columns.includes("platform")) guess.defaultPlatform = platformFromName(`${filename} ${t.sheet}`);
-      const ai = await callAi(db, ctx, deps.llm, mappingRequest(t, filename, guess), MAPPING_MAX_TOKENS);
-      const read = "input" in ai ? readMapping(ai.input, t.header.length) : null;
-      if (read) reader = { by: "ai", model: ai.model };
-      else if ("error" in ai) reader = { ...reader, error: ai.error };
-      const chosen = read ?? guess;
-      if (!chosen.columns.includes("platform") && !chosen.defaultPlatform) chosen.defaultPlatform = platformFromName(`${filename} ${t.sheet}`);
-      mappings.push(chosen);
-    }
-    row = { kind: "table", tables, mappings, items: null, reader };
-  } else if (type === "docx" || type === "pdf" || type === "text") {
+    return { prepared: { kind: "table", filename, tables }, ext, isCsv };
+  }
+  if (type === "docx" || type === "pdf" || type === "text") {
     let text: string;
     try {
       text = await materialText(file.bytes, type);
     } catch (e) {
       throw new ImportError(e instanceof ExtractError && e.code === "NO_TEXT" ? "NO_POSTS" : "INVALID_FILE");
     }
-    const ai = await callAi(db, ctx, deps.llm, extractRequest(text, filename), EXTRACT_MAX_TOKENS);
-    if ("error" in ai) throw new ImportError("AI_FAILED", ai.error);
-    const items = readExtraction(ai.input, text);
-    if (!items) throw new ImportError("AI_FAILED", "INVALID_OUTPUT");
-    if (!items.length) throw new ImportError("NO_POSTS");
-    row = { kind: "document", tables: null, mappings: [], items, reader: { by: "ai", model: ai.model } };
-  } else {
-    throw new ImportError("UNSUPPORTED_TYPE", type);
+    return { prepared: { kind: "document", filename, text }, ext, isCsv };
   }
+  throw new ImportError("UNSUPPORTED_TYPE", type);
+}
 
-  const ext = type === "text" ? (isCsv ? "csv" : "txt") : type;
+/** Up to this many characters go to Claude in one call; a longer plan is read in parts at the same time. */
+export const DOC_CHUNK_CHARS = 12_000;
+const DOC_PARALLEL = 3;
+
+/**
+ * Splits a plan document into parts of at most `max` characters, at headings or blank lines, so no post is cut in two
+ * (a single paragraph longer than `max` is its own part). Parts keep document order.
+ */
+export function splitDocument(text: string, max = DOC_CHUNK_CHARS): string[] {
+  const t = text.slice(0, DOC_MAX_CHARS);
+  if (t.length <= max) return [t];
+  // A heading stays with what follows it; a section longer than a part is split further at blank lines.
+  const blocks = t.split(/\n(?=#{1,4}\s)/).flatMap((sec) => (sec.length <= max ? [sec] : sec.split(/\n\s*\n/)));
+  const parts: string[] = [];
+  let cur = "";
+  for (const b of blocks) {
+    if (cur && cur.length + b.length + 2 > max) { parts.push(cur); cur = ""; }
+    cur = cur ? `${cur}\n\n${b}` : b;
+  }
+  if (cur.trim()) parts.push(cur);
+  return parts;
+}
+
+/** The AI part of reading (mapping columns, or listing the posts of a document). Throws ImportError. */
+async function readPrepared(db: Db, deps: Deps, ctx: OrgContext, p: Prepared): Promise<ReadResult> {
+  if (p.kind === "table") {
+    const mappings: ColumnMapping[] = [];
+    let reader: ImportRow["reader"] = { by: "headers" };
+    for (const t of p.tables) {
+      const guess = guessMapping(t.header, t.rows.slice(0, 8).map((r) => r.cells));
+      // No platform column: the file or sheet name may say it ("CHERR.IO_X_posts.xlsx").
+      if (!guess.columns.includes("platform")) guess.defaultPlatform = platformFromName(`${p.filename} ${t.sheet}`);
+      const ai = await callAi(db, ctx, deps.llm, mappingRequest(t, p.filename, guess), MAPPING_MAX_TOKENS);
+      const read = "input" in ai ? readMapping(ai.input, t.header.length) : null;
+      if (read) reader = { by: "ai", model: ai.model };
+      else if ("error" in ai) reader = { ...reader, error: ai.error };
+      const chosen = read ?? guess;
+      if (!chosen.columns.includes("platform") && !chosen.defaultPlatform) chosen.defaultPlatform = platformFromName(`${p.filename} ${t.sheet}`);
+      mappings.push(chosen);
+    }
+    return { kind: "table", tables: p.tables, mappings, items: null, reader };
+  }
+  // A long plan is read in parts at the same time (faster, and no part hits the answer's token limit); the answers are
+  // joined in document order, with the first shared image style / platform any part found.
+  const parts = splitDocument(p.text);
+  const answers: { input: unknown; model: string }[] = new Array(parts.length);
+  let next = 0;
+  let failure: ImportError | null = null;
+  const work = async () => {
+    while (next < parts.length && !failure) {
+      const i = next++;
+      const label = parts.length > 1 ? `${p.filename} (part ${i + 1} of ${parts.length})` : p.filename;
+      try {
+        const ai = await callAi(db, ctx, deps.llm, extractRequest(parts[i], label), EXTRACT_MAX_TOKENS);
+        if ("error" in ai) failure = new ImportError("AI_FAILED", ai.error);
+        else answers[i] = ai;
+      } catch (e) {
+        if (e instanceof ImportError) failure = e;
+        else throw e;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(DOC_PARALLEL, parts.length) }, work));
+  if (failure) throw failure;
+  const ok = answers.map((a) => a.input as { items?: unknown[]; sharedImageStyle?: unknown; defaultPlatform?: unknown } | null);
+  if (ok.some((a) => !a || !Array.isArray(a.items))) throw new ImportError("AI_FAILED", "INVALID_OUTPUT");
+  const merged = {
+    sharedImageStyle: ok.find((a) => a!.sharedImageStyle)?.sharedImageStyle ?? null,
+    defaultPlatform: ok.find((a) => a!.defaultPlatform)?.defaultPlatform ?? null,
+    items: ok.flatMap((a) => a!.items!),
+  };
+  const items = readExtraction(merged, p.text);
+  if (!items) throw new ImportError("AI_FAILED", "INVALID_OUTPUT");
+  if (!items.length) throw new ImportError("NO_POSTS");
+  return { kind: "document", tables: null, mappings: [], items, reader: { by: "ai", model: answers[0].model } };
+}
+
+/**
+ * Stores an uploaded plan. With a queue (the web request) the file is checked and stored at once and the AI reads it in
+ * the background (status "reading" → "draft" or "failed"): a long Word/Markdown plan takes minutes, longer than any
+ * proxy waits (incident 2026-10-11). Without a queue (tests, scripts) it is read inline and AI errors throw.
+ */
+export async function startImport(db: Db, deps: Deps & { queue?: ReadQueue }, ctx: OrgContext, file: { filename: string; bytes: Uint8Array }): Promise<string> {
+  const { prepared, ext, isCsv } = await prepare(file);
+  const id = crypto.randomUUID();
   const key = `org/${ctx.orgId}/imports/${id}.${ext}`;
+  const base = { id, filename: prepared.filename, storageKey: key, sha256: createHash("sha256").update(file.bytes).digest("hex"), createdBy: ctx.userId };
+  if (!deps.queue) {
+    const row = await readPrepared(db, deps, ctx, prepared);
+    await deps.storage.put(key, file.bytes, isCsv ? "text/csv; charset=utf-8" : "application/octet-stream");
+    await forOrg(db, ctx).insert(planImports, { ...base, ...row });
+    return id;
+  }
   await deps.storage.put(key, file.bytes, isCsv ? "text/csv; charset=utf-8" : "application/octet-stream");
   await forOrg(db, ctx).insert(planImports, {
-    id, filename, storageKey: key, sha256: createHash("sha256").update(file.bytes).digest("hex"), createdBy: ctx.userId, ...row,
+    ...base, kind: prepared.kind, status: "reading", tables: prepared.kind === "table" ? prepared.tables : null, mappings: [], items: null, reader: { by: "ai" },
   });
+  await deps.queue.send(PLAN_READ_QUEUE, { importId: id } satisfies PlanReadJob, `plan-read:${id}`);
   return id;
+}
+
+export type ReadQueue = { send(name: string, data: object, key: string): Promise<void> };
+
+/** Worker: reads a stored plan with the AI. Never throws for expected outcomes; a failure is kept on the import. */
+export async function runReadJob(db: Db, deps: Deps, job: PlanReadJob): Promise<"draft" | "failed" | "skipped"> {
+  const [r] = await db.select().from(planImports).where(eq(planImports.id, job.importId));
+  if (!r || r.status !== "reading") return "skipped";
+  const fail = async (error: string) => {
+    await db.update(planImports).set({ status: "failed", error: error.slice(0, 200) }).where(and(eq(planImports.id, r.id), eq(planImports.status, "reading")));
+    return "failed" as const;
+  };
+  let ctx: OrgContext;
+  try {
+    ctx = await resolveOrgContext(db, { userId: r.createdBy, activeOrganizationId: r.orgId });
+  } catch (e) {
+    if (e instanceof TenancyError) return fail("FORBIDDEN");
+    throw e;
+  }
+  try {
+    let prepared: Prepared;
+    if (r.kind === "table") prepared = { kind: "table", filename: r.filename, tables: (r.tables ?? []) as PlanTable[] };
+    else {
+      const bytes = await deps.storage.get(r.storageKey);
+      prepared = (await prepare({ filename: r.filename, bytes })).prepared;
+    }
+    const row = await readPrepared(db, deps, ctx, prepared);
+    await db.update(planImports).set({ ...row, status: "draft", error: null }).where(and(eq(planImports.id, r.id), eq(planImports.status, "reading")));
+    return "draft";
+  } catch (e) {
+    if (e instanceof ImportError) return fail(e.detail ? `${e.code}:${e.detail}` : e.code);
+    await fail("FAILED");
+    throw e;
+  }
 }
 
 async function ownImport(db: Db, ctx: OrgContext, id: string): Promise<ImportRow> {
@@ -239,7 +355,7 @@ export async function importView(db: Db, ctx: OrgContext, id: string) {
     g.channelId = ok ? chosen! : g.suggested;
   }
   return {
-    import: r, items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list, brand: hint.brand,
+    import: r, stale: isStale(r), items, schedule: scheduleOf(items, r.settings), groups: [...groups.values()], channels: list, brand: hint.brand,
     brandChosen: !!chosen, brands: brandList, newBrandName: hint.brand ? null : brandNameFromFile(r.filename),
   };
 }
@@ -452,12 +568,16 @@ export async function reopenImport(db: Db, ctx: OrgContext, id: string) {
 
 export async function discardImport(db: Db, ctx: OrgContext, id: string) {
   const r = await ownImport(db, ctx, id);
-  if (r.status !== "draft") throw new ImportError("BAD_STATE");
+  if (r.status !== "draft" && r.status !== "failed") throw new ImportError("BAD_STATE");
   await forOrg(db, ctx).update(planImports, { status: "discarded" }, eq(planImports.id, id));
 }
 
+/** A plan still "reading" after READ_STALE_MS counts as failed (the worker died or the provider hung). */
+const isStale = (r: { status: string; createdAt: Date }, now = Date.now()) => r.status === "reading" && now - r.createdAt.getTime() > READ_STALE_MS;
+
 export async function listImports(db: Db, ctx: OrgContext, limit = 50) {
-  return db
-    .select({ id: planImports.id, filename: planImports.filename, kind: planImports.kind, status: planImports.status, createdCount: planImports.createdCount, createdAt: planImports.createdAt, reader: planImports.reader })
+  const rows = await db
+    .select({ id: planImports.id, filename: planImports.filename, kind: planImports.kind, status: planImports.status, error: planImports.error, createdCount: planImports.createdCount, createdAt: planImports.createdAt, reader: planImports.reader })
     .from(planImports).where(eq(planImports.orgId, ctx.orgId)).orderBy(desc(planImports.createdAt)).limit(limit);
+  return rows.map((r) => (isStale(r) ? { ...r, status: "failed" as const, error: "TIMEOUT" } : r));
 }
