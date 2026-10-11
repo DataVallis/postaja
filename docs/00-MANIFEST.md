@@ -4,7 +4,7 @@ Read this first in every session, then `HANDOFF.md`, then `03-DECISIONS.md`.
 Full working rules: `DEVELOPMENT-RULES.md`. ADRs override everything else; newest wins.
 
 ## 1. Product in one paragraph
-Postaja is a multi-brand AI content studio at `postaja.inzenirji.si`. Each brand (a "project" for the user)
+Postaja is a multi-brand AI content studio at `peron.postaja.eu` (public site `postaja.eu`). Each brand (a "project" for the user)
 has its own CGP, **delivered by the owner**, plus uploaded materials (logo, fonts, documents, images); Postaja
 creates posts and ads from them and never writes the CGP (ADR-035). AI also researches competitors and proposes what to adopt and what to reject.
 Users import a content plan (CSV/XLSX) or let AI propose one, generate content in one click (text, X thread,

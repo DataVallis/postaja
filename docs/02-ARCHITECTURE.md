@@ -205,7 +205,7 @@ Persona posts add the DNA block and scene description; passport images go to the
 | local | docker compose: Postgres+pgvector, MinIO (S3 stand-in) | `pnpm dev` + `pnpm worker` |
 | dev | Owner's Hetzner VM (4 vCPU / 8 GB), shared with other apps (ADR-025), `dev-postaja.inzenirji.si` | auto-deploy on merge to `dev` |
 | uat | same VM, separate Kamal destination + DB | when there is a second user |
-| prod | separate Hetzner VM (or the same CX at start, decided before launch), `postaja.inzenirji.si` | manual deploy from `main` |
+| prod | same Hetzner VM as dev (ADR-084), `peron.postaja.eu`, destination `prod`, database `postaja-prod-db` | manual deploy from `main` (workflow "Deploy prod") |
 
 Worker sizing: video + LibreOffice need RAM; start on CX32 (8 GB) for the host running `worker`, or move `worker` to its own VM when video load grows.
 
