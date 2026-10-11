@@ -29,12 +29,13 @@ import { personaIllustrationPrompt } from "../personas/scene";
 export const POST_IMAGE_QUEUE = "post-image";
 /** new: plan and draw again; text: redraw the stored plan; revise: Claude applies the owner's words to the current images. */
 export type ImageMode = "new" | "text" | "revise";
-export type PostImageJob = { postId: string; mode: ImageMode; instruction?: string };
+/** `only` (TASK-054): a correction limited to these images (0-based); `redraw`: draw their illustrations again. */
+export type PostImageJob = { postId: string; mode: ImageMode; instruction?: string; only?: number[]; redraw?: boolean };
 export const REVISION_MAX = 1000;
 export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL" | "NO_PERSONA") {
+  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL" | "NO_PERSONA" | "BAD_PICK" | "NOT_RESTORABLE") {
     super(code);
   }
 }
@@ -86,14 +87,17 @@ export async function setPostPartnerLogo(db: Db, queue: { send(name: string, dat
 }
 
 /** Any member. Claims the post's images (a second request while one runs is refused) and queues the job. */
-export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean; partnerLogoId?: string | null } = {}) {
+export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean; partnerLogoId?: string | null; only?: number[]; redraw?: boolean } = {}) {
   z.enum(["new", "text", "revise"]).parse(mode);
   const words = instruction?.trim() ?? "";
   if (mode === "revise" && (!words || words.length > REVISION_MAX)) throw new ImageJobError("INVALID");
+  if (mode !== "revise" && (opts.only?.length || opts.redraw)) throw new ImageJobError("BAD_PICK");
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   if (p.status === "skipped") throw new ImageJobError("BAD_STATE");
   if (mode === "revise" && !p.visual) throw new ImageJobError("BAD_STATE");
+  // TASK-054: which images the correction may change (all when none are picked).
+  const only = opts.only?.length ? pickedSlides(opts.only, p.visual!.slides.length) : undefined;
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
   // TASK-046: the partner logo for this post's images (undefined = keep, null = none); only this brand's partners.
   if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, p.brandId, opts.partnerLogoId))) throw new ImageJobError("INVALID");
@@ -110,7 +114,32 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
     )!,
   );
   if (!claimed.length) throw new ImageJobError("BAD_STATE");
-  await queue.send(POST_IMAGE_QUEUE, { postId, mode, ...(mode === "revise" ? { instruction: words } : {}) } satisfies PostImageJob, `post:${postId}:image`);
+  await queue.send(POST_IMAGE_QUEUE, {
+    postId, mode, ...(mode === "revise" ? { instruction: words } : {}), ...(only ? { only } : {}), ...(opts.redraw ? { redraw: true } : {}),
+  } satisfies PostImageJob, `post:${postId}:image`);
+}
+
+/** TASK-054: picked image positions (0-based), sorted and unique; each must be one of the post's `count` images. */
+export function pickedSlides(only: number[], count: number): number[] {
+  const out = [...new Set(only)].sort((a, b) => a - b);
+  if (out.some((i) => !Number.isInteger(i) || i < 0 || i >= count)) throw new ImageJobError("BAD_PICK");
+  return out;
+}
+
+/**
+ * TASK-054: a correction limited to some images keeps every other image exactly as it was (template, words,
+ * illustration) — whatever Claude answered for it — and never adds or removes images. `redraw` draws the picked
+ * images' illustrations again even when their description stays the same.
+ */
+export function mergePicked(before: PostVisual["slides"], answer: PostVisual["slides"], only: number[] | undefined, redraw: boolean): PostVisual["slides"] {
+  const picked = new Set(only ?? answer.map((_, i) => i));
+  const slides = only ? before.map((b, i) => (picked.has(i) ? (answer[i] ?? b) : b)) : answer;
+  return slides.map((s, i) => {
+    const c = { ...s };
+    if (!picked.has(i) || !c.illustration) delete c.redraw;
+    else if (redraw) c.redraw = true;
+    return c;
+  });
 }
 
 export async function listPostMedia(db: Db, ctx: OrgContext, postId: string) {
@@ -253,7 +282,7 @@ async function drawIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: {
  * Makes the images of one post as `ctx` (the member who asked). Throws ImageError / SpendCapError / LlmError /
  * ImageJobError for expected outcomes; the caller records them on the post.
  */
-export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string) {
+export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, pick: { only?: number[]; redraw?: boolean } = {}) {
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   const design = await currentDesign(db, ctx, p.brandId);
@@ -282,7 +311,11 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         previews.push({ ...toBlock(new Uint8Array(await sharp(await deps.storage.get(m.storageKey)).resize({ width: 540 }).jpeg({ quality: 80 }).toBuffer())), caption: `Current image ${m.position + 1}:` });
       } catch { /* a missing image is described by the plan alone */ }
     }
-    visual = { ...(await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews })), revision: instruction!.trim() };
+    // TASK-054: only the picked images may change (positions outside the post are ignored — the plan may have changed).
+    const only = pick.only?.filter((i) => i >= 0 && i < p.visual!.slides.length);
+    const scope = only?.length ? only : undefined;
+    const planned = await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews, ...(scope ? { only: scope } : {}) });
+    visual = { ...planned, slides: mergePicked(p.visual!.slides, planned.slides, scope, !!pick.redraw), revision: instruction!.trim(), ...(scope ? { revisedSlides: scope } : {}) };
   } else {
     visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, where) : p.visual!;
   }
@@ -392,7 +425,7 @@ export async function runImageJob(db: Db, deps: ImageDeps, job: PostImageJob): P
     throw e;
   }
   try {
-    await renderPostImages(db, deps, ctx, p.id, job.mode, job.instruction);
+    await renderPostImages(db, deps, ctx, p.id, job.mode, job.instruction, { only: job.only, redraw: job.redraw });
     return "done";
   } catch (e) {
     const code = imageFailureCode(e);
@@ -435,7 +468,10 @@ export async function listImageVersions(db: Db, ctx: OrgContext, postId: string)
   if (!ids.length) return [];
   const runs = await db.select().from(postImageRuns)
     .where(and(eq(postImageRuns.orgId, ctx.orgId), inArray(postImageRuns.id, ids))).orderBy(desc(postImageRuns.createdAt));
-  return runs.map((r) => ({ id: r.id, createdAt: r.createdAt, revision: r.visual?.revision ?? null, slides: rows.filter((x) => x.runId === r.id) }));
+  return runs.map((r) => ({
+    id: r.id, createdAt: r.createdAt, revision: r.visual?.revision ?? null, revisedSlides: r.visual?.revisedSlides ?? null,
+    designId: r.visual?.designId ?? null, slides: rows.filter((x) => x.runId === r.id),
+  }));
 }
 
 /**
@@ -458,6 +494,45 @@ export async function restoreImageVersion(db: Db, ctx: OrgContext, postId: strin
     if (illustrations.length) await t.update(postMedia, { archivedAt: null }, and(eq(postMedia.postId, postId), inArray(postMedia.id, illustrations))!);
     await t.update(posts, { visual: run.visual, mediaStatus: "ready", mediaError: null, updatedAt: now }, eq(posts.id, postId));
   });
+}
+
+/**
+ * TASK-054, any member: one image of an earlier version comes back (its template, words and illustration) while the
+ * post's other images stay as they are. The earlier illustration is reused and the images are drawn again from it —
+ * no AI call, nothing paid; the current images become an earlier version in turn.
+ */
+export async function restoreSlideFromVersion(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, runId: string, position: number) {
+  const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
+  if (!p) throw new ImageJobError("NOT_FOUND");
+  if (p.mediaStatus === "queued" || p.mediaStatus === "rendering") throw new ImageJobError("BAD_STATE");
+  const [run] = (await forOrg(db, ctx).select(postImageRuns, and(eq(postImageRuns.id, runId), eq(postImageRuns.postId, postId))!)) as (typeof postImageRuns.$inferSelect)[];
+  if (!run) throw new ImageJobError("NOT_FOUND");
+  const design = await currentDesign(db, ctx, p.brandId);
+  const slide = Number.isInteger(position) ? run.visual?.slides[position] : undefined;
+  const t = slide && design?.spec?.templates.find((x) => x.id === slide.templateId);
+  // Same design version only: otherwise the images would be planned (and paid) again instead of redrawn.
+  if (!p.visual || !run.visual || !design || !slide || !t || !Number.isInteger(position) || position < 0 || position >= p.visual.slides.length
+    || run.visual.designId !== design.id || p.visual.designId !== design.id) throw new ImageJobError("NOT_RESTORABLE");
+  let back: string | null = null;
+  if (needsIllustration(t)) {
+    const ids = [...((await versionIllustrations(db, ctx, postId)).get(runId) ?? [])];
+    const [row] = ids.length ? await db.select({ id: postMedia.id }).from(postMedia)
+      .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.postId, postId), eq(postMedia.kind, "background"), eq(postMedia.position, position), inArray(postMedia.id, ids))) : [];
+    if (!row) throw new ImageJobError("NOT_RESTORABLE"); // its illustration was deleted: it would have to be drawn (and paid) again
+    back = row.id;
+  }
+  const restored = { ...slide };
+  delete restored.redraw;
+  const visual: PostVisual = { designId: p.visual.designId, slides: p.visual.slides.map((s, i) => (i === position ? restored : s)) };
+  await db.transaction(async (tx) => {
+    const tt = forOrg(tx as unknown as Db, ctx);
+    if (back) {
+      await tt.update(postMedia, { archivedAt: new Date() }, and(eq(postMedia.postId, postId), eq(postMedia.kind, "background"), eq(postMedia.position, position), isNull(postMedia.archivedAt), sql`${postMedia.id} <> ${back}`)!);
+      await tt.update(postMedia, { archivedAt: null }, and(eq(postMedia.postId, postId), eq(postMedia.id, back))!);
+    }
+    await tt.update(posts, { visual, updatedAt: new Date() }, eq(posts.id, postId));
+  });
+  await requestImages(db, queue, ctx, postId, "text");
 }
 
 /** The illustrations a version drew on: its own and the ones it reused (`kept`). */

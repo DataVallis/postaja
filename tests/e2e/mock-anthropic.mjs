@@ -176,8 +176,12 @@ http
           const slides = JSON.parse(current[1]);
           const ask = user.match(/<owner_request>\n([\s\S]*?)\n<\/owner_request>/)[1];
           const head = ask.match(/naslov:\s*(.+)/i);
-          if (head) slides[0].slots.headline = head[1].trim();
-          if (/ilustracij/i.test(ask)) slides[0].illustration = `${slides[0].illustration} (revised)`;
+          // TASK-054: the owner picked images → the change goes to the first picked one (and, like a careless model,
+          // also to the first image — Postaja must keep that one as it was).
+          const picked = user.match(/The owner picked images? ([\d, ]+) \(counting from 1\)/);
+          const at = picked ? Number(picked[1].split(",")[0]) - 1 : 0;
+          if (head) { slides[at].slots.headline = head[1].trim(); slides[0].slots.headline = head[1].trim(); }
+          if (/ilustracij/i.test(ask) && slides[at].illustration) slides[at].illustration = `${slides[at].illustration} (revised)`;
           return reply(tool, { slides });
         }
         const plan = JSON.parse(user.match(/<plan>(.*)<\/plan>/)[1]);

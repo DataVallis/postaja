@@ -10,7 +10,7 @@ import { LANGUAGES } from "@/server/brands/schemas";
 import { deleteBrandFile, renamePartnerLogo } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
 import { discardDraft } from "@/server/mcp/service";
-import { DesignError, requestDesign, activateDesign } from "@/server/design/service";
+import { DesignError, requestDesign, activateDesign, restoreDesignTemplate } from "@/server/design/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 export type ActionState = { error?: string; ok?: string } | undefined;
@@ -186,7 +186,9 @@ export async function requestDesignAction(f: FormData): Promise<void> {
   const instruction = str(f, "instruction");
   let error: string | null = null;
   try {
-    await requestDesign(getDb(), bossQueue(await getBoss()), ctx, brandId, instruction ? { instruction } : { brief: String(f.get("brief") ?? "") });
+    // TASK-054: picked templates ("templateId") limit a revision to them.
+    const templates = f.getAll("templateId").map(String).filter(Boolean);
+    await requestDesign(getDb(), bossQueue(await getBoss()), ctx, brandId, instruction ? { instruction, ...(templates.length ? { templates } : {}) } : { brief: String(f.get("brief") ?? "") });
   } catch (e) {
     error = e instanceof DesignError ? e.code : e instanceof z.ZodError ? "INVALID" : "FAILED";
   }
@@ -201,6 +203,17 @@ export async function activateDesignAction(f: FormData): Promise<void> {
   await activateDesign(getDb(), ctx, str(f, "designId")).catch(() => undefined);
   revalidatePath(`/app/brands/${brandId}`);
   redirect(`/app/brands/${brandId}?tab=design`);
+}
+
+/** "Vrni predlogo" (TASK-054): one template of an earlier version comes back as a new version; no AI call. */
+export async function restoreDesignTemplateAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const brandId = str(f, "brandId");
+  let error: string | null = null;
+  await restoreDesignTemplate(getDb(), ctx, str(f, "designId"), str(f, "templateId")).catch((e) => { error = e instanceof DesignError ? e.code : "FAILED"; });
+  revalidatePath(`/app/brands/${brandId}`);
+  redirect(`/app/brands/${brandId}?tab=design${error ? `&designError=${error}` : ""}`);
 }
 
 /** Owner picks the brand's Claude model (empty = platform default). */

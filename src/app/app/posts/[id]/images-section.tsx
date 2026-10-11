@@ -4,7 +4,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, inputClass, selectClass, textareaClass } from "@/components/ui";
 import type { MediaStatus, PostVisual } from "@/server/db/schema";
-import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, reviseImagesAction, saveSlidesAction, setPartnerLogoAction } from "../actions";
+import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, restoreSlideAction, reviseImagesAction, saveSlidesAction, setPartnerLogoAction } from "../actions";
 
 type Media = { id: string; position: number; width: number; height: number };
 type TemplateInfo = { id: string; name: string; slots: string[] };
@@ -33,7 +33,7 @@ export async function ImagesSection(props: {
   /** LinkedIn carousel: offer the images as one PDF (a document post). */
   pdf?: boolean;
   /** TASK-033: earlier versions of the images (kept until deleted). */
-  versions?: { id: string; createdAt: Date; revision: string | null; slides: { id: string; position: number; width: number; height: number }[] }[];
+  versions?: { id: string; createdAt: Date; revision: string | null; revisedSlides: number[] | null; designId: string | null; slides: { id: string; position: number; width: number; height: number }[] }[];
 }) {
   const t = await getTranslations("Images");
   const fmt = await getFormatter();
@@ -41,6 +41,14 @@ export async function ImagesSection(props: {
   // New images → the forms mount again, so their fields show the words now on the images (uncontrolled fields keep old
   // values across a refresh otherwise).
   const version = props.media.map((m) => m.id).join(",");
+  // TASK-054: images can be picked for a correction (the checkboxes on the cards belong to the correction form).
+  const revisable = !!(props.visual && props.templates && props.media.length);
+  const templateName = (position: number) => {
+    const id = props.visual?.slides[position]?.templateId;
+    return props.templates?.find((x) => x.id === id)?.name ?? null;
+  };
+  const revisionText = (text: string, slides: number[] | null | undefined) =>
+    t("lastRevision", { text: slides?.length ? `${t("revisedSlides", { list: slides.map((i) => i + 1).join(", ") })} · ${text}` : text });
   return (
     <Card className="grid gap-4 p-5" id="images" data-testid="images">
       <AutoRefresh active={working} seconds={3} />
@@ -71,7 +79,10 @@ export async function ImagesSection(props: {
       {props.media.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="image-list">
           {props.media.map((m) => (
-            <li key={m.id} className="grid min-w-0 gap-2">
+            <li key={m.id} className="grid min-w-0 content-start gap-2" data-testid="image-card">
+              <p className="truncate text-xs font-medium text-muted">
+                {t("slideOf", { n: m.position + 1, total: props.media.length })}{templateName(m.position) ? ` · ${templateName(m.position)}` : ""}
+              </p>
               <a href={`/api/post-media/${m.id}`} target="_blank" rel="noopener" className="block overflow-hidden rounded-lg bg-paper ring-1 ring-line focus-visible:outline-2 focus-visible:outline-fg">
                 {/* eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL behind an access-checked redirect */}
                 <img src={`/api/post-media/${m.id}`} alt={t("imageAlt", { n: m.position + 1 })} width={m.width} height={m.height} className="h-auto w-full" />
@@ -79,6 +90,12 @@ export async function ImagesSection(props: {
               <a href={`/api/post-media/${m.id}?download=1`} className={buttonClass("ghost", "sm")} data-testid="image-download">
                 <Download aria-hidden className="size-4" />{t("download", { n: m.position + 1 })}
               </a>
+              {revisable && props.media.length > 1 ? (
+                <label className="flex items-center justify-center gap-2 text-sm">
+                  <input type="checkbox" name="slide" value={m.position} form="image-revise-form" disabled={working} aria-label={t("pickSlide", { n: m.position + 1 })} className="size-4 accent-signal" data-testid="image-pick" />
+                  <span aria-hidden>{t("pickLabel")}</span>
+                </label>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -125,17 +142,26 @@ export async function ImagesSection(props: {
       {props.versions?.length ? (
         <details className="grid gap-3 border-t border-line pt-4" data-testid="image-versions">
           <summary className="cursor-pointer text-sm font-semibold">{t("versionsTitle", { n: props.versions.length })}</summary>
-          <p className="mt-2 text-xs text-muted">{t("versionsHint")}</p>
+          <p className="mt-2 text-xs text-muted">{t("versionsHint")} {t("restoreSlideHint")}</p>
           <ul className="mt-3 grid gap-4">
             {props.versions.map((v) => (
               <li key={v.id} className="grid gap-2 rounded-lg border border-line p-3" data-testid="image-version">
-                <p className="text-xs text-muted">{fmt.dateTime(v.createdAt, { dateStyle: "medium", timeStyle: "short" })}{v.revision ? ` · ${t("lastRevision", { text: v.revision })}` : ""}</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-xs text-muted">{fmt.dateTime(v.createdAt, { dateStyle: "medium", timeStyle: "short" })}{v.revision ? ` · ${revisionText(v.revision, v.revisedSlides)}` : ""}</p>
+                <div className="flex flex-wrap gap-3">
                   {v.slides.map((m) => (
-                    <a key={m.id} href={`/api/post-media/${m.id}`} target="_blank" rel="noopener" className="block w-24 overflow-hidden rounded ring-1 ring-line">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL behind an access-checked redirect */}
-                      <img src={`/api/post-media/${m.id}`} alt={t("imageAlt", { n: m.position + 1 })} width={m.width} height={m.height} loading="lazy" className="h-auto w-full" />
-                    </a>
+                    <div key={m.id} className="grid w-24 content-start gap-1">
+                      <a href={`/api/post-media/${m.id}`} target="_blank" rel="noopener" className="block overflow-hidden rounded ring-1 ring-line">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- presigned S3 URL behind an access-checked redirect */}
+                        <img src={`/api/post-media/${m.id}`} alt={t("imageAlt", { n: m.position + 1 })} width={m.width} height={m.height} loading="lazy" className="h-auto w-full" />
+                      </a>
+                      {/* TASK-054: one image of this version back, the others stay (same design version only). */}
+                      {props.visual && v.designId === props.visual.designId && m.position < props.visual.slides.length ? (
+                        <form action={restoreSlideAction}>
+                          <input type="hidden" name="postId" value={props.postId} /><input type="hidden" name="runId" value={v.id} /><input type="hidden" name="position" value={m.position} />
+                          <button type="submit" disabled={working} className={`${buttonClass("ghost", "sm")} w-full px-1 text-xs`} data-testid="restore-slide">{t("restoreSlide", { n: m.position + 1 })}</button>
+                        </form>
+                      ) : null}
+                    </div>
                   ))}
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
@@ -158,13 +184,17 @@ export async function ImagesSection(props: {
         </details>
       ) : null}
 
-      {props.visual && props.templates && props.media.length ? (
-        <form key={`revise-${version}`} action={reviseImagesAction} className="grid gap-2 border-t border-line pt-4" data-testid="image-revise">
+      {revisable && props.visual ? (
+        <form key={`revise-${version}`} id="image-revise-form" action={reviseImagesAction} className="grid gap-2 border-t border-line pt-4" data-testid="image-revise">
           <input type="hidden" name="postId" value={props.postId} />
           <label htmlFor="image-instruction" className="text-sm font-semibold">{t("reviseLabel")}</label>
-          <p id="image-instruction-hint" className="text-xs text-muted">{t("reviseHint")}</p>
+          <p id="image-instruction-hint" className="text-xs text-muted">{t("reviseHint")}{props.media.length > 1 ? ` ${t("pickHint")}` : ""}</p>
           <textarea id="image-instruction" name="instruction" rows={3} required maxLength={1000} aria-describedby="image-instruction-hint" placeholder={t("revisePlaceholder")} className={textareaClass} />
-          {props.visual.revision ? <p className="text-xs text-muted" data-testid="image-revision">{t("lastRevision", { text: props.visual.revision })}</p> : null}
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="redraw" value="1" className="mt-0.5 size-4 accent-signal" data-testid="image-redraw" />
+            <span>{t("redraw")}</span>
+          </label>
+          {props.visual.revision ? <p className="text-xs text-muted" data-testid="image-revision">{revisionText(props.visual.revision, props.visual.revisedSlides)}</p> : null}
           <div><button type="submit" disabled={working} className={buttonClass("secondary")}><Wand2 aria-hidden className="size-4" />{t("revise")}</button></div>
         </form>
       ) : null}

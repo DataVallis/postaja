@@ -62,6 +62,8 @@ export type PostVisual = {
   slides: { templateId: string; slots: Record<string, string>; illustration: string | null; verbatim?: boolean; /** Transient (ADR-076): a correction asked to draw this illustration again; never stored. */ redraw?: boolean }[];
   /** The owner's last correction in words (TASK-017 follow-up), shown on the post page. */
   revision?: string;
+  /** TASK-054: the images (0-based) that correction was limited to; absent = all images. */
+  revisedSlides?: number[];
 };
 export const POST_FORMATS = ["text", "image", "carousel", "thread", "video"] as const;
 export type PostFormat = (typeof POST_FORMATS)[number];

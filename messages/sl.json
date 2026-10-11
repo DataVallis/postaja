@@ -1191,7 +1191,9 @@
       "NO_DESIGN": "Brand še nima vizualne podobe.",
       "INVALID_OUTPUT": "Claude ni vrnil veljavnega predloga slik. Poskusi znova.",
       "LLM_PROVIDER": "Claude se ni odzval. Poskusi znova.",
-      "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen."
+      "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
+      "BAD_PICK": "Izbrane slike ne obstajajo več. Osveži stran in izberi znova.",
+      "NOT_RESTORABLE": "Te slike ni mogoče vrniti brez novega risanja: narejena je bila z drugo verzijo vizualne podobe ali je bila njena ilustracija izbrisana. Vrni celo verzijo ali uporabi popravek."
     },
     "designLink": "Vizualna podoba branda",
     "noDesign": "Brand še nima vizualne podobe, zato slik še ni mogoče narediti.",
@@ -1227,7 +1229,15 @@
     "partnerNone": "Brez",
     "partnerSave": "Shrani logotip",
     "partnerHint": "Uporabi se, ko narediš slike.",
-    "partnerHintRedraw": "Slike se brezplačno narišejo znova z izbranim logotipom (iste ilustracije); sedanje ostanejo kot prejšnja verzija."
+    "partnerHintRedraw": "Slike se brezplačno narišejo znova z izbranim logotipom (iste ilustracije); sedanje ostanejo kot prejšnja verzija.",
+    "pickHint": "Izberi slike, ki jih želiš popraviti. Če ne izbereš nobene, Claude gleda vse.",
+    "pickSlide": "Izberi sliko {n} za popravek",
+    "pickLabel": "Popravi to sliko",
+    "slideOf": "Slika {n} / {total}",
+    "redraw": "Ilustracijo nariši znova — izbranim slikam ali vsem, če ne izbereš nobene (vsaka taka slika z ilustracijo je ena nova, plačana ilustracija)",
+    "revisedSlides": "slike {list}",
+    "restoreSlide": "Obnovi sliko {n}",
+    "restoreSlideHint": "Gumb »Obnovi sliko« vrne samo tisto sliko (besedilo in ilustracijo), druge slike ostanejo. Brez stroška."
   },
   "Design": {
     "title": "Vizualna podoba",
@@ -1289,8 +1299,18 @@
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "PROVIDER": "Claude se ni odzval. Poskusi znova.",
       "NO_TOOL_CALL": "Claude ni vrnil podobe. Poskusi znova.",
-      "NO_ACCESS": "Član, ki je zahteval podobo, nima več dostopa."
-    }
+      "NO_ACCESS": "Član, ki je zahteval podobo, nima več dostopa.",
+      "BAD_PICK": "Izbrane predloge ne obstajajo več. Osveži stran in izberi znova.",
+      "NOT_RESTORABLE": "Predloge ni mogoče vrniti: ta verzija je že v uporabi ali ima trenutna podoba že 8 predlog."
+    },
+    "pickTemplate": "Popravi to predlogo",
+    "pickTemplateAria": "Izberi predlogo {name} za popravek",
+    "pickHint": "Če izbereš predloge (»Popravi to predlogo«), Claude spremeni samo te, vse drugo ostane točno tako, kot je. Brez izbire gleda celo podobo.",
+    "onlyTemplates": "samo: {list}",
+    "restoredTemplate": "Vrnjena predloga »{name}« iz v{v}",
+    "restoreTemplateLabel": "Vrni eno predlogo iz te verzije",
+    "restoreTemplate": "Vrni predlogo",
+    "restoreHint": "Izbrana predloga te verzije pride v trenutno podobo kot nova verzija. Brez AI klica, brez stroška."
   },
   "Ideas": {
     "title": "Predlagaj ideje",

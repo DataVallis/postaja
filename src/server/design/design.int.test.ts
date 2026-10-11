@@ -15,7 +15,7 @@ import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
-import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
+import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
 import { aiPersonPosts, postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
@@ -26,7 +26,7 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createPersonaManual, setPersonaInPosts, uploadPassportImage } from "../personas/service";
 import { estimateBulk } from "../bulk/estimate";
-import { activateDesign, brandAssetBytes, currentDesign, listDesigns, listPartnerLogos, requestDesign, runDesignJob, type DesignJob } from "./service";
+import { activateDesign, brandAssetBytes, currentDesign, listDesigns, listPartnerLogos, requestDesign, restoreDesignTemplate, runDesignJob, type DesignJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -781,4 +781,164 @@ describe("animation by Claude (TASK-023)", () => {
     expect(await runVideoJob(db, { llm: motionClaude([bad]).client, storage }, jobs[0])).toBe("failed");
     expect((await sql`select video_error from posts where id = ${carousel}`)[0].video_error).toBe("INVALID_OUTPUT");
   }, 120_000);
+});
+
+describe("TASK-054: correcting picked images and templates, bringing one back", () => {
+  /** Three images, two of them illustrated (cover · points · cover). */
+  const three = [
+    { templateId: "cover", slots: { headline: "Ena" }, illustration: "A red vault" },
+    { templateId: "points", slots: { number: "02", headline: "Dva" }, illustration: null },
+    { templateId: "cover", slots: { headline: "Tri" }, illustration: "A blue door" },
+  ];
+  async function carousel() {
+    await design();
+    const id = await post({ format: "carousel", plan: { topic: "Koraki", slides: ["Ena", "Dva", "Tri"] } });
+    const { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id, "new");
+    const fal = fakeImages();
+    await runImages(jobs, fakeClaude({ plans: [{ slides: three }] }), fal.client);
+    expect(fal.calls).toHaveLength(2);
+    return { id, q, jobs };
+  }
+  const keys = async (id: string, kind: "slide" | "background") => Object.fromEntries((await media(id)).filter((m) => m.kind === kind).map((m) => [m.position, m.storage_key]));
+  const ledgerRows = async () => Number((await sql`select count(*)::int as n from usage_ledger where provider <> 'anthropic'`)[0].n);
+
+  it("only the picked images change, whatever Claude answers for the others; the number of images stays", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    // Picks are positions of the post's images: 0 … count-1, nothing else; only with a correction.
+    await expect(requestImages(db, q, A, id, "revise", "x", { only: [3] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestImages(db, q, A, id, "revise", "x", { only: [-1] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestImages(db, q, A, id, "revise", "x", { only: [0.5] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestImages(db, q, A, id, "new", undefined, { only: [0] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestImages(db, q, A, id, "text", undefined, { redraw: true })).rejects.toMatchObject({ code: "BAD_PICK" });
+    expect(jobs).toHaveLength(1); // only the first "new" job; refused requests queue nothing
+    jobs.length = 0;
+    await requestImages(db, q, editorA, id, "revise", "Na tretji sliki krajši naslov.", { only: [2, 2] });
+    expect(jobs[0].data).toEqual({ postId: id, mode: "revise", instruction: "Na tretji sliki krajši naslov.", only: [2] });
+    // Claude also rewrites image 1 (words and picture) and adds a fourth image — none of that may happen.
+    const answer = [
+      { ...three[0], slots: { headline: "Drugačno" }, illustration: "A green field" },
+      three[1],
+      { ...three[2], slots: { headline: "Tri, krajše" } },
+      { templateId: "points", slots: { headline: "Štiri" }, illustration: null },
+    ];
+    const claude = fakeClaude({ plans: [{ slides: answer }] });
+    const fal = fakeImages();
+    const paidBefore = await ledgerRows();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls[0].user).toContain("The owner picked image 3 (counting from 1)");
+    expect(fal.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paidBefore);
+    const [{ visual }] = await sql`select visual from posts where id = ${id}`;
+    expect(visual.slides).toEqual([three[0], three[1], { ...three[2], slots: { headline: "Tri, krajše" } }]);
+    expect(visual.revisedSlides).toEqual([2]);
+    expect(await keys(id, "background")).toEqual(bgBefore);
+    expect((await listPostMedia(db, A, id)).map((m) => m.position)).toEqual([0, 1, 2]);
+    expect((await listImageVersions(db, A, id))[0]).toMatchObject({ revisedSlides: null });
+  });
+
+  it("redraw: the picked image gets a new illustration (one paid), the others keep theirs; it can be brought back for free", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    const slidesBefore = await keys(id, "slide");
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Na prvi sliki je odvečen pravokotnik.", { only: [0], redraw: true });
+    expect(jobs[0].data).toMatchObject({ only: [0], redraw: true });
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, fakeClaude({ plans: [{ slides: three }] }), fal.client); // Claude changes nothing itself
+    expect(fal.calls).toHaveLength(1);
+    expect(await ledgerRows()).toBe(paid0 + 1);
+    expect(fal.calls[0].prompt).toContain("A red vault");
+    const bgAfter = await keys(id, "background");
+    expect(bgAfter[0]).not.toBe(bgBefore[0]);
+    expect(bgAfter[2]).toBe(bgBefore[2]);
+    const [{ visual }] = await sql`select visual from posts where id = ${id}`;
+    expect(visual.slides[0]).not.toHaveProperty("redraw");
+
+    // Image 1 of the version before comes back: its illustration again, the others as they are now, no AI call.
+    const [prev] = await listImageVersions(db, A, id);
+    expect(prev.slides.map((s) => s.position)).toEqual([0, 1, 2]);
+    await expect(restoreSlideFromVersion(db, q, B, id, prev.id, 0)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(restoreSlideFromVersion(db, q, A, id, prev.id, 3)).rejects.toMatchObject({ code: "NOT_RESTORABLE" });
+    await expect(restoreSlideFromVersion(db, q, A, id, prev.id, -1)).rejects.toMatchObject({ code: "NOT_RESTORABLE" });
+    jobs.length = 0;
+    const paidBefore = await ledgerRows();
+    await restoreSlideFromVersion(db, q, editorA, id, prev.id, 0);
+    expect(jobs.map((j) => j.data)).toEqual([{ postId: id, mode: "text" }]);
+    const claude = fakeClaude();
+    const fal2 = fakeImages();
+    await runImages(jobs, claude, fal2.client);
+    expect(claude.calls).toHaveLength(0);
+    expect(fal2.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paidBefore);
+    expect(await keys(id, "background")).toEqual(bgBefore);
+    expect(Object.values(await keys(id, "slide")).some((k) => Object.values(slidesBefore).includes(k))).toBe(false); // drawn again
+    // Both earlier states stay as versions; the redrawn illustration is still there to bring back.
+    const versions = await listImageVersions(db, A, id);
+    expect(versions).toHaveLength(2);
+    expect(await storage.exists(bgAfter[0])).toBe(true);
+    await restoreSlideFromVersion(db, q, A, id, versions[0].id, 0);
+    await runImages(jobs.slice(-1), fakeClaude(), fakeImages().client);
+    expect((await keys(id, "background"))[0]).toBe(bgAfter[0]);
+  });
+
+  it("an image made with another design version cannot come back without being planned again", async () => {
+    const { id, q, jobs } = await carousel();
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Krajši naslov.", { only: [1] });
+    await runImages(jobs, fakeClaude({ plans: [{ slides: three }] }), fakeImages().client);
+    const [prev] = await listImageVersions(db, A, id);
+    await design(fakeClaude(), "Nova podoba"); // a new design version is now current
+    await expect(restoreSlideFromVersion(db, q, A, id, prev.id, 1)).rejects.toMatchObject({ code: "NOT_RESTORABLE" });
+  });
+
+  it("design: a revision of picked templates keeps everything else as it was", async () => {
+    const v1 = await design();
+    const { q } = memoryQueue();
+    await expect(requestDesign(db, q, A, brandA, { instruction: "večji naslov", templates: ["nope"] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestDesign(db, q, A, brandA, { brief: "x", templates: ["points"] })).rejects.toMatchObject({ code: "BAD_PICK" });
+    await expect(requestDesign(db, q, editorA, brandA, { instruction: "večji naslov", templates: ["points"] })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const v2 = await requestDesign(db, q, A, brandA, { instruction: "Seznam: večji naslov", templates: ["points", "points"] });
+    // Claude changes the palette, the summary, the cover and the list — only the list may change.
+    const answer = structuredClone(cardDesign);
+    answer.summary = "Vse drugače";
+    answer.palette.accent = "#00ff00";
+    answer.templates[0].name = "Spremenjena naslovnica";
+    answer.templates[1].name = "Seznam z večjim naslovom";
+    const claude = fakeClaude({ designs: [answer] });
+    expect(await runDesignJob(db, { llm: claude.client, storage }, { designId: v2 })).toBe("ready");
+    expect(claude.calls[0].user).toContain('The owner picked only this template: "points"');
+    const now = (await currentDesign(db, A, brandA))!;
+    expect(now.id).toBe(v2);
+    expect(now.onlyTemplates).toEqual(["points"]);
+    const before = (await listDesigns(db, A, brandA)).find((d) => d.id === v1)!.spec!;
+    expect(now.spec!.summary).toBe(before.summary);
+    expect(now.spec!.palette).toEqual(before.palette);
+    expect(now.spec!.templates[0]).toEqual(before.templates[0]);
+    expect(now.spec!.templates[1].name).toBe("Seznam z večjim naslovom");
+  });
+
+  it("design: one template of an earlier version comes back as a new version, without Claude", async () => {
+    const v1 = await design();
+    const { q } = memoryQueue();
+    const v2 = await requestDesign(db, q, A, brandA, { instruction: "vse drugače" });
+    const answer = structuredClone(cardDesign);
+    answer.templates[0].name = "Nova naslovnica";
+    answer.templates[1].name = "Nov seznam";
+    await runDesignJob(db, { llm: fakeClaude({ designs: [answer] }).client, storage }, { designId: v2 });
+    await expect(restoreDesignTemplate(db, editorA, v1, "cover")).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(restoreDesignTemplate(db, B, v1, "cover")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(restoreDesignTemplate(db, A, v1, "nope")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(restoreDesignTemplate(db, A, v2, "cover")).rejects.toMatchObject({ code: "NOT_RESTORABLE" }); // already in use
+    const paid = Number((await sql`select count(*)::int as n from usage_ledger`)[0].n);
+    const v3 = await restoreDesignTemplate(db, A, v1, "cover");
+    expect(Number((await sql`select count(*)::int as n from usage_ledger`)[0].n)).toBe(paid);
+    const now = (await currentDesign(db, A, brandA))!;
+    expect(now).toMatchObject({ id: v3, version: 3, status: "ready", basedOn: v2, restoredFrom: { version: 1, templateId: "cover", name: "Naslovnica" } });
+    expect(now.spec!.templates.map((t) => t.name)).toEqual(["Naslovnica", "Nov seznam"]);
+    expect((await listDesigns(db, A, brandA)).map((d) => d.version)).toEqual([3, 2, 1]);
+  });
 });

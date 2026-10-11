@@ -14,6 +14,9 @@ Najboljši rezultat dobiš, če v **Datoteke** prej naložiš logotip, font in n
 
 - Predloge vidiš v predogledu v oblikah 4:5, 1:1 in 16:9.
 - V **Kaj naj spremenim?** napiši popravek (npr. »naslov večji, več zraka«) in klikni **Popravi**. Claude spremeni samo to, kar napišeš.
+- **Samo izbrane predloge**: pod predlogami, ki jih želiš popraviti, obkljukaj **Popravi to predlogo**, nato napiši popravek. Spremenijo se samo izbrane predloge; vse druge ter skupne barve, pisave in slog ostanejo točno taki, kot so. V seznamu verzij piše npr. »samo: Seznam · …«.
 - **Ustvari na novo** naredi povsem novo podobo iz opisa.
 
 Vsak popravek je nova **verzija**. Z **Uporabi** izbereš, katera velja za nove slike.
+
+Z **Vrni eno predlogo iz te verzije** pri starejši verziji izbereš eno njeno predlogo in klikneš **Vrni predlogo**: ta predloga pride v trenutno podobo kot nova verzija (predloga z istim imenom se zamenja, sicer se doda), vse drugo ostane. Brez AI klica in brez stroška.

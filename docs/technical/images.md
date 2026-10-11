@@ -16,6 +16,14 @@ clients; Postaja only renders what the design says.
   `brands.current_design_id`. Failures: `SPEND_CAP`, `INVALID_OUTPUT`, `NO_ACCESS`, provider codes.
 - **Revising**: *Popravi* with the owner's words; Claude also sees the current templates rendered. Every version stays;
   *Uporabi* switches back. One design job per brand at a time (`BUSY`, stale after 15 min).
+- **Picked templates** (TASK-054, ADR-079): *Popravi to predlogo* checkboxes (`templateId`, `form="design-revise-form"`)
+  → `requestDesign({ instruction, templates })` (ids of the current design, else `BAD_PICK`) → `brand_designs.only_templates`.
+  Claude is told the picked ids; `mergePickedTemplates` keeps every other template and the shared summary, style,
+  palette and typography from the base version whatever Claude answered.
+- **One template back** (TASK-054): *Vrni eno predlogo iz te verzije* → `restoreDesignTemplate` (owner): a new `ready`
+  version = current spec with that template (same id replaced, else added; > 8 → `NOT_RESTORABLE`), `restored_from`
+  `{version, templateId, name}`, becomes current. No AI call; refused while a design job runs (`BUSY`) and for the
+  version in use. Migration `0048_design_template_scope.sql`.
 - **Preview**: `/api/designs/[id]/preview?template=&shape=portrait|square|landscape` (members, PNG 540 px, stand-in
   illustration, brand logo and font).
 
@@ -35,6 +43,19 @@ clients; Postaja only renders what the design says.
    and must keep everything it was not asked to change verbatim. An illustration is reused when its image keeps the
    same description and an illustration box of the same proportions; otherwise it is drawn again (paid). The request is
    kept as `posts.visual.revision` ("Zadnji popravek"). The image forms remount when the images change.
+7. **Picked images** (TASK-054, ADR-079): the cards show "Slika N / M · <template>" and a *Popravi to sliko* checkbox
+   (`slide` = 0-based position, `form="image-revise-form"`); the correction form has *Ilustracijo nariši znova*
+   (`redraw`). `requestImages(…, "revise", words, { only, redraw })`: `pickedSlides` → sorted, unique, each
+   `0 ≤ i < slides` else `BAD_PICK` (also for picks outside `revise`); job data carries `only`/`redraw`. Claude is told
+   which images were picked (`VisualRevision.only`), and `mergePicked` enforces it: unpicked images are the previous
+   slides verbatim (so their illustrations are reused, nothing paid), Claude's extra or missing images are ignored,
+   `redraw` marks picked slides with an illustration. `posts.visual.revisedSlides` records the pick ("slike 3 · …").
+8. **One image back** (TASK-054): *Obnovi sliko N* under an earlier version → `restoreSlideFromVersion` (any member):
+   same design version for the run and the post, position inside the current images, and — for an illustrated
+   template — that run's illustration at that position must still exist (else `NOT_RESTORABLE`; nothing would be
+   redrawn or paid). In one transaction the current background at that position is archived and the old one
+   un-archived, `posts.visual.slides[N]` becomes the old slide; then a `text` job redraws all images from the stored
+   illustrations (no Claude, no fal) and the current images become a version as usual.
 
 Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 
@@ -46,7 +67,10 @@ Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 ## Tests
 `design/design.test.ts` (spec rules, fitting, emphasis, rendering at 3 shapes, fonts, prompts), `images/fal.test.ts`,
 `design/design.int.test.ts` (Claude inputs, retry, versions, cap, post flow with style references, free word edits,
-access, bulk, HTTP, corrections: words only reuse the illustration, a picture change redraws one, refusals), E2E `tests/e2e/images.spec.ts` (design, revision, versions, post images, word edits, corrections in words, bulk carousel).
+access, bulk, HTTP, corrections: words only reuse the illustration, a picture change redraws one, refusals; TASK-054
+picked images / redraw / one image back / picked templates / one template back), `images/pick.test.ts` (pick rules,
+merges, prompts), E2E `tests/e2e/images.spec.ts` (design, revision, picked template, template back, versions, post
+images, word edits, corrections in words, bulk carousel, picked image 3, image 3 back).
 
 ## Versions (TASK-033, ADR-062)
 Every run of `renderPostImages` creates a `post_image_runs` row (with the words it drew) and tags its new `post_media`

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Palette, Sparkles, Wand2 } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
-import { Badge, buttonClass, Card, DataTable, td, textareaClass } from "@/components/ui";
+import { Badge, buttonClass, Card, DataTable, selectClass, td, textareaClass } from "@/components/ui";
 import type { brandDesigns } from "@/server/db/schema";
-import { activateDesignAction, requestDesignAction } from "../actions";
+import { activateDesignAction, requestDesignAction, restoreDesignTemplateAction } from "../actions";
 
 type Design = typeof brandDesigns.$inferSelect;
 const SHAPES = ["portrait", "square", "landscape"] as const;
@@ -31,6 +31,13 @@ export async function DesignSection(props: {
   const working = latest?.status === "generating";
   const canEdit = props.isOwner && !props.archived;
   const base = `/app/brands/${props.brandId}?tab=design`;
+  // TASK-054: what a version is — made from the description, a revision (maybe of picked templates) or a template brought back.
+  const nameOf = (d: Design, id: string) => props.designs.find((x) => x.id === d.basedOn)?.spec?.templates.find((tp) => tp.id === id)?.name ?? id;
+  const whatText = (d: Design) => {
+    if (d.restoredFrom) return t("restoredTemplate", { name: d.restoredFrom.name, v: d.restoredFrom.version });
+    if (!d.instruction) return t("fromScratch");
+    return d.onlyTemplates?.length ? `${t("onlyTemplates", { list: d.onlyTemplates.map((id) => nameOf(d, id)).join(", ") })} · ${d.instruction}` : d.instruction;
+  };
 
   const createForm = (lead: boolean) => (
     <form action={requestDesignAction} className="grid gap-3" data-testid="design-create">
@@ -103,16 +110,23 @@ export async function DesignSection(props: {
                 <img src={`/api/designs/${current.id}/preview?template=${tp.id}&shape=${props.shape}`} alt={t("previewAlt", { name: tp.name })} className="w-full rounded-lg ring-1 ring-line" loading="lazy" />
                 <p className="text-sm font-medium">{tp.name}</p>
                 <p className="text-xs text-muted">{tp.use}</p>
+                {/* TASK-054: picked templates limit the revision below to them. */}
+                {canEdit ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="templateId" value={tp.id} form="design-revise-form" disabled={working} aria-label={t("pickTemplateAria", { name: tp.name })} className="size-4 accent-signal" data-testid="design-pick" />
+                    <span aria-hidden>{t("pickTemplate")}</span>
+                  </label>
+                ) : null}
               </li>
             ))}
           </ul>
 
           {canEdit ? (
             <Card className="grid gap-3 p-5">
-              <form action={requestDesignAction} className="grid gap-3" data-testid="design-revise">
+              <form id="design-revise-form" action={requestDesignAction} className="grid gap-3" data-testid="design-revise">
                 <input type="hidden" name="brandId" value={props.brandId} />
                 <label htmlFor="design-instruction" className="text-sm font-medium">{t("reviseLabel")}</label>
-                <p id="design-instruction-hint" className="text-xs text-muted">{t("reviseHint")}</p>
+                <p id="design-instruction-hint" className="text-xs text-muted">{t("reviseHint")} {t("pickHint")}</p>
                 <textarea id="design-instruction" name="instruction" rows={3} required minLength={3} maxLength={2000} aria-describedby="design-instruction-hint" className={textareaClass} />
                 <div><button type="submit" disabled={working} className={buttonClass("primary")}><Wand2 aria-hidden className="size-4" />{t("revise")}</button></div>
               </form>
@@ -130,18 +144,35 @@ export async function DesignSection(props: {
           {props.designs.map((d) => (
             <tr key={d.id}>
               <td className={`${td} font-medium`}>v{d.version}</td>
-              <td className={td}>{d.instruction ?? t("fromScratch")}</td>
+              <td className={td}>{whatText(d)}</td>
               <td className={td}>
                 {d.id === current?.id ? <Badge tone="ok" dot>{t("inUse")}</Badge> : <Badge tone={d.status === "failed" ? "danger" : d.status === "generating" ? "signal" : "neutral"}>{t(`status.${d.status}`)}</Badge>}
               </td>
               <td className={`${td} whitespace-nowrap text-muted`}>{f.dateTime(d.createdAt, { dateStyle: "short", timeStyle: "short" })}</td>
               <td className={td}>
                 {canEdit && d.status === "ready" && d.id !== current?.id ? (
-                  <form action={activateDesignAction}>
-                    <input type="hidden" name="brandId" value={props.brandId} />
-                    <input type="hidden" name="designId" value={d.id} />
-                    <button type="submit" className={buttonClass("ghost", "sm")}>{t("activate")}</button>
-                  </form>
+                  <div className="grid justify-items-start gap-1">
+                    <form action={activateDesignAction}>
+                      <input type="hidden" name="brandId" value={props.brandId} />
+                      <input type="hidden" name="designId" value={d.id} />
+                      <button type="submit" className={buttonClass("ghost", "sm")}>{t("activate")}</button>
+                    </form>
+                    {/* TASK-054: one template of this version back into the current design, no AI call. */}
+                    {current && d.spec?.templates.length ? (
+                      <details className="text-sm" data-testid="design-restore-template">
+                        <summary className={`${buttonClass("ghost", "sm")} cursor-pointer list-none`}>{t("restoreTemplateLabel")}</summary>
+                        <form action={restoreDesignTemplateAction} className="mt-2 grid max-w-xs gap-2">
+                          <input type="hidden" name="brandId" value={props.brandId} />
+                          <input type="hidden" name="designId" value={d.id} />
+                          <select name="templateId" aria-label={t("restoreTemplateLabel")} className={selectClass}>
+                            {d.spec.templates.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}</option>)}
+                          </select>
+                          <p className="text-xs text-muted">{t("restoreHint")}</p>
+                          <button type="submit" disabled={working} className={buttonClass("secondary", "sm")}>{t("restoreTemplate")}</button>
+                        </form>
+                      </details>
+                    ) : null}
+                  </div>
                 ) : null}
               </td>
             </tr>
