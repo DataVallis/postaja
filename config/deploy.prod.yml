@@ -1,0 +1,65 @@
+# Destination: prod — https://peron.postaja.eu (manual deploy from `main`, workflow "Deploy prod"). ADR-084.
+# Same host as dev (owner, 2026-10-11): host nginx terminates TLS and proxies to kamal-proxy on 127.0.0.1:8080 (ADR-027),
+# kamal-proxy routes peron.postaja.eu to this destination. Container names carry the destination, the database
+# accessory is "prod-db" (container postaja-prod-db), so nothing collides with dev on the same host.
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch("PROD_HOST") %>
+
+proxy:
+  host: peron.postaja.eu
+  ssl: false            # TLS is done by host nginx (ADR-027)
+  forward_headers: true # trust X-Forwarded-* from nginx
+
+env:
+  clear:
+    APP_URL: https://peron.postaja.eu
+    BETTER_AUTH_URL: https://peron.postaja.eu
+    SMTP_HOST: mail.datavallis.com
+    SMTP_PORT: "465"
+    # Sending mailbox; override with the GitHub variables SMTP_USER / EMAIL_FROM in the environment "prod".
+    SMTP_USER: <%= ENV.fetch("SMTP_USER", "info@postaja.eu") %>
+    EMAIL_FROM: "<%= ENV.fetch("EMAIL_FROM", "Postaja <info@postaja.eu>") %>"
+    SUPERADMIN_EMAILS: "<%= ENV.fetch("SUPERADMIN_EMAILS") %>"
+    # Object storage (ADR-006): production bucket, separate keys from dev.
+    S3_ENDPOINT: https://fsn1.your-objectstorage.com
+    S3_REGION: fsn1
+    S3_BUCKET: postaja-prod
+    # Background jobs (ADR-042): the web container runs the pg-boss workers (one container, as on dev).
+    RUN_WORKER: "1"
+    # Payments (ADR-073/074): Stripe live mode; the seller is a VAT payer → Stripe Tax computes VAT.
+    STRIPE_TAX: "1"
+    # Nightly database backups (TASK-030, ADR-063): production only.
+    BACKUP_ENABLED: "<%= ENV.fetch("BACKUP_ENABLED", "1") %>"
+    BACKUP_S3_ENDPOINT: <%= ENV.fetch("BACKUP_S3_ENDPOINT", "https://fsn1.your-objectstorage.com") %>
+    BACKUP_S3_BUCKET: <%= ENV.fetch("BACKUP_S3_BUCKET", "postaja-backup") %>
+    BACKUP_S3_REGION: fsn1
+  secret:
+    - DATABASE_URL
+    - BETTER_AUTH_SECRET
+    - SMTP_PASSWORD
+    - S3_ACCESS_KEY_ID
+    - S3_SECRET_ACCESS_KEY
+    - ANTHROPIC_API_KEY
+    - FAL_KEY
+    - STRIPE_SECRET_KEY
+    - STRIPE_WEBHOOK_SECRET
+    - BACKUP_S3_ACCESS_KEY_ID
+    - BACKUP_S3_SECRET_ACCESS_KEY
+
+accessories:
+  prod-db:
+    image: pgvector/pgvector:pg16
+    host: <%= ENV.fetch("PROD_HOST") %>
+    # No `port:` → reachable only on the internal `kamal` Docker network as postaja-prod-db:5432.
+    env:
+      clear:
+        POSTGRES_USER: postaja
+        POSTGRES_DB: postaja_prod
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - postaja-prod-db:/var/lib/postgresql/data
+    options:
+      memory: 1g

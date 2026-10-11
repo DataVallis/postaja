@@ -38,7 +38,7 @@ for E2E with a preinstalled Chromium set `PW_CHROMIUM_PATH`.
 |---|---|---|---|
 | local | http://localhost:3000 | working tree | Built (TASK-001, merged) |
 | dev | https://dev-postaja.inzenirji.si | `dev` (auto on merge) | **Live** |
-| prod | https://postaja.inzenirji.si | `main` (manual) | Planned |
+| prod | https://peron.postaja.eu | `main` (manual, workflow "Deploy prod", ADR-084) | Configured — first deploy pending |
 
 ## Done
 - 2026-10-11: **TASK-053 plan features and add-ons** (ADR-083): Solo without ad sets, animations and competitor research; persona only in Agencija or as the 49 € add-on (trial and pilot = Studio; comped/partner/starter/pro keep everything). The server refuses a missing feature; pages show an upgrade card instead. Paket in plačilo → Dodatki: extra brand 15 €, extra member 9 €, persona 49 € per month as quantities on the Stripe subscription (prorated); the webhook raises the limits (migration 0049). **Owner action:** after deploy press "Pripravi cenik v Stripe" in /admin/billing so the six add-on prices exist; in the Stripe customer portal nothing changes. Orgs on plan `trial` lose the persona — set an org to `comped`/`pro` in /admin if it should keep it.
@@ -153,6 +153,7 @@ Latest numbers: TASK-056 (last done TASK-053; TASK-051, TASK-035, 037, 039, 042,
 
 ## Servers
 - dev: Hetzner VM 91.99.191.8, user `deploy`, 4 vCPU / 8 GB / 80 GB. Shared: asisto (docker compose + host nginx today; must keep running) and later volil.si (ADR-025). Edge: host nginx (80/443, certbot) → kamal-proxy on 127.0.0.1:8080 for Kamal apps (ADR-027). asisto = Laravel on host PHP-FPM + docker compose API; not migrated. Hetzner Cloud Firewall: 22/80/443 only.
+- prod (ADR-084): same VM, destination `prod`, https://peron.postaja.eu, host nginx site `ops/nginx/peron.postaja.eu.conf`, database container `postaja-prod-db`. Public site postaja.eu (repo `DataVallis/postaja-website`) also runs here.
 
 ## Open items
 - ADR-008 embedding provider (Open).
