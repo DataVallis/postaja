@@ -14,6 +14,9 @@ You get the best result if you first upload a logo, a font and a few images of p
 
 - You see the templates in a preview in 4:5, 1:1 and 16:9.
 - In **What should I change?** write a revision (e.g. “bigger headline, more white space”) and click **Revise**. Claude changes only what you write.
+- **Picked templates only**: tick **Fix this template** under the templates you want changed, then write the revision. Only the picked templates change; all others and the shared colours, fonts and style stay exactly as they are. The version list shows e.g. "only: Seznam · …".
 - **Create from scratch** makes a completely new identity from the description.
 
 Every revision is a new **version**. With **Use** you choose which one applies to new images.
+
+With **Bring back one template from this version** on an earlier version you choose one of its templates and click **Bring back template**: it comes into the current identity as a new version (the template with the same id is replaced, otherwise it is added) and everything else stays. No AI call and no cost.

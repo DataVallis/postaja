@@ -23,6 +23,10 @@ export const brandDesigns = pgTable(
     /** A revision request ("naslov večji …"); null for a design made from scratch. */
     instruction: text("instruction"),
     basedOn: text("based_on"),
+    /** TASK-054: a revision limited to these templates (ids of the version it is based on); the others stay as they are. */
+    onlyTemplates: jsonb("only_templates").$type<string[]>(),
+    /** TASK-054: a version made by taking one template back from an earlier version (no AI call). */
+    restoredFrom: jsonb("restored_from").$type<{ version: number; templateId: string; name: string }>(),
     error: text("error"),
     model: text("model"),
     createdBy: text("created_by").notNull().references(() => user.id, { onDelete: "restrict" }),

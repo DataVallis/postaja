@@ -11,7 +11,7 @@ Status: **Built** (TASK-036). Decision: ADR-073. Owner: prices from business pla
 - Banner on every app page when a payment failed (until when it still works), when work is stopped, when the plan ended.
 - **/admin/billing**: which variables are set (names only), which catalogue prices exist in Stripe, *Pripravi cenik v
   Stripe* (creates missing products and prices by lookup key; a price whose amount changed in `catalog.ts` gets a new
-  Stripe price that takes over the lookup key, the old one is archived and running subscriptions keep it — ADR-079;
+  Stripe price that takes over the lookup key, the old one is archived and running subscriptions keep it — ADR-080;
   audited), subscriptions, the latest webhook events.
 
 ## How

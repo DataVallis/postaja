@@ -9,7 +9,7 @@ import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
 import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
-import { deleteImageVersion, ImageJobError, requestImages, restoreImageVersion, setPostPartnerLogo, setSlideTexts } from "@/server/images/service";
+import { deleteImageVersion, ImageJobError, requestImages, restoreImageVersion, restoreSlideFromVersion, setPostPartnerLogo, setSlideTexts } from "@/server/images/service";
 import { deletePostVideo } from "@/server/video/media";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
@@ -143,7 +143,9 @@ export async function reviseImagesAction(f: FormData): Promise<void> {
   const id = String(f.get("postId") ?? "");
   let error: string | null = null;
   try {
-    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), personaChoice(f));
+    // TASK-054: the picked images ("slide" = 0-based positions) and whether their illustrations are drawn again.
+    const only = f.getAll("slide").map((v) => Number(v));
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), { ...personaChoice(f), only, redraw: f.get("redraw") === "1" });
   } catch (e) {
     error = e instanceof ImageJobError ? e.code : "FAILED";
   }
@@ -235,6 +237,18 @@ export async function restoreImageVersionAction(f: FormData): Promise<void> {
   const postId = String(f.get("postId") ?? "");
   let error: string | null = null;
   await restoreImageVersion(getDb(), ctx, postId, String(f.get("runId") ?? "")).catch((e) => { error = e instanceof ImageJobError ? e.code : "FAILED"; });
+  revalidatePath(`/app/posts/${postId}`);
+  redirect(`/app/posts/${postId}${error ? `?imageError=${error}` : ""}#images`);
+}
+
+/** "Obnovi to sliko" (TASK-054): one image of an earlier version comes back; the others stay; redrawn for free. */
+export async function restoreSlideAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const postId = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  await restoreSlideFromVersion(getDb(), bossQueue(await getBoss()), ctx, postId, String(f.get("runId") ?? ""), Number(f.get("position") ?? -1))
+    .catch((e) => { error = e instanceof ImageJobError ? e.code : "FAILED"; });
   revalidatePath(`/app/posts/${postId}`);
   redirect(`/app/posts/${postId}${error ? `?imageError=${error}` : ""}#images`);
 }

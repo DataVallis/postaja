@@ -1,4 +1,4 @@
-// What Postaja sells (business plan §4, owner 2026-10-08; Studio 149 € and Agencija 499 € from 2026-10-11, ADR-079;
+// What Postaja sells (business plan §4, owner 2026-10-08; Studio 149 € and Agencija 499 € from 2026-10-11, ADR-080;
 // prices without VAT). Stripe prices are found by lookup key,
 // so the code never needs price ids; `ensureStripeCatalog` creates the missing ones and
 // replaces a price whose amount changed.

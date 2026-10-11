@@ -1,4 +1,4 @@
-// Stripe catalogue sync (TASK-036, ADR-079): missing prices are created; a price whose amount changed is replaced
+// Stripe catalogue sync (TASK-036, ADR-080): missing prices are created; a price whose amount changed is replaced
 // (lookup key moved to the new price, the old one archived); unchanged prices are left alone.
 import type Stripe from "stripe";
 import { describe, expect, it } from "vitest";

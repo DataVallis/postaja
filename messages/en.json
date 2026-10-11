@@ -1191,7 +1191,9 @@
       "NO_DESIGN": "The brand has no visual identity yet.",
       "INVALID_OUTPUT": "Claude did not return a valid image plan. Try again.",
       "LLM_PROVIDER": "Claude did not respond. Try again.",
-      "NOT_CONFIGURED": "The Claude (Anthropic) key is not set."
+      "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
+      "BAD_PICK": "The picked images no longer exist. Refresh the page and pick again.",
+      "NOT_RESTORABLE": "This image cannot come back without being drawn again: it was made with another version of the visual identity, or its illustration was deleted. Restore the whole version or use a correction."
     },
     "designLink": "Brand visual identity",
     "noDesign": "The brand has no visual identity yet, so images cannot be made.",
@@ -1227,7 +1229,15 @@
     "partnerNone": "None",
     "partnerSave": "Save logo",
     "partnerHint": "Used when the images are made.",
-    "partnerHintRedraw": "The images are redrawn for free with the chosen logo (same illustrations); the current ones stay as an earlier version."
+    "partnerHintRedraw": "The images are redrawn for free with the chosen logo (same illustrations); the current ones stay as an earlier version.",
+    "pickHint": "Pick the images you want fixed. With none picked, Claude looks at all of them.",
+    "pickSlide": "Pick image {n} for the correction",
+    "pickLabel": "Fix this image",
+    "slideOf": "Image {n} / {total}",
+    "redraw": "Draw the illustration again — for the picked images, or all of them if none is picked (each such image with an illustration is one new, paid illustration)",
+    "revisedSlides": "images {list}",
+    "restoreSlide": "Restore image {n}",
+    "restoreSlideHint": "\"Restore image\" brings back only that image (words and illustration); the other images stay. No cost."
   },
   "Design": {
     "title": "Visual identity",
@@ -1289,8 +1299,18 @@
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "PROVIDER": "Claude did not respond. Try again.",
       "NO_TOOL_CALL": "Claude did not return a design. Try again.",
-      "NO_ACCESS": "The member who asked no longer has access."
-    }
+      "NO_ACCESS": "The member who asked no longer has access.",
+      "BAD_PICK": "The picked templates no longer exist. Refresh the page and pick again.",
+      "NOT_RESTORABLE": "The template cannot be brought back: this version is already in use, or the current identity already has 8 templates."
+    },
+    "pickTemplate": "Fix this template",
+    "pickTemplateAria": "Pick the {name} template for the revision",
+    "pickHint": "If you pick templates (“Fix this template”), Claude changes only those; everything else stays exactly as it is. Without a pick it looks at the whole identity.",
+    "onlyTemplates": "only: {list}",
+    "restoredTemplate": "Template “{name}” brought back from v{v}",
+    "restoreTemplateLabel": "Bring back one template from this version",
+    "restoreTemplate": "Bring back template",
+    "restoreHint": "The chosen template of this version comes into the current identity as a new version. No AI call, no cost."
   },
   "Ideas": {
     "title": "Suggest ideas",
