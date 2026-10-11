@@ -40,9 +40,11 @@ For images the brand needs a [visual identity](/app/help/vizualna-podoba).
    - The illustration never contains words or a logo; Postaja draws the brand logo and the words over it from the template. Illustrations drawn after the brand's past posts are checked by Claude; if the model draws made-up letters or a logo into one, it is drawn again automatically, without using credits.
 2. **Words on the images**: correct the words and click **Save and refresh**. The images are redrawn at no extra cost. Words in \*asterisks\* are highlighted.
 3. **What should AI fix on the images?**: describe the fix in words and click **Fix the images**. You pay only for the illustrations that change. If you write that something in a picture should not be there (e.g. "there is made-up text on the picture"), that illustration is drawn again even when the prompt stays the same.
+   - **Picked images only** (carousel): every image shows **Image N / M** and its template name. Tick **Fix this image** under the images you want fixed, then write the fix. Claude changes only the picked images; the others stay exactly as they are (words, template and illustration) and the number of images does not change. With nothing picked, Claude looks at all images.
+   - **Draw the illustration again**: tick it to draw a new illustration with the same description for the picked images (or all of them if none is picked). Each such image with an illustration is one new, paid illustration; images without an illustration cost nothing.
 4. **New images** makes everything again.
 
-Nothing gets lost: every new creation, revision or word refresh saves the previous images as a version. In the **Earlier image versions** section you restore a version (**Restore this version**; the current images become a version) or delete it permanently (**Delete version**).
+Nothing gets lost: every new creation, revision or word refresh saves the previous images as a version. In the **Earlier image versions** section you restore a version (**Restore this version**; the current images become a version) or delete it permanently (**Delete version**). Under every image of an earlier version is **Restore image N**: it brings back only that image (its words and illustration) and leaves the other images as they are — at no cost, because the illustration is not drawn again. It is offered while the brand uses the same version of the visual identity as back then.
 
 For a LinkedIn carousel, **Download PDF carousel** is available.
 

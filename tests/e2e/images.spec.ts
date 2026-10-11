@@ -108,6 +108,20 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   // Square previews.
   await design.getByRole("navigation", { name: "Oblika predogleda" }).getByRole("link", { name: "1:1" }).click();
   await expect.poll(() => templates.first().evaluate((el: HTMLImageElement) => el.complete && el.naturalHeight)).toBe(540);
+  // TASK-054: a revision of one picked template; one template of an earlier version back, without Claude.
+  await design.getByRole("checkbox", { name: "Izberi predlogo Seznam za popravek" }).check();
+  await design.getByLabel("Kaj naj spremenim?").fill("seznam bolj zračen");
+  await design.getByRole("button", { name: "Popravi" }).click();
+  await expect(design.getByTestId("design-summary")).toContainText("Verzija 3", { timeout: 30_000 });
+  await expect(versions.getByRole("row", { name: /v3/ })).toContainText("samo: Seznam · seznam bolj zračen");
+  await expect(design.getByTestId("design-summary")).not.toContainText("Popravek: seznam"); // the shared summary stays
+  const v2row = versions.getByRole("row", { name: /v2/ });
+  await v2row.getByText("Vrni eno predlogo iz te verzije").click();
+  await v2row.getByLabel("Vrni eno predlogo iz te verzije").selectOption({ label: "Naslovnica" });
+  expect(await serious(p)).toEqual([]);
+  await v2row.getByRole("button", { name: "Vrni predlogo" }).click();
+  await expect(design.getByTestId("design-summary")).toContainText("Verzija 4");
+  await expect(versions.getByRole("row", { name: /v4/ })).toContainText("Vrnjena predloga »Naslovnica« iz v2");
 
   // A plan with an image post and a carousel for today.
   const plan = makeXlsx([{ name: "IG", rows: [
@@ -226,6 +240,29 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   // Every image of the carousel can be animated, the text-only slides too.
   await expect(p.getByTestId("animation").getByLabel("Katera slika").locator("option")).toHaveCount(4);
   await expect(p.getByTestId("carousel-pdf")).toHaveCount(0); // an Instagram carousel is images, not a PDF document
+
+  // TASK-054: every image is numbered; picking image 3 limits a correction to it — the others stay exactly as they are.
+  const cimages = p.getByTestId("images");
+  await expect(cimages.getByTestId("image-card").nth(2)).toContainText("Slika 3 / 4 · Seznam");
+  const coverHeadline = await cimages.getByTestId("slide-texts").getByLabel("Naslov · 1").inputValue();
+  const thirdBefore = await cimages.getByTestId("slide-texts").getByLabel("Naslov · 3").inputValue();
+  const falBeforePick = (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length;
+  await cimages.getByRole("checkbox", { name: "Izberi sliko 3 za popravek" }).check();
+  await cimages.getByLabel("Kaj naj AI popravi na slikah?").fill("Naslov: Tretji, krajše.");
+  expect(await serious(p)).toEqual([]);
+  await cimages.getByRole("button", { name: "Popravi slike" }).click();
+  await expect(cimages.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  await expect(cimages.getByTestId("slide-texts").getByLabel("Naslov · 3")).toHaveValue("Tretji, krajše.");
+  await expect(cimages.getByTestId("slide-texts").getByLabel("Naslov · 1")).toHaveValue(coverHeadline);
+  await expect(cimages.getByTestId("image-revision")).toHaveText("Zadnji popravek: slike 3 · Naslov: Tretji, krajše.");
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falBeforePick);
+  // Image 3 of the version before comes back on its own, for free.
+  await cimages.getByTestId("image-versions").getByText(/^Prejšnje verzije slik/).click();
+  await cimages.getByTestId("image-version").first().getByRole("button", { name: "Obnovi sliko 3" }).click();
+  await expect(cimages.getByTestId("slide-texts").getByLabel("Naslov · 3")).toHaveValue(thirdBefore, { timeout: 30_000 });
+  await expect(cimages.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length).toBe(falBeforePick);
+  await p.screenshot({ path: info.outputPath("carousel-pick.png"), fullPage: true });
 
   // One click: this post as a ZIP (images in order), then the whole day with its overview (TASK-016).
   const [postZip] = await Promise.all([p.waitForEvent("download"), p.getByTestId("post-zip").click()]);

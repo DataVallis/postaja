@@ -93,7 +93,7 @@ export function createDesignRequest(i: DesignInputs, invalid?: { draft: unknown;
 }
 
 /** A revision: the current design, what it looks like now (rendered previews), and the owner's words. */
-export function reviseDesignRequest(i: DesignInputs, current: DesignSpec, instruction: string, previews: ImageBlock[], invalid?: { draft: unknown; errors: string }): Omit<StructuredRequest, "model"> {
+export function reviseDesignRequest(i: DesignInputs, current: DesignSpec, instruction: string, previews: ImageBlock[], invalid?: { draft: unknown; errors: string }, only?: string[] | null): Omit<StructuredRequest, "model"> {
   return {
     system: [{ text: SYSTEM_DESIGN, cache: true }],
     images: images(i, previews),
@@ -103,7 +103,10 @@ export function reviseDesignRequest(i: DesignInputs, current: DesignSpec, instru
       "The last images above are the current templates rendered with their sample content.",
       `<owner_request>\n${instruction.trim()}\n</owner_request>`,
       invalid ? `Your previous answer did not validate. Fix exactly these problems:\n${invalid.errors}\n<previous>${JSON.stringify(invalid.draft).slice(0, 20_000)}</previous>` : "",
-      "Apply the owner's request to the design. Change only what the request asks for (and what it implies for consistency across templates); keep everything else exactly as it is, including template ids. Submit the full revised design.",
+      only?.length
+        // TASK-054: the owner picked templates; Postaja keeps every other part of the design as it is anyway.
+        ? `The owner picked only ${only.length > 1 ? "these templates" : "this template"}: ${only.map((x) => `"${x}"`).join(", ")}. Apply the request to ${only.length > 1 ? "them" : "it"} only and keep ${only.length > 1 ? "their ids" : "its id"}. Every other template and the shared summary, illustration style, palette and typography must stay exactly as they are — if a picked template needs a colour the palette does not have, use an explicit #rrggbb in that template. Submit the full design.`
+        : "Apply the owner's request to the design. Change only what the request asks for (and what it implies for consistency across templates); keep everything else exactly as it is, including template ids. Submit the full revised design.",
     ].filter(Boolean).join("\n\n"),
     tool,
     maxTokens: 12_000,
@@ -146,7 +149,13 @@ export function postVisualSchema(spec: DesignSpec) {
 }
 
 /** A correction of a post's images in the owner's words (owner, 2026-10-07): the current plan and how it looks now. */
-export type VisualRevision = { current: { templateId: string; slots: Record<string, string>; illustration: string | null }[]; instruction: string; previews: ImageBlock[] };
+export type VisualRevision = {
+  current: { templateId: string; slots: Record<string, string>; illustration: string | null }[];
+  instruction: string;
+  previews: ImageBlock[];
+  /** TASK-054: the owner picked these images (0-based); every other image stays exactly as it is. */
+  only?: number[];
+};
 
 export function postVisualRequest(spec: DesignSpec, p: PostVisualInputs, invalid?: { draft: unknown; errors: string }, revise?: VisualRevision): Omit<StructuredRequest, "model"> {
   const templates = spec.templates.map((t) => ({
@@ -186,6 +195,9 @@ Rules:
       p.persona ? `<persona name="${p.persona.name.replace(/"/g, "'")}">Every illustration shows this brand's persona, a real-looking person made from reference photos. Describe the scene as a photo: what she or he does, where, the framing and where the text has room — never the face, hair or body (they come from the photos).</persona>` : "",
       revise ? `<current_images>\n${JSON.stringify(revise.current)}\n</current_images>\nThe images above are these current images, in order.` : "",
       revise ? `<owner_request>\n${revise.instruction.trim()}\n</owner_request>` : "",
+      revise?.only?.length
+        ? `The owner picked image${revise.only.length > 1 ? "s" : ""} ${revise.only.map((i) => i + 1).join(", ")} (counting from 1): the request is about ${revise.only.length > 1 ? "these images" : "this image"} only. Change nothing on any other image, and keep the number of images.`
+        : "",
       revise
         ? `Apply the owner's request to the current images and submit all images again. Change only what the request asks for (and what it implies); keep every other image, template, word and illustration description exactly as it is — identical text — so unchanged illustrations are reused at no cost. If the request is about the picture itself (subject, colours, mood, composition), rewrite that image's illustration description; if it is about words, change the slots; if it is about layout, pick another of the brand's templates. If the owner says something is wrong in a picture that its description did not ask for (letters, logos, made-up text, objects or people that should not be there), set redraw=true for that image — also when its description stays the same, e.g. the plan's imagePrompt. Adding or removing images only when asked.`
         : "",

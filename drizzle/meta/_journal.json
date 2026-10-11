@@ -337,6 +337,13 @@
       "when": 1791698931850,
       "tag": "0047_plan_import_reading",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1791708765489,
+      "tag": "0048_design_template_scope",
+      "breakpoints": true
     }
   ]
 }

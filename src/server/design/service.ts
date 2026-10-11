@@ -26,7 +26,7 @@ export const EXAMPLES_MAX = 6;
 const STALE_MS = 15 * 60 * 1000;
 
 export class DesignError extends Error {
-  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "ARCHIVED" | "BUSY" | "NO_DESIGN" | "INVALID") {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "ARCHIVED" | "BUSY" | "NO_DESIGN" | "INVALID" | "BAD_PICK" | "NOT_RESTORABLE") {
     super(code);
   }
 }
@@ -34,7 +34,22 @@ export class DesignError extends Error {
 export const SHAPES = { portrait: { width: 1080, height: 1350 }, square: { width: 1080, height: 1080 }, landscape: { width: 1600, height: 900 } } as const;
 export type Shape = keyof typeof SHAPES;
 
-const requestInput = z.object({ brief: z.string().max(4000).optional(), instruction: z.string().trim().min(3).max(2000).optional() });
+const requestInput = z.object({
+  brief: z.string().max(4000).optional(),
+  instruction: z.string().trim().min(3).max(2000).optional(),
+  /** TASK-054: a revision limited to these templates of the current design (none = the whole design). */
+  templates: z.array(z.string().max(40)).max(8).optional(),
+});
+
+/**
+ * TASK-054: a revision limited to some templates keeps everything else of the design as it was — the other
+ * templates and the shared summary, style, palette and typography — whatever Claude answered for them. A picked
+ * template Claude left out stays as it was.
+ */
+export function mergePickedTemplates(base: DesignSpec, answer: DesignSpec, only: string[]): DesignSpec {
+  const picked = new Set(only);
+  return { ...base, templates: base.templates.map((t) => (picked.has(t.id) ? (answer.templates.find((x) => x.id === t.id) ?? t) : t)) };
+}
 
 /** Owner only. A new design (from the description) or a revision of the current one (instruction). */
 export async function requestDesign(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, brandId: string, input: z.input<typeof requestInput>) {
@@ -44,6 +59,8 @@ export async function requestDesign(db: Db, queue: { send(name: string, data: ob
   if (brand.archivedAt) throw new DesignError("ARCHIVED");
   const current = await currentDesign(db, ctx, brandId);
   if (r.instruction && !current) throw new DesignError("NO_DESIGN");
+  const only = r.templates?.length ? [...new Set(r.templates)] : null;
+  if (only && (!r.instruction || only.some((id) => !current!.spec?.templates.some((t) => t.id === id)))) throw new DesignError("BAD_PICK");
   const id = crypto.randomUUID();
   await db.transaction(async (tx) => {
     // One at a time per brand; a version stuck for 15 minutes no longer blocks.
@@ -54,7 +71,7 @@ export async function requestDesign(db: Db, queue: { send(name: string, data: ob
     const [{ max }] = await tx.select({ max: sql<number>`coalesce(max(${brandDesigns.version}), 0)::int` }).from(brandDesigns).where(eq(brandDesigns.brandId, brandId));
     await forOrg(tx as unknown as Db, ctx).insert(brandDesigns, {
       id, brandId, version: max + 1, status: "generating",
-      brief: r.brief ?? current?.brief ?? "", instruction: r.instruction ?? null, basedOn: r.instruction ? current!.id : null, createdBy: ctx.userId,
+      brief: r.brief ?? current?.brief ?? "", instruction: r.instruction ?? null, basedOn: r.instruction ? current!.id : null, onlyTemplates: only, createdBy: ctx.userId,
     });
   });
   await queue.send(DESIGN_QUEUE, { designId: id } satisfies DesignJob, `design:${brandId}`);
@@ -85,6 +102,39 @@ export async function activateDesign(db: Db, ctx: OrgContext, designId: string) 
   const d = await getDesign(db, ctx, designId);
   if (d.status !== "ready") throw new DesignError("INVALID");
   await db.update(brands).set({ currentDesignId: d.id, updatedAt: new Date() }).where(and(eq(brands.id, d.brandId), eq(brands.orgId, ctx.orgId)));
+}
+
+/**
+ * TASK-054, owner only: one template of an earlier version comes back into the current design as a new version (the
+ * template with the same id is replaced, or it is added). No AI call; every version stays.
+ */
+export async function restoreDesignTemplate(db: Db, ctx: OrgContext, fromDesignId: string, templateId: string) {
+  if (ctx.role !== "owner") throw new DesignError("FORBIDDEN");
+  const from = await getDesign(db, ctx, fromDesignId);
+  const tpl = from.status === "ready" ? from.spec?.templates.find((t) => t.id === templateId) : undefined;
+  if (!tpl) throw new DesignError("NOT_FOUND");
+  const { brand } = await getBrandDetail(db, ctx, from.brandId).catch(() => { throw new DesignError("NOT_FOUND"); });
+  if (brand.archivedAt) throw new DesignError("ARCHIVED");
+  const id = crypto.randomUUID();
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select 1 from brands where id = ${from.brandId} for update`);
+    const [busy] = await tx.select({ id: brandDesigns.id }).from(brandDesigns)
+      .where(and(eq(brandDesigns.brandId, from.brandId), eq(brandDesigns.status, "generating"), sql`${brandDesigns.updatedAt} > now() - make_interval(secs => ${STALE_MS / 1000})`));
+    if (busy) throw new DesignError("BUSY");
+    const current = await currentDesign(tx as unknown as Db, ctx, from.brandId);
+    if (!current?.spec) throw new DesignError("NO_DESIGN");
+    if (current.id === from.id) throw new DesignError("NOT_RESTORABLE");
+    const has = current.spec.templates.some((t) => t.id === tpl.id);
+    const spec = designSpecSchema.safeParse({ ...current.spec, templates: has ? current.spec.templates.map((t) => (t.id === tpl.id ? tpl : t)) : [...current.spec.templates, tpl] });
+    if (!spec.success) throw new DesignError("NOT_RESTORABLE"); // e.g. the current design already has 8 templates
+    const [{ max }] = await tx.select({ max: sql<number>`coalesce(max(${brandDesigns.version}), 0)::int` }).from(brandDesigns).where(eq(brandDesigns.brandId, from.brandId));
+    await forOrg(tx as unknown as Db, ctx).insert(brandDesigns, {
+      id, brandId: from.brandId, version: max + 1, status: "ready", spec: spec.data, brief: current.brief, basedOn: current.id,
+      restoredFrom: { version: from.version, templateId: tpl.id, name: tpl.name }, model: null, createdBy: ctx.userId,
+    });
+    await tx.update(brands).set({ currentDesignId: id, updatedAt: new Date() }).where(and(eq(brands.id, from.brandId), eq(brands.orgId, ctx.orgId)));
+  });
+  return id;
 }
 
 /** The brand's logo and font bytes (first uploaded of each), for rendering and for Claude. */
@@ -198,7 +248,7 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
   // Why the last attempt was refused, kept with the failed version for diagnosis (the UI shows only the code).
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const req = base ? reviseDesignRequest(inputs, base, d.instruction!, previews, invalid) : createDesignRequest(inputs, invalid);
+    const req = base ? reviseDesignRequest(inputs, base, d.instruction!, previews, invalid, d.onlyTemplates) : createDesignRequest(inputs, invalid);
     let out;
     try {
       out = await cappedCall(db, deps.llm, { orgId: d.orgId, brandId: d.brandId, postId: null, now: deps.now }, req);
@@ -208,7 +258,10 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
       if (e instanceof LlmError) return fail(e.message && e.message !== e.code ? `${e.code}:${e.message}`.slice(0, 200) : e.code);
       throw e;
     }
-    const parsed = designSpecSchema.safeParse(out.input);
+    const answer = designSpecSchema.safeParse(out.input);
+    if (!answer.success) { invalid = { draft: out.input, errors: issues(answer.error) }; reason = "schema"; continue; }
+    // TASK-054: only the picked templates change.
+    const parsed = base && d.onlyTemplates?.length ? designSpecSchema.safeParse(mergePickedTemplates(base, answer.data, d.onlyTemplates)) : answer;
     if (!parsed.success) { invalid = { draft: out.input, errors: issues(parsed.error) }; reason = "schema"; continue; }
     // A design that cannot be rendered is not saved.
     try {

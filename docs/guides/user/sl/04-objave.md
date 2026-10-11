@@ -40,9 +40,11 @@ Za slike mora imeti brand [vizualno podobo](/app/help/vizualna-podoba).
    - Ilustracija je vedno brez besed in logotipa; logotip branda in besede Postaja nariše čez njo iz predloge. Ilustracije, narisane po vzoru preteklih objav, Claude pregleda; če model vanje nariše izmišljene črke ali logotip, se ilustracija samodejno nariše znova, brez porabe kreditov.
 2. **Tekst na slikah**: popravi besede in klikni **Shrani in osveži**. Slike se izrišejo znova brez novih stroškov. Besede v \*zvezdicah\* so poudarjene.
 3. **Kaj naj AI popravi na slikah?**: opiši popravek z besedami in klikni **Popravi slike**. Plačajo se samo ilustracije, ki se spremenijo. Če napišeš, da je na sliki kaj odveč (npr. »na sliki so izmišljeni napisi«), se ta ilustracija nariše na novo, tudi če ostane isti prompt.
+   - **Samo izbrane slike** (karusel): vsaka slika ima oznako **Slika N / M** in ime predloge. Pod slikami, ki jih želiš popraviti, obkljukaj **Popravi to sliko**, nato napiši popravek. Claude spremeni samo izbrane slike; ostale ostanejo točno take, kot so (besede, predloga in ilustracija), in število slik se ne spremeni. Brez izbire Claude gleda vse slike.
+   - **Ilustracijo nariši znova**: obkljukaj, če želiš izbranim slikam (ali vsem, če ne izbereš nobene) narisati novo ilustracijo z istim opisom. Vsaka taka slika z ilustracijo je ena nova, plačana ilustracija; slike brez ilustracije se ne plačajo.
 4. **Nove slike** naredi vse znova.
 
-Nič se ne izgubi: vsaka nova izdelava, popravek ali osvežitev besed shrani prejšnje slike kot verzijo. V razdelku **Prejšnje verzije slik** verzijo vrneš (**Vrni to verzijo**; trenutne slike postanejo verzija) ali jo trajno izbrišeš (**Izbriši verzijo**).
+Nič se ne izgubi: vsaka nova izdelava, popravek ali osvežitev besed shrani prejšnje slike kot verzijo. V razdelku **Prejšnje verzije slik** verzijo vrneš (**Vrni to verzijo**; trenutne slike postanejo verzija) ali jo trajno izbrišeš (**Izbriši verzijo**). Pod vsako sliko prejšnje verzije je gumb **Obnovi sliko N**: vrne samo to sliko (njene besede in ilustracijo), druge slike ostanejo, kot so — brez stroška, saj se ilustracija ne riše znova. Gumb je na voljo, dokler brand uporablja isto verzijo vizualne podobe kot takrat.
 
 Za LinkedIn karusel je na voljo **Prenesi PDF karusel**.
 
