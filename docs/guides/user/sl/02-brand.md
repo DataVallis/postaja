@@ -7,6 +7,22 @@ Brand je projekt v Postaji. Vsak brand ima svoj CGP, kanale, datoteke, vizualno 
 1. **Brandi → Nov brand** (samo lastnik).
 2. Vpiši ime, kratko ime (slug), spletno stran in jezike objav.
 3. Klikni **Ustvari**.
+4. Odpre se **Nastavitev branda** (čarovnik), ki te vodi korak za korakom.
+
+## Nastavitev branda (čarovnik)
+
+Rezultat je tako dober, kot so podatki, ki jih vneseš. Čarovnik pri vsakem koraku pove, zakaj je pomemben in kaj vanj sodi:
+
+1. **Komunikacija (CGP)** – obvezno, vsaj 400 znakov: kdo ste, ponudba, publika, ton, besede, ki jih uporabljate in ne.
+2. **Logotip in pretekle objave** – logotip je obvezen za slike; vsaj 3 pretekle objave so slogovni vzor; pisava po želji.
+3. **Gradiva** – cenik, izdelki, pogosta vprašanja (priporočeno).
+4. **Teme in pravila** – stebri vsebine, pozivi k dejanju, prepovedane besede (priporočeno).
+5. **Barve in slog slik** – barve branda, slog ilustracij in česa na slikah ne sme biti (priporočeno).
+6. **Kanali** – vsaj en kanal je obvezen.
+7. **Vizualna podoba** – Claude pripravi predloge slik (obvezno za slike).
+8. **Povzetek** – kaj je urejeno, kaj manjka, in naslednji koraki.
+
+Levo vidiš korake z oznakami: zelena kljukica pomeni urejeno, rdeč klicaj obvezno, a manjka, prazen krog priporočeno. Vsak korak se shrani v brand (CGP in pravila kot nova verzija profila), zato lahko kadar koli nehaš in nadaljuješ z gumbom **Nastavitev** na strani branda. Dokler ni vse urejeno, stran branda pokaže, koliko je brand pripravljen in kaj manjka.
 
 ## Profil (CGP)
 

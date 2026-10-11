@@ -47,7 +47,9 @@ test("client link: the client reviews a week of posts without an account; the ag
   await p.getByLabel("Ime", { exact: true }).fill("Polygon");
   await p.getByLabel("Kratko ime (slug)").fill("polygon");
   await p.getByRole("button", { name: "Ustvari" }).click();
-  await expect(p).toHaveURL(/\/app\/brands\/[0-9a-f-]{36}/);
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
+  await expect(p).toHaveURL(/\/app\/brands\/[0-9a-f-]{36}$/);
   const brandUrl = p.url().split(/[?#]/)[0];
   await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: "Kanali" }).click();
   await p.getByLabel("Platforma").selectOption("instagram");

@@ -7,6 +7,22 @@ A brand is a project in Postaja. Each brand has its own CGP, channels, files, vi
 1. **Brands → New brand** (owner only).
 2. Enter the name, short name (slug), website and post languages.
 3. Click **Create**.
+4. The **Brand setup** wizard opens and guides you step by step.
+
+## Brand setup (wizard)
+
+The results are only as good as what you put in. At each step the wizard says why it matters and what belongs in it:
+
+1. **Communication (CGP)** – required, at least 400 characters: who you are, the offer, the audience, the tone, words you use and avoid.
+2. **Logo and past posts** – the logo is required for images; at least 3 past posts are the style references; a font is optional.
+3. **Materials** – price list, products, FAQ (recommended).
+4. **Topics and rules** – content pillars, calls to action, banned words (recommended).
+5. **Colours and image style** – brand colours, illustration style and what pictures must not show (recommended).
+6. **Channels** – at least one channel is required.
+7. **Visual identity** – Claude prepares the image templates (required for images).
+8. **Summary** – what is done, what is missing, and the next steps.
+
+On the left the steps are marked: a green tick means done, a red exclamation mark required and missing, an empty circle recommended. Every step is saved into the brand (CGP and rules as a new profile version), so you can stop any time and continue with **Setup** on the brand page. Until everything is done, the brand page shows how ready the brand is and what is missing.
 
 ## Profile (CGP)
 

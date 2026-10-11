@@ -44,6 +44,8 @@ test("ads: Claude writes copy per network within its limits; the owner edits, th
   await p.goto("/app/brands/new");
   await p.getByLabel("Ime", { exact: true }).fill("Tečaj");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Tečaj", level: 1 })).toBeVisible();
   await p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name: "Oglasi" }).click();
   const form = p.getByTestId("ad-form");

@@ -62,7 +62,7 @@ type ProfileProps = {
   visual: { colors: Record<string, string | undefined>; imageStyle: string; negativePrompt: string };
 };
 
-function CgpDraftBanner({ draft, onInsert }: { draft: NonNullable<ProfileProps["cgpDraft"]>; onInsert: (text: string) => void }) {
+export function CgpDraftBanner({ draft, onInsert }: { draft: NonNullable<ProfileProps["cgpDraft"]>; onInsert: (text: string) => void }) {
   const t = useTranslations("Brands.cgpDraft");
   const [inserted, setInserted] = useState(false);
   return (

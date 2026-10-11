@@ -43,6 +43,8 @@ test("ideas: Claude proposes topics for a channel, the owner keeps some and they
   await p.goto("/app/brands/new");
   await p.getByLabel("Ime", { exact: true }).fill("Kavarna");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Kavarna", level: 1 })).toBeVisible();
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
   await tab("Kanali");

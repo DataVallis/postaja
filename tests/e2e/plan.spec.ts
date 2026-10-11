@@ -51,6 +51,8 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
   await p.getByLabel("Ime", { exact: true }).fill("Inženirji"); // a slug typed by hand is kept
   await expect(p.getByLabel("Kratko ime (slug)")).toHaveValue("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
   await tab("Kanali");
   await p.getByLabel("Platforma").selectOption("instagram");

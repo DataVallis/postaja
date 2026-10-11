@@ -60,6 +60,8 @@ test("owner connects Claude, Claude proposes a CGP, the owner saves it, then dis
   await p.getByLabel("Ime", { exact: true }).fill("Inženirji");
   await p.getByLabel("Kratko ime (slug)").fill("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
   const brandUrl = p.url();
 

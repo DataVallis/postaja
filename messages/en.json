@@ -1931,5 +1931,192 @@
     "failedBody": "Ask the sender for a new sample.",
     "imagesLabel": "Images: {topic}",
     "creativesLabel": "Ad images"
+  },
+  "Setup": {
+    "title": "Brand setup",
+    "subtitle": "Step by step through everything Postaja needs for good posts. The results are only as good as what you put in.",
+    "skip": "Skip to brand",
+    "open": "Setup",
+    "continue": "Continue setup",
+    "noticeTitle": "Brand setup: {n} %",
+    "noticeRecommended": "the required parts are done; the recommended steps make posts even better.",
+    "score": "Ready: {n} %",
+    "missingRequired": "Required and missing: {list}",
+    "allRequired": "Everything required is done.",
+    "progressLabel": "Brand readiness",
+    "stepsLabel": "Setup steps",
+    "stateMissing": "(missing)",
+    "stateDone": "(done)",
+    "badgeDone": "done",
+    "badgeRequired": "required",
+    "badgeRecommended": "recommended",
+    "back": "Back",
+    "next": "Next",
+    "saveNext": "Save and continue",
+    "saving": "Saving …",
+    "steps": {
+      "cgp": {
+        "short": "Communication (CGP)",
+        "title": "How the brand speaks (CGP)",
+        "intro": "The CGP is the most important input: Postaja writes every post from it. A generic or short CGP means generic posts.",
+        "tips": [
+          "Who you are and what you offer (products, services, prices, what is special).",
+          "Who you write for: the audience, their problems and wishes.",
+          "Tone: how you speak (formal/informal, serious/playful), example sentences.",
+          "Words and phrases you use — and those you must not.",
+          "Calls to action, links, campaigns or dates."
+        ]
+      },
+      "images": {
+        "short": "Logo and past posts",
+        "title": "Logo and past posts",
+        "intro": "From the logo and your past posts Postaja builds the visual identity, so the images are recognisably yours, not generic.",
+        "tips": [
+          "The logo (PNG/SVG, ideally transparent) is required for images.",
+          "At least 3 images of past posts you like (more is better) — they are the style references.",
+          "The brand font (TTF/OTF/WOFF) if you have one; for Slovenian it needs č, š, ž.",
+          "A ZIP with many files is fine: Postaja sorts them itself."
+        ]
+      },
+      "materials": {
+        "short": "Materials",
+        "title": "Materials and knowledge base",
+        "intro": "Postaja takes facts from the materials — prices, products, dates, answers. Without them it has to rely on general knowledge.",
+        "tips": [
+          "Price list, product or service catalogue.",
+          "Frequently asked questions and answers.",
+          "Company presentation, references, customer examples.",
+          "Word, PDF, Excel, PowerPoint or text; Postaja reads the text on upload."
+        ]
+      },
+      "rules": {
+        "short": "Topics and rules",
+        "title": "Topics and rules",
+        "intro": "Content pillars keep posts varied; rules make every post meet your requirements without corrections.",
+        "tips": [
+          "2–5 content pillars with a share (e.g. Tips 40 %, Products 30 %, Behind the scenes 30 %).",
+          "The calls to action you want (e.g. “Book an appointment”).",
+          "Banned words (e.g. competitors, exaggerated promises).",
+          "Maximum hashtags and emojis, links yes/no."
+        ]
+      },
+      "visual": {
+        "short": "Colours and image style",
+        "title": "Colours and image style",
+        "intro": "Colours and the style description guide the design and illustrations; the avoid list keeps out what you never want in pictures.",
+        "tips": [
+          "Primary, secondary and accent colour as #rrggbb (from the CGP or the website).",
+          "The illustration style in one sentence (e.g. “warm product photography, soft light”).",
+          "What pictures must not show (e.g. people, text, competing products)."
+        ]
+      },
+      "channels": {
+        "short": "Channels",
+        "title": "Channels to post to",
+        "intro": "A channel says where and how often you post: Postaja follows the platform's limits (length, hashtags, links) and the right image size.",
+        "tips": [
+          "At least one channel is required (e.g. Instagram @yourbrand).",
+          "The channel's language must be one of the brand's languages.",
+          "Days and posts per day shape the plan.",
+          "Allowed post types (image, carousel, text, video)."
+        ]
+      },
+      "design": {
+        "short": "Visual identity",
+        "title": "Visual identity (design)",
+        "intro": "From the CGP, colours, logo and past posts Claude prepares this brand's image templates. Without a design Postaja cannot draw images.",
+        "tips": [
+          "Finish the CGP, logo and past posts first — the design will be better.",
+          "Describe how the images should look (e.g. dark cards, big headlines, logo at the bottom).",
+          "You can correct the design in words later on the Visual identity tab."
+        ]
+      },
+      "done": {
+        "short": "Summary",
+        "title": "Summary"
+      }
+    },
+    "cgp": {
+      "label": "CGP text",
+      "enough": "{n} characters — enough for good posts.",
+      "short": "{n} characters — we recommend at least {min}. Add tone, audience, offer and examples."
+    },
+    "images": {
+      "logoOk": "The logo is uploaded.",
+      "logoMissing": "The logo is missing (required for images).",
+      "examples": "Past posts: {n} (at least {min} recommended)",
+      "fontOk": "Fonts: {n}",
+      "fontNone": "No font uploaded (optional — Postaja picks one otherwise)."
+    },
+    "materials": {
+      "none": "No materials yet."
+    },
+    "rules": {
+      "pillars": "Content pillars",
+      "pillarsHint": "Name, share in % (100 at most in total) and a short description. Empty rows are not saved.",
+      "pillarName": "Pillar {n}: name",
+      "pillarNamePh": "Pillar {n}",
+      "pillarShare": "Pillar {n}: share in %",
+      "pillarDesc": "Pillar {n}: description",
+      "pillarDescPh": "What belongs to this pillar",
+      "cta": "Calls to action",
+      "ctaHint": "One per line.",
+      "banned": "Banned words",
+      "bannedHint": "Comma separated.",
+      "hashtags": "Maximum hashtags",
+      "emoji": "Maximum emojis",
+      "links": "Links in the text",
+      "linksDefault": "by the platform's rules",
+      "yes": "yes",
+      "no": "no",
+      "endWithCta": "Every post ends with a call to action"
+    },
+    "visual": {
+      "colors": "Brand colours",
+      "colorsHint": "Format #rrggbb. At least two colours.",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "accent": "Accent",
+      "background": "Background",
+      "text": "Text",
+      "style": "Illustration style",
+      "styleHint": "One or two sentences on how the images should look.",
+      "avoid": "What pictures must not show",
+      "avoidHint": "E.g. people, text, other brands' logos."
+    },
+    "channels": {
+      "none": "No channel yet — without one Postaja does not know where it writes for."
+    },
+    "design": {
+      "needCgp": "Finish the CGP first (step 1).",
+      "noLogo": "No logo yet — the design will be made without it (add it in step 2).",
+      "error": "The design could not be started. Try again.",
+      "working": "Claude is preparing the visual identity (a few minutes). The page refreshes by itself.",
+      "ready": "The visual identity is ready.",
+      "review": "Review the templates",
+      "brief": "Visual identity description",
+      "briefHint": "How the images should look; optional but helpful.",
+      "create": "Create the visual identity",
+      "again": "Create a new version"
+    },
+    "done": {
+      "ready": "The brand is ready. Postaja has everything it needs for good posts.",
+      "notYet": "Something required is still missing — finish the marked steps, or posts and images will be poorer or impossible.",
+      "nextTitle": "What now?",
+      "firstPost": "Create the first post",
+      "import": "Import a content plan",
+      "extrasTitle": "Optional, for even better results:",
+      "persona": "A persona (AI influencer) for the brand",
+      "competitors": "Competitor research",
+      "partners": "Partner logos",
+      "claude": "Connect Claude to fill the knowledge base"
+    },
+    "errors": {
+      "pillars": "Pillars: a name is required, share 0–100, 100 at most in total, names must not repeat.",
+      "invalid": "Check the entries (e.g. colours as #rrggbb).",
+      "forbidden": "Only the owner can change the setup.",
+      "archived": "The brand is archived.",
+      "failed": "Saving failed. Try again."
+    }
   }
 }
