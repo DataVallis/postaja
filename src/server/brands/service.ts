@@ -130,6 +130,25 @@ export async function saveProfile(db: Db, ctx: OrgContext, brandId: string, inpu
   });
 }
 
+/**
+ * The setup wizard (TASK-055) saves one part of the profile at a time: the rest is copied from the current version,
+ * so each step is a normal new version (history, ADR-035) and nothing else changes.
+ */
+export async function saveProfilePart(
+  db: Db, ctx: OrgContext, brandId: string,
+  part: { cgp?: string; pillars?: z.input<typeof profileInput>["pillars"]; rules?: Partial<z.input<typeof profileInput>["rules"]>; visual?: z.input<typeof profileInput>["visual"]; note?: string },
+) {
+  const { profile } = await getBrandDetail(db, ctx, brandId);
+  const base = profile ?? { cgp: "", pillars: [], rules: { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] }, visual: { colors: {}, imageStyle: "", negativePrompt: "" } };
+  return saveProfile(db, ctx, brandId, {
+    cgp: part.cgp ?? base.cgp,
+    pillars: part.pillars ?? base.pillars,
+    rules: { ...base.rules, ...(part.rules ?? {}) },
+    visual: part.visual ?? base.visual,
+    note: part.note,
+  });
+}
+
 async function checkPreset(db: Db, platform: string, key?: string) {
   if (!key) return;
   const [p] = await db.select({ platform: formatPresets.platform, enabled: formatPresets.enabled }).from(formatPresets).where(eq(formatPresets.key, key));

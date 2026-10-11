@@ -44,6 +44,8 @@ test("owner imports the CGP verbatim from a Word file and from an uploaded PDF, 
   await p.getByLabel("Ime", { exact: true }).fill("Inženirji");
   await p.getByLabel("Kratko ime (slug)").fill("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
 
   // From the computer: a Word file.

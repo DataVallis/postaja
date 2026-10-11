@@ -53,6 +53,8 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await p.getByLabel("Ime", { exact: true }).fill("Cherr");
   await p.getByLabel("Kratko ime (slug)").fill("cherr");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
   await tab("Kanali");
   await p.getByLabel("Platforma").selectOption("instagram");

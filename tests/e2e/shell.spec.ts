@@ -56,6 +56,8 @@ test("dashboard, posts and brands in the new frame; filters; theme and language 
     await p.getByLabel("Ime", { exact: true }).fill(name);
     await p.getByLabel("Kratko ime (slug)").fill(slug);
     await p.getByRole("button", { name: "Ustvari" }).click();
+    // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+    await p.getByRole("link", { name: "Preskoči na brand" }).click();
     await expect(p.getByRole("heading", { name, level: 1 })).toBeVisible();
   }
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();

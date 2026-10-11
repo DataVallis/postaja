@@ -1931,5 +1931,192 @@
     "failedBody": "Za nov primer se obrnite na pošiljatelja.",
     "imagesLabel": "Slike: {topic}",
     "creativesLabel": "Oglasne slike"
+  },
+  "Setup": {
+    "title": "Nastavitev branda",
+    "subtitle": "Korak za korakom do vsega, kar Postaja potrebuje za dobre objave. Rezultat je tako dober, kot so podatki, ki jih vnesete.",
+    "skip": "Preskoči na brand",
+    "open": "Nastavitev",
+    "continue": "Nadaljuj nastavitev",
+    "noticeTitle": "Nastavitev branda: {n} %",
+    "noticeRecommended": "obvezno je urejeno, s priporočenimi koraki bodo objave še boljše.",
+    "score": "Pripravljenost: {n} %",
+    "missingRequired": "Manjka obvezno: {list}",
+    "allRequired": "Vse obvezno je urejeno.",
+    "progressLabel": "Pripravljenost branda",
+    "stepsLabel": "Koraki nastavitve",
+    "stateMissing": "(manjka)",
+    "stateDone": "(urejeno)",
+    "badgeDone": "urejeno",
+    "badgeRequired": "obvezno",
+    "badgeRecommended": "priporočeno",
+    "back": "Nazaj",
+    "next": "Naprej",
+    "saveNext": "Shrani in naprej",
+    "saving": "Shranjujem …",
+    "steps": {
+      "cgp": {
+        "short": "Komunikacija (CGP)",
+        "title": "Kako brand govori (CGP)",
+        "intro": "CGP je najpomembnejši vnos: Postaja iz njega piše vsako objavo. Generičen ali kratek CGP pomeni generične objave.",
+        "tips": [
+          "Kdo ste in kaj ponujate (izdelki, storitve, cene, posebnosti).",
+          "Komu pišete: publika, njihove težave in želje.",
+          "Ton: kako govorite (tikanje/vikanje, resno/igrivo), primeri stavkov.",
+          "Besede in fraze, ki jih uporabljate — in tiste, ki jih ne smete.",
+          "Pozivi k dejanju, povezave, posebne kampanje ali datumi."
+        ]
+      },
+      "images": {
+        "short": "Logotip in pretekle objave",
+        "title": "Logotip in pretekle objave",
+        "intro": "Iz logotipa in vaših preteklih objav Postaja naredi vizualno podobo, da so slike prepoznavno vaše, ne splošne.",
+        "tips": [
+          "Logotip (PNG/SVG, po možnosti s prozornim ozadjem) je obvezen za slike.",
+          "Vsaj 3 slike preteklih objav, ki so vam všeč (več je bolje) — to so slogovni vzori.",
+          "Pisava branda (TTF/OTF/WOFF), če jo imate; za slovenščino mora imeti č, š, ž.",
+          "ZIP z več datotekami naenkrat je v redu: Postaja jih razvrsti sama."
+        ]
+      },
+      "materials": {
+        "short": "Gradiva",
+        "title": "Gradiva in baza znanja",
+        "intro": "Iz gradiv Postaja jemlje dejstva — cene, izdelke, datume, odgovore na vprašanja. Brez njih si mora pomagati s splošnim znanjem.",
+        "tips": [
+          "Cenik, katalog izdelkov ali storitev.",
+          "Pogosta vprašanja in odgovori.",
+          "Predstavitev podjetja, reference, primeri strank.",
+          "Word, PDF, Excel, PowerPoint ali besedilo; Postaja prebere besedilo ob nalaganju."
+        ]
+      },
+      "rules": {
+        "short": "Teme in pravila",
+        "title": "Teme in pravila",
+        "intro": "Stebri vsebine poskrbijo za raznolike objave, pravila pa, da vsaka objava ustreza vašim zahtevam brez popravkov.",
+        "tips": [
+          "2–5 stebrov vsebine z deležem (npr. Nasveti 40 %, Izdelki 30 %, Zakulisje 30 %).",
+          "Pozivi k dejanju, ki jih želite (npr. »Rezervirajte termin«).",
+          "Prepovedane besede (npr. konkurenca, pretirane obljube).",
+          "Največ ključnikov in emojijev, povezave da/ne."
+        ]
+      },
+      "visual": {
+        "short": "Barve in slog slik",
+        "title": "Barve in slog slik",
+        "intro": "Barve in opis sloga usmerjajo dizajn in ilustracije; seznam »izogibaj se« prepreči, kar na slikah nočete.",
+        "tips": [
+          "Glavna, dodatna in poudarjena barva v obliki #rrggbb (iz CGP ali spletne strani).",
+          "Slog ilustracij v enem stavku (npr. »topla fotografija izdelkov, mehka svetloba«).",
+          "Česa na slikah ne sme biti (npr. ljudje, besedilo, konkurenčni izdelki)."
+        ]
+      },
+      "channels": {
+        "short": "Kanali",
+        "title": "Kanali za objave",
+        "intro": "Kanal pove, kje objavljate in kako pogosto: Postaja upošteva omejitve platforme (dolžina, ključniki, povezave) in pravo velikost slik.",
+        "tips": [
+          "Vsaj en kanal je obvezen (npr. Instagram @vasbrand).",
+          "Jezik kanala mora biti eden od jezikov branda.",
+          "Dnevi in število objav na dan določajo plan.",
+          "Dovoljene vrste objav (slika, karusel, besedilo, video)."
+        ]
+      },
+      "design": {
+        "short": "Vizualna podoba",
+        "title": "Vizualna podoba (dizajn)",
+        "intro": "Iz CGP, barv, logotipa in preteklih objav Claude pripravi predloge slik za ta brand. Brez dizajna Postaja ne more risati slik.",
+        "tips": [
+          "Najprej uredite CGP, logotip in pretekle objave — dizajn bo boljši.",
+          "V opis zapišite, kako naj bodo slike videti (npr. temne kartice, veliki naslovi, logotip spodaj).",
+          "Dizajn lahko kasneje popravite z besedami na zavihku Vizualna podoba."
+        ]
+      },
+      "done": {
+        "short": "Povzetek",
+        "title": "Povzetek"
+      }
+    },
+    "cgp": {
+      "label": "Besedilo CGP",
+      "enough": "{n} znakov — dovolj za dobre objave.",
+      "short": "{n} znakov — priporočamo vsaj {min}. Dodajte ton, publiko, ponudbo in primere."
+    },
+    "images": {
+      "logoOk": "Logotip je naložen.",
+      "logoMissing": "Logotip manjka (obvezno za slike).",
+      "examples": "Pretekle objave: {n} (priporočeno vsaj {min})",
+      "fontOk": "Pisava: {n}",
+      "fontNone": "Pisava ni naložena (neobvezno — sicer Postaja izbere pisavo sama)."
+    },
+    "materials": {
+      "none": "Gradiv še ni."
+    },
+    "rules": {
+      "pillars": "Stebri vsebine",
+      "pillarsHint": "Ime, delež v % (skupaj največ 100) in kratek opis. Prazne vrstice se ne shranijo.",
+      "pillarName": "Steber {n}: ime",
+      "pillarNamePh": "Steber {n}",
+      "pillarShare": "Steber {n}: delež v %",
+      "pillarDesc": "Steber {n}: opis",
+      "pillarDescPh": "Kaj sodi v ta steber",
+      "cta": "Pozivi k dejanju",
+      "ctaHint": "En na vrstico.",
+      "banned": "Prepovedane besede",
+      "bannedHint": "Ločene z vejico.",
+      "hashtags": "Največ ključnikov",
+      "emoji": "Največ emojijev",
+      "links": "Povezave v besedilu",
+      "linksDefault": "po pravilih platforme",
+      "yes": "da",
+      "no": "ne",
+      "endWithCta": "Vsaka objava naj se konča s pozivom k dejanju"
+    },
+    "visual": {
+      "colors": "Barve branda",
+      "colorsHint": "Oblika #rrggbb. Vsaj dve barvi.",
+      "primary": "Glavna",
+      "secondary": "Dodatna",
+      "accent": "Poudarek",
+      "background": "Ozadje",
+      "text": "Besedilo",
+      "style": "Slog ilustracij",
+      "styleHint": "En ali dva stavka o tem, kako naj bodo slike videti.",
+      "avoid": "Česa na slikah ne sme biti",
+      "avoidHint": "Npr. ljudje, besedilo, logotipi drugih znamk."
+    },
+    "channels": {
+      "none": "Še ni kanala — brez njega Postaja ne ve, kam piše."
+    },
+    "design": {
+      "needCgp": "Najprej uredite CGP (korak 1).",
+      "noLogo": "Logotipa še ni — dizajn bo brez njega (dodate ga v koraku 2).",
+      "error": "Dizajna ni bilo mogoče začeti. Poskusite znova.",
+      "working": "Claude pripravlja vizualno podobo (nekaj minut). Stran se osveži sama.",
+      "ready": "Vizualna podoba je pripravljena.",
+      "review": "Oglejte si predloge",
+      "brief": "Opis vizualne podobe",
+      "briefHint": "Kako naj bodo slike videti; neobvezno, a pomaga.",
+      "create": "Ustvari vizualno podobo",
+      "again": "Ustvari novo različico"
+    },
+    "done": {
+      "ready": "Brand je pripravljen. Postaja ima vse, kar potrebuje za dobre objave.",
+      "notYet": "Nekaj obveznega še manjka — dokončajte označene korake, sicer bodo objave ali slike slabše ali jih ne bo.",
+      "nextTitle": "Kaj zdaj?",
+      "firstPost": "Ustvari prvo objavo",
+      "import": "Uvozi plan objav",
+      "extrasTitle": "Neobvezno, za še boljše rezultate:",
+      "persona": "Persona (AI influencer) za brand",
+      "competitors": "Raziskava konkurence",
+      "partners": "Logotipi partnerjev",
+      "claude": "Povezava s Claude za polnjenje baze znanja"
+    },
+    "errors": {
+      "pillars": "Stebri: ime je obvezno, delež 0–100, skupaj največ 100, imena se ne smejo ponavljati.",
+      "invalid": "Preverite vnose (npr. barve v obliki #rrggbb).",
+      "forbidden": "Nastavitve lahko ureja samo lastnik.",
+      "archived": "Brand je arhiviran.",
+      "failed": "Shranjevanje ni uspelo. Poskusite znova."
+    }
   }
 }

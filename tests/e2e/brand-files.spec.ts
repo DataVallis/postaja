@@ -54,6 +54,8 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await p.getByLabel("Ime", { exact: true }).fill("Inženirji");
   await p.getByLabel("Kratko ime (slug)").fill("inzenirji");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Inženirji", level: 1 })).toBeVisible();
   await tab(p, "Datoteke");
   await expect(p.getByRole("heading", { name: "Datoteke branda" })).toBeVisible();
@@ -146,6 +148,8 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await p.getByLabel("slovenščina").uncheck();
   await p.getByLabel("angleščina").check();
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "AI Builders", level: 1 })).toBeVisible();
   await tab(p, "Datoteke");
   await expect(p.getByTestId("dropzone")).toBeVisible();

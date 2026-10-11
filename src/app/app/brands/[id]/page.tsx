@@ -22,6 +22,7 @@ import { addDays, isoWeekday, todayIn } from "@/lib/dates";
 import { latestReviews, listApprovalLinks } from "@/server/reviews/service";
 import { ApprovalSection } from "./approval-section";
 import { listDesigns } from "@/server/design/service";
+import { brandReadiness } from "@/server/brands/readiness";
 import { DesignSection } from "./design-section";
 import { ModelSection } from "./model-section";
 import { listTextModels } from "@/server/brands/service";
@@ -66,8 +67,10 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
   const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
   const t = await getTranslations("Brands");
+  const ts = await getTranslations("Setup");
   const f = await getFormatter();
   const isOwner = org.role === "owner";
+  const ready = isOwner && !brand.archivedAt ? await brandReadiness(db, org, brand.id) : null;
   const rules = profile?.rules ?? { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] };
   const effective = await Promise.all(
     channels.map(async (c) => {
@@ -90,12 +93,24 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
           </>
         }
         actions={isOwner ? (
+          <div className="flex flex-wrap gap-2">
+          {!brand.archivedAt ? <Link href={`/app/brands/${brand.id}/setup`} className={buttonClass("secondary", "sm")}>{ts("open")}</Link> : null}
           <form action={archiveBrandAction}>
             <input type="hidden" name="brandId" value={brand.id} />
             <button type="submit" className={buttonClass("secondary", "sm")}><Archive aria-hidden className="size-4" />{t("archive")}</button>
           </form>
+          </div>
         ) : null}
       />
+
+      {ready && ready.score < 100 ? (
+        <Card className={`mb-6 grid gap-2 p-4 text-sm ${ready.missing.length ? "border-danger/50" : "border-signal/50"}`} data-testid="setup-notice">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span><strong>{ts("noticeTitle", { n: ready.score })}</strong> · {ready.missing.length ? ts("missingRequired", { list: ready.missing.map((m) => ts(`steps.${m}.short`)).join(", ") }) : ts("noticeRecommended")}</span>
+            <Link href={`/app/brands/${brand.id}/setup?step=${ready.next}`} className={buttonClass(ready.missing.length ? "primary" : "secondary", "sm")}>{ts("continue")}</Link>
+          </div>
+        </Card>
+      ) : null}
 
       {draft && isOwner && tab !== "profile" ? (
         <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 border-signal/50 p-4 text-sm" data-testid="draft-notice">

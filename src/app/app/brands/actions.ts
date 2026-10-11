@@ -16,6 +16,11 @@ import { bossQueue, getBoss } from "@/server/jobs/boss";
 export type ActionState = { error?: string; ok?: string } | undefined;
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+/** The setup wizard (TASK-055) posts the same forms with `returnTo` = its own step; only that brand's wizard is allowed. */
+const wizardReturn = (f: FormData, brandId: string) => {
+  const r = str(f, "returnTo");
+  return r.startsWith(`/app/brands/${brandId}/setup`) && !r.includes("//") ? r : null;
+};
 const optInt = (f: FormData, k: string) => (str(f, k) === "" ? undefined : Number(str(f, k)));
 const lines = (s: string) => s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const list = (s: string) => s.split(/[,\n]/).map((l) => l.trim()).filter(Boolean);
@@ -43,7 +48,8 @@ export async function createBrandAction(_p: ActionState, f: FormData): Promise<A
     return { error: errorCode(e) };
   }
   revalidatePath("/app/brands");
-  redirect(`/app/brands/${id}`);
+  // A new brand starts in the setup wizard (TASK-055).
+  redirect(`/app/brands/${id}/setup`);
 }
 
 /** Pillar lines: "Name | share | description". */
@@ -82,7 +88,7 @@ export async function saveProfileAction(_p: ActionState, f: FormData): Promise<A
       },
       note: str(f, "note") || undefined,
     });
-    revalidatePath(`/app/brands/${brandId}`);
+    revalidatePath(`/app/brands/${brandId}`, "layout");
     return { ok: `v${r.version}` };
   } catch (e) {
     return { error: errorCode(e) };
@@ -104,7 +110,7 @@ export async function addChannelAction(_p: ActionState, f: FormData): Promise<Ac
       allowedTypes: f.getAll("allowedTypes").map(String) as (typeof POST_TYPES)[number][],
       defaultPresetKey: str(f, "defaultPresetKey") || undefined,
     });
-    revalidatePath(`/app/brands/${brandId}`);
+    revalidatePath(`/app/brands/${brandId}`, "layout");
     return { ok: "channelAdded" };
   } catch (e) {
     return { error: errorCode(e) };
@@ -158,7 +164,7 @@ export async function deleteBrandFileAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const table = str(f, "table") === "asset" ? "asset" : "source";
   await deleteBrandFile(getDb(), getStorage(), ctx, table, str(f, "fileId")).catch(() => undefined);
-  revalidatePath(`/app/brands/${str(f, "brandId")}`);
+  revalidatePath(`/app/brands/${str(f, "brandId")}`, "layout");
 }
 
 /** Owner only (checked in the service): a partner logo's name (TASK-047). */
@@ -192,7 +198,9 @@ export async function requestDesignAction(f: FormData): Promise<void> {
   } catch (e) {
     error = e instanceof DesignError ? e.code : e instanceof z.ZodError ? "INVALID" : "FAILED";
   }
-  revalidatePath(`/app/brands/${brandId}`);
+  revalidatePath(`/app/brands/${brandId}`, "layout");
+  const back = wizardReturn(f, brandId);
+  if (back) redirect(`${back}${error ? `&designError=${error}` : ""}`);
   redirect(`/app/brands/${brandId}?tab=design${error ? `&designError=${error}` : ""}`);
 }
 

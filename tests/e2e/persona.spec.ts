@@ -47,6 +47,8 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await p.goto("/app/brands/new");
   await p.getByLabel("Ime", { exact: true }).fill("Mila AI");
   await p.getByRole("button", { name: "Ustvari" }).click();
+  // A new brand opens in the setup wizard (TASK-055); these tests go straight to the brand page.
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
   await expect(p.getByRole("heading", { name: "Mila AI", level: 1 })).toBeVisible();
   const tab = (name: string) => p.getByRole("navigation", { name: "Razdelki branda" }).getByRole("link", { name }).click();
   await tab("Persona");
