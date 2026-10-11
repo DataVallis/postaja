@@ -839,7 +839,28 @@
     "costsTitle": "Spend per brand",
     "costsHint": "This month in total {total} €.",
     "costCol": "This month",
-    "noBrandCost": "Plan imports and other"
+    "noBrandCost": "Plan imports and other",
+    "hero": "Today {n, plural, one {<a># post</a> is} other {<a># posts</a> are}} planned for {brands, plural, one {# brand} other {# brands}}.",
+    "heroEmpty": "Nothing planned today. <a>A free day.</a>",
+    "importPlan": "Import plan",
+    "openFeed": "Open the month's plan",
+    "value": {
+      "title": "This month with Postaja",
+      "posts": "Posts written this month",
+      "brands": "for {n, plural, one {# brand} other {# brands}}",
+      "images": "Graphics this month",
+      "imagesHint": "each in its brand's look",
+      "saved": "Time saved",
+      "savedHint": "estimate: {text} min per post, {image} min per graphic",
+      "worth": "Value of the work",
+      "worthHint": "estimate at €{rate}/h"
+    },
+    "noImage": "Image made on request",
+    "noChannels": "no channels",
+    "palette": "Brand colours",
+    "noDesign": "No visual identity yet",
+    "upcoming": "{n, plural, =0 {nothing planned} one {# post planned} other {# posts planned}}",
+    "next": "next {date}"
   },
   "PostsList": {
     "title": "Posts",
@@ -1066,7 +1087,8 @@
     "views": {
       "month": "Month",
       "week": "Week",
-      "day": "Day"
+      "day": "Day",
+      "feed": "Feed"
     },
     "time": "Time",
     "format": "Format",
@@ -1082,7 +1104,25 @@
     "downloadDay": "Download day (ZIP, {n, plural, one {# post} other {# posts}})",
     "show": "Show:",
     "showDefault": "Default (no published)",
-    "openPublished": "open"
+    "openPublished": "open",
+    "feed": {
+      "channelsLabel": "Channel",
+      "pickTitle": "Pick the channel whose feed you want to see",
+      "noChannels": "The brands have no channels yet.",
+      "prev": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month",
+      "imagesWeek": "Make images for the next 7 days ({n})",
+      "empty": "No posts planned for this channel this month.",
+      "counts": "{handle} · {n, plural, one {# post} other {# posts}} · {images} with an image, {planned} without",
+      "noImage": "Image made on request",
+      "hint": "Images are made when you ask — for one post, a week or the whole month. Until then the feed shows what is ready.",
+      "selected": "Selected post",
+      "noImageYet": "No image yet",
+      "makeImage": "Make the image",
+      "noText": "No text written yet.",
+      "openPost": "Open the post"
+    }
   },
   "Bulk": {
     "scope": "Scope",
@@ -1254,7 +1294,9 @@
       "cgp": "CGP",
       "examples": "{n, plural, =0 {No past post examples} one {# past post example} other {# past post examples}}",
       "logo": "Logo",
-      "font": "Brand font (optional)"
+      "font": "Brand font (optional)",
+      "have": "done",
+      "missing": "missing"
     },
     "examplesHint": "Upload a few images of past posts to Files for the best result — Claude sees them and derives the style; the image generator uses them as a reference.",
     "toFiles": "Open Files",
@@ -1310,7 +1352,15 @@
     "restoredTemplate": "Template “{name}” brought back from v{v}",
     "restoreTemplateLabel": "Bring back one template from this version",
     "restoreTemplate": "Bring back template",
-    "restoreHint": "The chosen template of this version comes into the current identity as a new version. No AI call, no cost."
+    "restoreHint": "The chosen template of this version comes into the current identity as a new version. No AI call, no cost.",
+    "lookCol": "Look",
+    "workingHint": "Usually takes 1–2 minutes. The page refreshes itself; you can also leave it.",
+    "steps": {
+      "read": "Reads the CGP, colours and your description",
+      "look": "Looks at the logo and past posts ({n})",
+      "draw": "Draws templates for every kind of post",
+      "check": "Checks that every template renders"
+    }
   },
   "Ideas": {
     "title": "Suggest ideas",

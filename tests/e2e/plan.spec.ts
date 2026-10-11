@@ -135,8 +135,14 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
 
   // Dashboard: today.
   await p.goto("/app");
-  await expect(p.getByTestId("today-posts").getByRole("row")).toHaveCount(2);
+  // TASK-056: today's posts as tiles (no images yet: they are made on request), the month's value, brand cards.
+  await expect(p.getByTestId("hero")).toContainText("Danes je v planu 1 objava za 1 brand.");
+  await expect(p.getByTestId("today-posts").getByRole("article")).toHaveCount(1);
   await expect(p.getByTestId("today-posts")).toContainText("Zjutraj objavimo to.");
+  await expect(p.getByTestId("today-posts")).toContainText("Slika nastane na klik");
+  await expect(p.getByTestId("value")).toContainText("Vrednost dela");
+  await expect(p.getByTestId("brand-cards")).toContainText("Inženirji");
+  await expect(p.getByTestId("brand-cards")).toContainText("instagram");
   // Today's goal per channel (TASK-020): the Instagram channel with its post of today; spend per brand.
   const goals = p.getByTestId("today-goals");
   await expect(goals.getByRole("row").nth(1)).toContainText("Inženirji");
@@ -145,6 +151,17 @@ test("plan: calendar, day and week views, moving a post, no slot, history, today
   await expect(p.getByTestId("brand-costs")).toContainText("Inženirji");
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("dashboard.png"), fullPage: true });
+
+  // TASK-056: the month as the channel's feed; the picked post on a phone with "make the image".
+  await p.goto("/app/plan?view=feed");
+  await p.getByTestId("feed-channels").getByRole("link", { name: "Inženirji · instagram" }).click();
+  await expect(p.getByTestId("feed-grid").getByRole("listitem")).not.toHaveCount(0);
+  await expect(p.getByTestId("feed-counts")).toContainText("brez slike");
+  await p.getByTestId("feed-grid").getByRole("link", { name: /Zjutraj objavimo to\./ }).click();
+  await expect(p.getByTestId("feed-phone")).toContainText("Zjutraj objavimo to.");
+  await expect(p.getByTestId("feed-phone").getByRole("link", { name: "Ustvari sliko" })).toBeVisible();
+  expect(await serious(p)).toEqual([]);
+  await p.screenshot({ path: info.outputPath("feed.png"), fullPage: true });
 
   // Phone: the grid becomes an agenda.
   await p.setViewportSize({ width: 390, height: 844 });

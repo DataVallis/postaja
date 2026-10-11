@@ -59,6 +59,7 @@
   --color-on-signal: var(--color-on-signal);
   --color-accent-text: var(--color-accent-text);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-serif), ui-serif, Georgia, serif;
 }
 
 body {
@@ -70,4 +71,13 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-signal);
   outline-offset: 2px;
+}
+
+/* TASK-056: a few words of a headline in the accent face (italic serif, signal colour). */
+.accent-words {
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-accent-text);
 }

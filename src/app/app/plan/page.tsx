@@ -10,10 +10,11 @@ import { PLATFORMS, POST_STATUSES, type PostStatus } from "@/server/db/schema";
 import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, unscheduledPosts, type PlanPost } from "@/server/posts/calendar";
 import { bulkCandidates, listBulkRuns } from "@/server/bulk/service";
 import { BulkRuns } from "./bulk-runs";
+import { FeedView } from "./feed-view";
 
 export const dynamic = "force-dynamic";
 
-type View = "month" | "week" | "day";
+type View = "month" | "week" | "day" | "feed";
 type Search = Record<string, string | string[] | undefined>;
 
 const SHORT: Record<string, string> = { instagram: "IG", facebook: "FB", linkedin: "IN", x: "X", tiktok: "TT", youtube: "YT", google_display: "GD" };
@@ -29,7 +30,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
   const today = todayIn();
-  const view: View = one("view") === "week" || one("view") === "day" ? (one("view") as View) : "month";
+  const view: View = one("view") === "week" || one("view") === "day" || one("view") === "feed" ? (one("view") as View) : "month";
   const anchor = isIsoDate(one("d")) ? one("d")! : today;
   const tab = one("tab") === "unscheduled" || one("tab") === "history" || one("tab") === "runs" ? one("tab")! : "calendar";
   const bulkError = one("bulkError");
@@ -43,10 +44,10 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const customShown = picked.length > 0 && (picked.length !== CALENDAR_DEFAULT_STATUSES.length || !CALENDAR_DEFAULT_STATUSES.every((x) => picked.includes(x)));
 
   const db = getDb();
-  const range = viewRange(view, anchor);
+  const range = viewRange(view === "feed" ? "month" : view, anchor);
   const [brandList, items, unscheduled, history, runs, dayTodo, dayImageTodo] = await Promise.all([
     listBrands(db, org),
-    tab === "calendar" ? calendarPosts(db, org, range.from, range.to, { ...f, statuses: shown }) : Promise.resolve([] as PlanPost[]),
+    tab === "calendar" && view !== "feed" ? calendarPosts(db, org, range.from, range.to, { ...f, statuses: shown }) : Promise.resolve([] as PlanPost[]),
     unscheduledPosts(db, org, f, tab === "unscheduled" ? 200 : 0),
     historyPosts(db, org, { ...f, page: tab === "history" ? page : 1 }),
     listBulkRuns(db, org),
@@ -93,6 +94,14 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
       <td className={td}><Badge tone={STATUS_TONE[p.status]} dot>{tp(`status.${p.status}`)}</Badge></td>
     </tr>
   ));
+  const viewNav = (
+    <nav aria-label={t("viewLabel")} className="inline-flex rounded-lg border border-line p-0.5">
+      {(["month", "week", "day", "feed"] as const).map((v) => (
+        <Link key={v} href={qs({ view: v })} aria-current={v === view ? "page" : undefined}
+          className={`rounded-md px-3 py-1 text-sm ${v === view ? "bg-raised font-medium text-fg" : "text-muted hover:text-fg"}`}>{t(`views.${v}`)}</Link>
+      ))}
+    </nav>
+  );
   const weekdays = viewRange("week", "2026-10-05").days.map((d) => day(d, { weekday: "short" }));
 
   return (
@@ -113,7 +122,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           <option value="">{t("allPlatforms")}</option>
           {PLATFORMS.filter((p) => p !== "google_display").map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        {tab === "calendar" ? (
+        {tab === "calendar" && view !== "feed" ? (
           <fieldset className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line px-3 py-1.5" data-testid="plan-show">
             <legend className="sr-only">{t("show")}</legend>
             <span aria-hidden className="text-sm text-muted">{t("show")}</span>
@@ -140,7 +149,10 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
       />
       {bulkError ? <p role="alert" className="mb-4 rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger">{tb.has(`errors.${bulkError}`) ? tb(`errors.${bulkError}`) : tb("errors.FAILED")}</p> : null}
 
-      {tab === "calendar" ? (
+      {tab === "calendar" && view === "feed" ? (
+        <FeedView db={db} org={org} anchor={anchor} today={today} brandId={f.brandId} platform={f.platform} postId={one("post")} href={(over) => qs(over)} views={viewNav} />
+      ) : null}
+      {tab === "calendar" && view !== "feed" ? (
         <section aria-labelledby="cal-h" className="grid gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -149,12 +161,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
               <Link href={qs({ d: stepAnchor(view, anchor, 1) })} className={buttonClass("secondary", "sm")} aria-label={t("next")}><ChevronRight aria-hidden className="size-4" /></Link>
               <h2 id="cal-h" className="ml-2 text-lg font-semibold first-letter:uppercase" data-testid="plan-title">{title}</h2>
             </div>
-            <nav aria-label={t("viewLabel")} className="inline-flex rounded-lg border border-line p-0.5">
-              {(["month", "week", "day"] as const).map((v) => (
-                <Link key={v} href={qs({ view: v })} aria-current={v === view ? "page" : undefined}
-                  className={`rounded-md px-3 py-1 text-sm ${v === view ? "bg-raised font-medium text-fg" : "text-muted hover:text-fg"}`}>{t(`views.${v}`)}</Link>
-              ))}
-            </nav>
+            {viewNav}
           </div>
 
           {view === "day" && (dayTodo.length || dayImageTodo.length) ? (

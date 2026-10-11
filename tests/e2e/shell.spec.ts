@@ -110,6 +110,7 @@ test("dashboard, posts and brands in the new frame; filters; theme and language 
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("dashboard-light.png"), fullPage: true });
   await p.getByRole("button", { name: /Jezik/ }).click();
-  await expect(p.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible();
+  // TASK-056: with brands the headline says what is planned today (here in English).
+  await expect(p.getByRole("heading", { level: 1 })).toContainText(/today/i);
   await ctx.close();
 });
