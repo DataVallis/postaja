@@ -1,0 +1,251 @@
+import { adNetworkInfo, listAdSets } from "@/server/ads/service";
+import { AdsSection } from "./ads-section";
+import { Archive } from "lucide-react";
+import Link from "next/link";
+import { getFormatter, getTranslations } from "next-intl/server";
+import { buttonClass, Card, DataTable, PageHeader, Tabs, td } from "@/components/ui";
+import { notFound } from "next/navigation";
+import { effectiveRules } from "@/lib/rules";
+import { requireOrgPage } from "@/server/auth/require";
+import { listBrandFiles } from "@/server/brands/files";
+import { BrandError, getBrandDetail, listProfileVersions } from "@/server/brands/service";
+import { getDb } from "@/server/db/client";
+import { getPlatformRuleSet, listPlatformRules, listPresets } from "@/server/rules/repo";
+import { archiveBrandAction, removeChannelAction } from "../actions";
+import { ChannelEdit, ChannelForm, ProfileForm } from "../forms";
+import { FilesSection } from "./files-section";
+import { PostsSection } from "./posts-section";
+import { listPosts } from "@/server/posts/generate";
+import { pendingDraft } from "@/server/mcp/service";
+import { bulkCandidates } from "@/server/bulk/service";
+import { addDays, isoWeekday, todayIn } from "@/lib/dates";
+import { latestReviews, listApprovalLinks } from "@/server/reviews/service";
+import { ApprovalSection } from "./approval-section";
+import { listDesigns } from "@/server/design/service";
+import { brandReadiness } from "@/server/brands/readiness";
+import { orgFeatures } from "@/server/billing/features";
+import { UpgradeCard } from "@/components/upgrade-card";
+import { DesignSection } from "./design-section";
+import { ModelSection } from "./model-section";
+import { listTextModels } from "@/server/brands/service";
+import { dnaEstimate, getBrandPersona, passportEstimate } from "@/server/personas/service";
+import { PersonaSection } from "./persona-section";
+import { CompetitorsSection } from "./competitors-section";
+import { findEstimate, listCompetitors } from "@/server/competitors/service";
+import { analyzeEstimate, listItems, listReports } from "@/server/competitors/analysis";
+import { microToUsd } from "@/lib/money/usd";
+import { postsWithVideo } from "@/server/video/media";
+
+export const dynamic = "force-dynamic";
+
+const TABS = ["posts", "ads", "persona", "competitors", "files", "design", "profile", "channels", "versions"] as const;
+type Tab = (typeof TABS)[number];
+
+export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string; competitorError?: string; report?: string; ideaHint?: string }> }) {
+  const { org } = await requireOrgPage();
+  const { id } = await params;
+  const sp = await searchParams;
+  const raw = sp.tab;
+  const tab: Tab = (TABS as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "posts";
+  const db = getDb();
+  const detail = await getBrandDetail(db, org, id).catch((e) => {
+    if (e instanceof BrandError && e.code === "NOT_FOUND") notFound();
+    throw e;
+  });
+  const { brand, profile, channels } = detail;
+  const [versions, presets, platformRows, files, recentPosts, draft, designs] = await Promise.all([listProfileVersions(db, org, id), listPresets(db), listPlatformRules(db), listBrandFiles(db, org, id), listPosts(db, org, id, 10), pendingDraft(db, org, id), listDesigns(db, org, id)]);
+  const [adNets, adSetList, personaData, competitorData] = await Promise.all([adNetworkInfo(db), listAdSets(db, org, id), getBrandPersona(db, org, id), listCompetitors(db, org, id)]);
+  const [findCost, analyzeCost, competitorItemsMap, competitorReportList] = tab === "competitors"
+    ? await Promise.all([findEstimate(db, org, id).catch(() => null), analyzeEstimate(db, org, id).catch(() => null), listItems(db, org, id), listReports(db, org, id)])
+    : [null, null, new Map(), []];
+  const withPersonaVideo = tab === "persona" ? await postsWithVideo(db, org, recentPosts.map((x) => x.id), "persona") : new Set<string>();
+  const [dnaCost, passport] = tab === "persona"
+    ? await Promise.all([personaData ? null : dnaEstimate(db, id), personaData ? passportEstimate(db, org, personaData.persona.id) : null])
+    : [null, null];
+  const approvalLinkList = tab === "posts" ? await listApprovalLinks(db, org, id) : [];
+  const postReviewMap = tab === "posts" ? await latestReviews(db, org, recentPosts.map((p) => p.id)) : new Map();
+  const today = todayIn();
+  const nextMonday = addDays(today, ((8 - isoWeekday(today)) % 7) || 7);
+  const plannedTodo = (await bulkCandidates(db, org, { kind: "brand", brandId: id, from: todayIn(), to: null })).length;
+  const clickable = new Map(platformRows.map((r) => [r.platform, r.linksClickable]));
+  const t = await getTranslations("Brands");
+  const ts = await getTranslations("Setup");
+  const f = await getFormatter();
+  const isOwner = org.role === "owner";
+  const ready = isOwner && !brand.archivedAt ? await brandReadiness(db, org, brand.id) : null;
+  const features = await orgFeatures(db, org.orgId);
+  const rules = profile?.rules ?? { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] };
+  const effective = await Promise.all(
+    channels.map(async (c) => {
+      const platform = await getPlatformRuleSet(db, c.platform);
+      return { id: c.id, rules: effectiveRules(platform, c.rules, rules) };
+    }),
+  );
+  const base = `/app/brands/${brand.id}`;
+  const href = (k: Tab) => (k === "posts" ? base : `${base}?tab=${k}`);
+  return (
+    <>
+      <PageHeader
+        eyebrow={<Link href="/app/brands" className="hover:text-fg hover:underline">{t("title")}</Link>}
+        title={brand.name}
+        description={
+          <>
+            /{brand.slug}
+            {brand.website ? <> · <a href={brand.website} rel="noopener noreferrer" target="_blank" className="underline underline-offset-4">{brand.website.replace(/^https?:\/\//, "")}</a></> : null}
+            {" · "}{t("currentVersion", { v: profile?.version ?? 0 })}
+          </>
+        }
+        actions={isOwner ? (
+          <div className="flex flex-wrap gap-2">
+          {!brand.archivedAt ? <Link href={`/app/brands/${brand.id}/setup`} className={buttonClass("secondary", "sm")}>{ts("open")}</Link> : null}
+          <form action={archiveBrandAction}>
+            <input type="hidden" name="brandId" value={brand.id} />
+            <button type="submit" className={buttonClass("secondary", "sm")}><Archive aria-hidden className="size-4" />{t("archive")}</button>
+          </form>
+          </div>
+        ) : null}
+      />
+
+      {ready && ready.score < 100 ? (
+        <Card className={`mb-6 grid gap-2 p-4 text-sm ${ready.missing.length ? "border-danger/50" : "border-signal/50"}`} data-testid="setup-notice">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span><strong>{ts("noticeTitle", { n: ready.score })}</strong> · {ready.missing.length ? ts("missingRequired", { list: ready.missing.map((m) => ts(`steps.${m}.short`)).join(", ") }) : ts("noticeRecommended")}</span>
+            <Link href={`/app/brands/${brand.id}/setup?step=${ready.next}`} className={buttonClass(ready.missing.length ? "primary" : "secondary", "sm")}>{ts("continue")}</Link>
+          </div>
+        </Card>
+      ) : null}
+
+      {draft && isOwner && tab !== "profile" ? (
+        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 border-signal/50 p-4 text-sm" data-testid="draft-notice">
+          <span><strong>{t("cgpDraft.title")}</strong> · {t("cgpDraft.waiting")}</span>
+          <Link href={href("profile")} className={buttonClass("primary", "sm")}>{t("cgpDraft.open")}</Link>
+        </Card>
+      ) : null}
+
+      <Tabs
+        label={t("tabsLabel")}
+        defaultKey="posts"
+        tabs={[
+          { key: "posts", label: t("tabs.posts"), href: href("posts"), count: recentPosts.length },
+          { key: "ads", label: t("tabs.ads"), href: href("ads"), count: adSetList.length },
+          { key: "persona", label: t("tabs.persona"), href: href("persona"), count: personaData ? personaData.images.length : undefined },
+          { key: "competitors", label: t("tabs.competitors"), href: href("competitors"), count: competitorData.competitors.filter((c) => c.status === "kept").length },
+          { key: "files", label: t("tabs.files"), href: href("files"), count: files.sources.length + files.logos.length + files.fonts.length },
+          { key: "design", label: t("tabs.design"), href: href("design"), count: designs.filter((d) => d.status === "ready").length },
+          { key: "profile", label: t("tabs.profile"), href: href("profile") },
+          { key: "channels", label: t("tabs.channels"), href: href("channels"), count: channels.length },
+          { key: "versions", label: t("tabs.versions"), href: href("versions"), count: versions.length },
+        ]}
+      />
+
+      {tab === "posts" ? (
+        <PostsSection brandId={brand.id} archived={brand.archivedAt !== null} posts={recentPosts} channels={channels.map((c) => ({ id: c.id, label: `${c.platform} · ${c.handle}` }))} channelsHref={href("channels")} plannedTodo={brand.archivedAt ? 0 : plannedTodo} ideaError={sp.ideaError} ideaHint={sp.ideaHint} reviews={postReviewMap} />
+      ) : null}
+      {tab === "posts" ? (
+        <div className="mt-6"><ApprovalSection brandId={brand.id} links={approvalLinkList} from={nextMonday} to={addDays(nextMonday, 6)} archived={brand.archivedAt !== null} now={new Date(`${today}T00:00:00Z`).getTime()} /></div>
+      ) : null}
+
+      {tab === "ads" && !features.has("ads") ? <UpgradeCard feature="ads" isOwner={isOwner} /> : null}
+      {tab === "ads" && features.has("ads") ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
+      {tab === "persona" && !features.has("persona") ? <UpgradeCard feature="persona" isOwner={isOwner} /> : null}
+      {tab === "persona" && features.has("persona") ? (
+        <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
+          data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport}
+          posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: withPersonaVideo.has(x.id) }))} />
+      ) : null}
+      {tab === "competitors" && !features.has("research") ? <UpgradeCard feature="research" isOwner={isOwner} /> : null}
+      {tab === "competitors" && features.has("research") ? (
+        <CompetitorsSection brandId={brand.id} list={competitorData.competitors} run={competitorData.run} archived={brand.archivedAt !== null} error={sp.competitorError} maxCost={findCost === null ? "—" : `${microToUsd(findCost)} €`}
+          analyzeCost={analyzeCost === null ? "—" : `${microToUsd(analyzeCost)} €`} items={competitorItemsMap} reports={competitorReportList} reportId={sp.report} isOwner={isOwner} />
+      ) : null}
+      {tab === "files" ? <FilesSection brandId={brand.id} files={files} isOwner={isOwner} archived={brand.archivedAt !== null} languages={brand.languages} /> : null}
+
+      {tab === "design" ? (
+        <DesignSection
+          brandId={brand.id}
+          designs={designs}
+          currentId={brand.currentDesignId}
+          isOwner={isOwner}
+          archived={brand.archivedAt !== null}
+          inputs={{ cgp: !!profile?.cgp.trim(), examples: files.sources.filter((s) => s.kind === "image").length, logo: files.logos.length > 0, font: files.fonts.length > 0 }}
+          shape={sp.shape === "square" || sp.shape === "landscape" ? sp.shape : "portrait"}
+          error={sp.designError}
+          filesHref={href("files")}
+        />
+      ) : null}
+
+      {tab === "profile" ? (
+        <section aria-labelledby="profile-h">
+          <h2 id="profile-h" className="sr-only">{t("profile")}</h2>
+          <ModelSection brandId={brand.id} models={await listTextModels(db)} current={brand.textModelId} isOwner={isOwner} saved={sp.model === "saved"} />
+          <ProfileForm
+            brandId={brand.id}
+            readOnly={!isOwner}
+            cgpSources={files.sources.filter((s) => s.kind === "pdf" || s.kind === "docx" || s.kind === "text").map((s) => ({ id: s.id, filename: s.filename }))}
+            cgp={profile?.cgp ?? ""}
+            cgpDraft={draft ? { id: draft.id, text: draft.text, note: draft.note, when: f.dateTime(draft.createdAt, { dateStyle: "medium", timeStyle: "short" }) } : null}
+            pillarsText={(profile?.pillars ?? []).map((p) => `${p.name} | ${p.share}${p.description ? ` | ${p.description}` : ""}`).join("\n")}
+            rules={rules}
+            visual={profile?.visual ?? { colors: {}, imageStyle: "", negativePrompt: "" }}
+          />
+        </section>
+      ) : null}
+
+      {tab === "channels" ? (
+        <section aria-labelledby="channels-h" className="grid gap-6">
+          <h2 id="channels-h" className="sr-only">{t("channels")}</h2>
+          {channels.length === 0 ? <p className="text-muted">{t("noChannels")}</p> : null}
+          <ul className="grid gap-3" data-testid="channels">
+            {channels.map((c) => {
+              const r = effective.find((e) => e.id === c.id)!.rules;
+              return (
+                <li key={c.id}>
+                  <Card className="grid gap-1 p-4 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <strong>{c.platform} · {c.handle}</strong>
+                      {isOwner ? (
+                        <form action={removeChannelAction}>
+                          <input type="hidden" name="brandId" value={brand.id} />
+                          <input type="hidden" name="channelId" value={c.id} />
+                          <button type="submit" className={buttonClass("ghost", "sm")}>{t("remove")}</button>
+                        </form>
+                      ) : null}
+                    </div>
+                    <p className="text-muted">
+                      {t(`lang.${c.language as "sl"}`)} · {t("perDay", { n: c.goal.postsPerDay })} · {c.goal.weekdays.map((d) => t(`days.${d as 1}`)).join(" ")} · {c.allowedTypes.map((ty) => t(`types.${ty}`)).join(", ")}
+                      {c.defaultPresetKey ? ` · ${c.defaultPresetKey}` : ""}
+                    </p>
+                    {!brand.languages.includes(c.language) ? <p role="alert" className="text-warn">{t("channelLanguageMismatch", { lang: t(`lang.${c.language as "sl"}`) })}</p> : null}
+                    <p data-testid={`effective-${c.platform}`}>
+                      {t("effective")}: {t("chars", { n: r.captionMax ?? "∞" })} · {t("hashtags", { n: r.hashtagsMax ?? "∞" })} · {r.linksAllowed === false ? t("noLinks") : clickable.get(c.platform) === false ? t("linksNotClickable") : t("linksOk")}
+                    </p>
+                    {isOwner ? (
+                      <ChannelEdit brandId={brand.id} languages={brand.languages} channel={{ id: c.id, platform: c.platform, handle: c.handle, language: c.language, goal: c.goal, rules: c.rules, allowedTypes: c.allowedTypes, defaultPresetKey: c.defaultPresetKey }}
+                        presets={presets.filter((p) => p.enabled).map((p) => ({ key: p.key, platform: p.platform, width: p.width, height: p.height, media: p.media }))} />
+                    ) : null}
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+          {isOwner ? <Card className="p-5"><ChannelForm brandId={brand.id} languages={brand.languages} presets={presets.filter((p) => p.enabled).map((p) => ({ key: p.key, platform: p.platform, width: p.width, height: p.height, media: p.media }))} /></Card> : null}
+        </section>
+      ) : null}
+
+      {tab === "versions" ? (
+        <section aria-labelledby="versions-h">
+          <h2 id="versions-h" className="sr-only">{t("versions")}</h2>
+          <DataTable testId="versions" head={[t("versionCol"), t("savedAt"), t("noteCol")]}>
+            {versions.map((v) => (
+              <tr key={v.id}>
+                <td className={`${td} font-medium`}>v{v.version}</td>
+                <td className={`${td} text-muted`}>{f.dateTime(v.createdAt, { dateStyle: "medium", timeStyle: "short" })}</td>
+                <td className={td}>{v.note ? (v.note === "created" ? t("createdNote") : v.note) : "—"}</td>
+              </tr>
+            ))}
+          </DataTable>
+        </section>
+      ) : null}
+    </>
+  );
+}

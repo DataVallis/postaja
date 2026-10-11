@@ -75,6 +75,7 @@ Rules:
   not yet exercised on the target) · **Planned** (spec/ADR only). Never label something Live without proof.
 - Docs describe **reality**, not intentions. A rule that is no longer true is deleted or corrected.
 - Language: code, specs, commits, PRs and docs in English; conversation with the owner in <owner language>.
+  Exception: the customer user guide (`docs/guides/user/<locale>/`) is written in the customers' language (Slovenian first).
 
 ---
 
@@ -167,7 +168,10 @@ E2E + accessibility (critical journeys, both themes, desktop + mobile) · domain
 
 Every task updates, in the same PR:
 - `docs/technical/<chapter>.md` for each area it changed (follow the maintenance map in `docs/technical/README.md`);
-- `docs/guides/*` when user- or owner-visible behaviour changed;
+- `docs/guides/*` when user- or owner-visible behaviour changed — in particular the **customer user guide**
+  `docs/guides/user/sl/*.md` (shown in the app under Pomoč): every new or changed screen, button, limit or price a
+  customer sees is described there in the same PR, with the UI's exact labels. A PR that changes the UI without it is
+  not done;
 - `docs/CHEATSHEET.md` when URLs, hosts, commands, env var names or secret locations changed;
 - `.env.example` for every new env var (name only);
 - `docs/tasks/TASK-XXX.feedback.md` with real outputs and deliberate breaks;
@@ -181,6 +185,13 @@ adds a change-log line and rebuilds the artefact.
 
 Facts that change a published document (whitepaper, pitch) are logged in a `CORRECTIONS.md` (exact old → new text)
 and applied in one pass at the end of the phase.
+
+---
+
+### No silent loss (owner rule, ADR-062)
+Nothing a user made — or paid an AI call for — disappears unless the user deletes it. "New", "again", "regenerate",
+"correct" and re-imports **add a version**; the earlier one stays reachable (restore or delete). Deleting is a
+separate, confirmed action. Code review checks every `delete`/overwrite of generated content against this rule.
 
 ---
 

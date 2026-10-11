@@ -63,15 +63,21 @@ Paste 3–10 posts that are exactly how we want to sound (and why each one is go
 
 ## Persona DNA (only for AI influencer brands)
 
+DNA framework (in English; Postaja can also fill it in from a rough description):
+
 - Name / handle:
-- Age (apparent):
-- Face: shape, eyes (color, shape), eyebrows, nose, lips, distinctive marks
-- Hair: color, length, texture, usual styles
-- Skin: tone, freckles, etc.
-- Body: height impression, build
-- Signature style: outfits, colors, accessories, makeup
-- Typical locations / settings:
-- Personality: 3–5 traits, how she talks, humour
-- Voice (for video): pitch, pace, accent, language
-- Never: (poses, outfits, topics, settings)
-- Passport images: 3–10 consistent images (front, 3/4, profile, smiling, neutral); mark one as primary.
+
+- Gender:
+- Age:
+- Ethnicity / Skin Tone:
+- Hair Style:
+- Hair Colour:
+- Clothing Style:
+- Mood / Emotion:
+- Environment / Setting:
+- Camera Angle:
+- Pose / Action:
+- Lighting:
+- Style / Medium:
+- Extra Notes: (distinctive features that must always be visible)
+- Passport images: 3–10 consistent images (front, 3/4, profile, smiling, full body); mark one as primary.

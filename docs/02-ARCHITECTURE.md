@@ -13,7 +13,7 @@ Decisions referenced as ADR-XXX live in `03-DECISIONS.md`.
 | UI | Tailwind CSS + shadcn/ui, design tokens, next-intl (sl, en) |
 | DB | PostgreSQL 16 + pgvector (ADR-003) |
 | ORM / migrations | Drizzle ORM + drizzle-kit |
-| Auth | Better Auth — email/password + magic link, **organization** plugin, **admin** plugin (ADR-004) |
+| Auth | Better Auth — magic link, **organization** plugin; super admin as `user.role` (ADR-004, ADR-028) |
 | Background jobs | pg-boss on Postgres, separate `worker` process from the same image (ADR-007) |
 | LLM | Anthropic Claude API behind an `llm` adapter; JSON output validated with zod (ADR-010) |
 | Images / video | fal.ai (`@fal-ai/client`) queue API + webhooks behind a `media` adapter; model registry (ADR-011) |
@@ -34,7 +34,7 @@ Decisions referenced as ADR-XXX live in `03-DECISIONS.md`.
 ## 2. Components
 
 ```
-Browser
+Browser                 Claude (claude.ai / Claude Code) ── MCP over HTTPS + OAuth 2.1 ──► web /api/mcp (ADR-038)
   │ HTTPS
 kamal-proxy (TLS)
   │
@@ -59,7 +59,7 @@ Postgres is never exposed publicly (internal Docker network only).
 
 ## 3. Multi-tenancy (ADR-005)
 
-- Shared database. Every tenant table has `org_id uuid not null` (FK, indexed).
+- Shared database. Every tenant table has `org_id text not null` (FK to `organization.id`, indexed) — Better Auth ids are text (ADR-029).
 - Active organization comes from the Better Auth session; membership and role are verified server-side on **every** request. `org_id` is never taken from the client.
 - All tenant data access goes through `src/server/db/scoped.ts` (`forOrg(ctx)`), which adds `org_id` to every query and every insert.
 - Super admin: `user.role = 'superadmin'` (admin plugin). `/admin` has its own layout and guard; every action writes `audit_log`.
@@ -127,13 +127,13 @@ Job chain per post (pg-boss, singleton key `post:<id>:<step>` for idempotency):
 - Every rendered asset is validated against its `format_presets` row (exact width × height, bytes, duration) before `ready`.
 - "Clean" assets (`image_clean`, `video_clean`) are kept without overlays so text edits, animation and recompose never re-generate.
 
-### 5.1 Brand ingestion jobs
-1. `source.extract` (per source) — by kind (see §1 Brand ingestion); store `extract`; images also get palette (sharp stats) and a vision description.
-   Sources are wrapped as quoted data in every prompt; instructions inside them are ignored (prompt-injection guard, tested with a fixture).
-2. `brand.synthesize` — when all sources of a batch are extracted: Claude gets the current profile (if any) + extracts → returns
-   zod-validated `{fields, source_refs, conflicts, plan_like_sources}` → `brand_profile_proposals` row.
-3. Owner accepts in UI → new `brand_profile_versions` row; confirmed assets copied to `brand_assets`.
-4. Phase 2: `source.chunk` → `brand_knowledge_chunks` with embeddings; generation retrieves top-k by post topic.
+### 5.1 Brand materials for generation (ADR-035 — no CGP synthesis)
+1. Material text is read **at upload** (TASK-009, ADR-039): PDF (unpdf), DOCX/XLSX/PPTX (in-house over the safe unzip), TXT/MD/CSV → `brand_sources.extract = {text, chars}` (≤ 300k chars), `status` extracted/failed; older rows are read on the next generation.
+   Later: images get palette (sharp stats) and a vision description for use as references.
+   Materials are wrapped as quoted data in every prompt; instructions inside them are ignored (prompt-injection guard, tested with a fixture).
+2. Generation uses the owner's CGP version + rules + material text; the CGP wins on conflicts. All material text when it fits 60k characters, otherwise BM25 over paragraph chunks (diacritics folded) picks the passages matching the brief (`src/server/posts/retrieve.ts`).
+3. Phase 2: embeddings (ADR-008) can replace the lexical ranking without changing the stored text.
+(The former `brand.synthesize` / `brand_profile_proposals` flow is dropped.)
 
 ### 5.1a Rule engine (all post types)
 - `src/server/rules/` — pure functions: `effectiveRules(platformRules, channelRules, brandRules)` (most strict wins) and
@@ -203,9 +203,9 @@ Persona posts add the DNA block and scene description; passport images go to the
 | Env | Host | Notes |
 |---|---|---|
 | local | docker compose: Postgres+pgvector, MinIO (S3 stand-in) | `pnpm dev` + `pnpm worker` |
-| dev | Hetzner CX22 (shared at start), `dev-postaja.inzenirji.si` | auto-deploy on merge to `dev` |
+| dev | Owner's Hetzner VM (4 vCPU / 8 GB), shared with other apps (ADR-025), `dev-postaja.inzenirji.si` | auto-deploy on merge to `dev` |
 | uat | same VM, separate Kamal destination + DB | when there is a second user |
-| prod | separate Hetzner VM (or the same CX at start, decided before launch), `postaja.inzenirji.si` | manual deploy from `main` |
+| prod | same Hetzner VM as dev (ADR-084), `peron.postaja.eu`, destination `prod`, database `postaja-prod-db` | manual deploy from `main` (workflow "Deploy prod") |
 
 Worker sizing: video + LibreOffice need RAM; start on CX32 (8 GB) for the host running `worker`, or move `worker` to its own VM when video load grows.
 
@@ -229,9 +229,12 @@ EMBEDDINGS_PROVIDER / EMBEDDINGS_API_KEY
 FAL_KEY
 META_AD_LIBRARY_TOKEN        # competitor ads (phase 1b)
 S3_ENDPOINT / S3_REGION / S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY
-EMAIL_PROVIDER_API_KEY / EMAIL_FROM
+SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / EMAIL_FROM   # ADR-028
 SUPERADMIN_EMAILS            # bootstrap only: these emails get role superadmin on first login
 SENTRY_DSN                   # optional
+STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET   # payments (TASK-036, ADR-073); empty = online payment off
+STRIPE_TAX                   # "1" when Stripe Tax is on in the Stripe account
+STRIPE_API_BASE              # tests only: the Stripe stand-in
 ```
 
 ---
@@ -245,6 +248,7 @@ SENTRY_DSN                   # optional
 - Brand sources: office files processed only in the worker, LibreOffice in a sandboxed process without network; macros never executed; zip-bomb limits on DOCX/XLSX/PPTX.
 - URL sources: server-side fetch with SSRF guard (no private IPs, no redirects to them), size and time limits.
 - Prompt injection: source content always passed as quoted data; synthesis output is a proposal the owner must accept.
+- MCP (ADR-038): OAuth codes only to Claude's callbacks; JWT access tokens audience-bound to `/api/mcp`, scope `postaja`, verified against the local JWKS, plus a live consent per request; org re-resolved per request; CGP from Claude is only a draft; tool calls logged without arguments.
 - No prompts, captions, emails or tokens in logs beyond IDs; provider errors logged without payloads.
 - BYOK keys (phase 2): encrypted at rest (AES-GCM, key from env), never returned to the client.
 

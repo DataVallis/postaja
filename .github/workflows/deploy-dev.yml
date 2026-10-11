@@ -1,0 +1,72 @@
+name: Deploy dev
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      setup:
+        description: "First run on a host: set kamal-proxy ports (127.0.0.1:8080) and run kamal setup"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Push deploys are off until TASK-002 is done (repo variable DEPLOY_DEV_ENABLED=true). Manual runs always allowed on dev.
+    if: github.ref == 'refs/heads/dev' && (github.event_name == 'workflow_dispatch' || vars.DEPLOY_DEV_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    environment: dev
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DEV_HOST: ${{ vars.DEV_HOST }}
+      KAMAL_REGISTRY_USERNAME: ${{ github.actor }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      FAL_KEY: ${{ secrets.FAL_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      SUPERADMIN_EMAILS: ${{ vars.SUPERADMIN_EMAILS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Install Kamal
+        run: gem install kamal -v "~> 2.7" --no-document
+      - uses: docker/setup-buildx-action@v3
+      - name: SSH key and pinned host key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEV_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: First-time setup (proxy behind host nginx, accessories, app)
+        if: github.event_name == 'workflow_dispatch' && inputs.setup
+        run: |
+          kamal proxy boot_config set --http-port 8080 --https-port 8443 --publish-host-ip 127.0.0.1 -d dev
+          kamal setup -d dev
+      - name: Deploy
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.setup) }}
+        run: kamal deploy -d dev
+      - name: Smoke check
+        run: |
+          for i in $(seq 1 20); do
+            body=$(curl -fsS https://dev-postaja.inzenirji.si/api/health || true)
+            echo "$body" | grep -q "\"sha\":\"${GITHUB_SHA}\"" && break
+            sleep 5
+          done
+          echo "$body"
+          echo "$body" | grep -q "\"sha\":\"${GITHUB_SHA}\"" && echo "$body" | grep -q '"db":"ok"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://dev-postaja.inzenirji.si/)" = "200"

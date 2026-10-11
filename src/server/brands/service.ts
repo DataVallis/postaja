@@ -1,0 +1,239 @@
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import type { z } from "zod";
+import type { Db } from "../db/client";
+import { brandProfileVersions, brands, cgpDrafts, channels, formatPresets, modelRegistry, orgSettings } from "../db/schema";
+import type { OrgContext } from "../tenancy/context";
+import { forOrg } from "../tenancy/scoped";
+import { slugify } from "@/lib/slug";
+import { brandInput, channelInput, LANGUAGES, profileInput } from "./schemas";
+
+export class BrandError extends Error {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_FOUND" | "LIMIT_REACHED" | "DUPLICATE" | "PRESET_MISMATCH" | "ARCHIVED" | "LANGUAGE_NOT_IN_BRAND") {
+    super(code);
+  }
+}
+
+/** Brand configuration is the owner's job (spec §2); editors read it and work on content. */
+function requireOwner(ctx: OrgContext) {
+  if (ctx.role !== "owner") throw new BrandError("FORBIDDEN");
+}
+
+const isUniqueViolation = (e: unknown) => {
+  const err = e as { code?: string; cause?: { code?: string } };
+  return err?.code === "23505" || err?.cause?.code === "23505";
+};
+
+const EMPTY_PROFILE = {
+  cgp: "",
+  rules: { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] },
+  pillars: [],
+  visual: { colors: {}, imageStyle: "", negativePrompt: "" },
+};
+
+/** Loads a brand of the context's org or throws NOT_FOUND (also for another org's id). */
+async function ownBrand(db: Db, ctx: OrgContext, brandId: string) {
+  const [b] = await forOrg(db, ctx).select(brands, eq(brands.id, brandId));
+  if (!b) throw new BrandError("NOT_FOUND");
+  return b as typeof brands.$inferSelect;
+}
+
+/** The plan's brand limit counts brands that are not archived. */
+async function assertBrandRoom(db: Db, ctx: OrgContext) {
+  const [settings] = await db.select({ limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, ctx.orgId));
+  const max = settings?.limits?.brands;
+  if (max === undefined) return;
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(brands).where(and(eq(brands.orgId, ctx.orgId), isNull(brands.archivedAt)));
+  if (n >= max) throw new BrandError("LIMIT_REACHED");
+}
+
+export async function createBrand(db: Db, ctx: OrgContext, input: z.input<typeof brandInput>) {
+  requireOwner(ctx);
+  const data = brandInput.parse(input);
+  await assertBrandRoom(db, ctx);
+  const id = crypto.randomUUID();
+  try {
+    await db.transaction(async (tx) => {
+      const t = forOrg(tx as unknown as Db, ctx);
+      await t.insert(brands, { id, ...data, website: data.website ?? null });
+      const vId = crypto.randomUUID();
+      await t.insert(brandProfileVersions, { id: vId, brandId: id, version: 1, ...EMPTY_PROFILE, createdBy: ctx.userId, note: "created" });
+      await t.update(brands, { currentProfileVersionId: vId }, eq(brands.id, id));
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) throw new BrandError("DUPLICATE");
+    throw e;
+  }
+  return { id };
+}
+
+/**
+ * A brand from just a name (MCP, plan import): the short name is made from it (`slugify`, numbered when taken) and a
+ * bare website gets https://. Same checks as createBrand.
+ */
+export async function createBrandNamed(db: Db, ctx: OrgContext, input: { name: string; website?: string; languages?: (typeof LANGUAGES)[number][] }) {
+  const base = slugify(input.name) || "brand";
+  const taken = new Set(((await forOrg(db, ctx).select(brands)) as (typeof brands.$inferSelect)[]).map((b) => b.slug));
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base.slice(0, 44)}-${n}`;
+  const website = input.website ? (/^https?:\/\//i.test(input.website) ? input.website : `https://${input.website}`) : undefined;
+  const { id } = await createBrand(db, ctx, { name: input.name.trim(), slug, website, languages: input.languages ?? ["sl"] });
+  return { id, slug };
+}
+
+export async function updateBrand(db: Db, ctx: OrgContext, brandId: string, input: z.input<typeof brandInput>) {
+  requireOwner(ctx);
+  const data = brandInput.parse(input);
+  await ownBrand(db, ctx, brandId);
+  try {
+    const rows = await forOrg(db, ctx).update(brands, { ...data, website: data.website ?? null, updatedAt: new Date() }, eq(brands.id, brandId));
+    return rows[0];
+  } catch (e) {
+    if (isUniqueViolation(e)) throw new BrandError("DUPLICATE");
+    throw e;
+  }
+}
+
+export async function setBrandArchived(db: Db, ctx: OrgContext, brandId: string, archived: boolean) {
+  requireOwner(ctx);
+  const b = await ownBrand(db, ctx, brandId);
+  // Bringing a brand back counts against the plan's brand limit like a new one (TASK-028).
+  if (!archived && b.archivedAt) await assertBrandRoom(db, ctx);
+  await forOrg(db, ctx).update(brands, { archivedAt: archived ? new Date() : null, updatedAt: new Date() }, eq(brands.id, brandId));
+}
+
+/**
+ * Saves the CGP/profile as a NEW version (spec §4 versioning). The brand row is locked so concurrent saves
+ * get consecutive version numbers; old versions are never changed.
+ */
+export async function saveProfile(db: Db, ctx: OrgContext, brandId: string, input: z.input<typeof profileInput>) {
+  requireOwner(ctx);
+  const data = profileInput.parse(input);
+  return db.transaction(async (tx) => {
+    const [b] = await tx
+      .select({ id: brands.id, archivedAt: brands.archivedAt })
+      .from(brands)
+      .where(and(eq(brands.id, brandId), eq(brands.orgId, ctx.orgId)))
+      .for("update");
+    if (!b) throw new BrandError("NOT_FOUND");
+    if (b.archivedAt) throw new BrandError("ARCHIVED");
+    const [{ max }] = await tx
+      .select({ max: sql<number>`coalesce(max(${brandProfileVersions.version}), 0)::int` })
+      .from(brandProfileVersions)
+      .where(eq(brandProfileVersions.brandId, brandId));
+    const id = crypto.randomUUID();
+    const t = forOrg(tx as unknown as Db, ctx);
+    await t.insert(brandProfileVersions, { id, brandId, version: max + 1, ...data, createdBy: ctx.userId });
+    await t.update(brands, { currentProfileVersionId: id, updatedAt: new Date() }, eq(brands.id, brandId));
+    // A saved version settles any CGP draft Claude sent for this brand (ADR-038).
+    await t.update(cgpDrafts, { status: "used", resolvedAt: new Date() }, and(eq(cgpDrafts.brandId, brandId), eq(cgpDrafts.status, "pending")));
+    return { id, version: max + 1 };
+  });
+}
+
+/**
+ * The setup wizard (TASK-055) saves one part of the profile at a time: the rest is copied from the current version,
+ * so each step is a normal new version (history, ADR-035) and nothing else changes.
+ */
+export async function saveProfilePart(
+  db: Db, ctx: OrgContext, brandId: string,
+  part: { cgp?: string; pillars?: z.input<typeof profileInput>["pillars"]; rules?: Partial<z.input<typeof profileInput>["rules"]>; visual?: z.input<typeof profileInput>["visual"]; note?: string },
+) {
+  const { profile } = await getBrandDetail(db, ctx, brandId);
+  const base = profile ?? { cgp: "", pillars: [], rules: { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] }, visual: { colors: {}, imageStyle: "", negativePrompt: "" } };
+  return saveProfile(db, ctx, brandId, {
+    cgp: part.cgp ?? base.cgp,
+    pillars: part.pillars ?? base.pillars,
+    rules: { ...base.rules, ...(part.rules ?? {}) },
+    visual: part.visual ?? base.visual,
+    note: part.note,
+  });
+}
+
+async function checkPreset(db: Db, platform: string, key?: string) {
+  if (!key) return;
+  const [p] = await db.select({ platform: formatPresets.platform, enabled: formatPresets.enabled }).from(formatPresets).where(eq(formatPresets.key, key));
+  if (!p || !p.enabled || p.platform !== platform) throw new BrandError("PRESET_MISMATCH");
+}
+
+export async function addChannel(db: Db, ctx: OrgContext, brandId: string, input: z.input<typeof channelInput>) {
+  requireOwner(ctx);
+  const data = channelInput.parse(input);
+  const b = await ownBrand(db, ctx, brandId);
+  if (b.archivedAt) throw new BrandError("ARCHIVED");
+  // A channel posts in one of the brand's languages (an English-only brand cannot get a Slovenian channel).
+  if (!b.languages.includes(data.language)) throw new BrandError("LANGUAGE_NOT_IN_BRAND");
+  await checkPreset(db, data.platform, data.defaultPresetKey);
+  const id = crypto.randomUUID();
+  try {
+    await forOrg(db, ctx).insert(channels, { id, brandId, ...data, defaultPresetKey: data.defaultPresetKey ?? null });
+  } catch (e) {
+    if (isUniqueViolation(e)) throw new BrandError("DUPLICATE");
+    throw e;
+  }
+  return { id };
+}
+
+export async function updateChannel(db: Db, ctx: OrgContext, channelId: string, input: z.input<typeof channelInput>) {
+  requireOwner(ctx);
+  const data = channelInput.parse(input);
+  const [ch] = (await forOrg(db, ctx).select(channels, eq(channels.id, channelId))) as (typeof channels.$inferSelect)[];
+  if (!ch) throw new BrandError("NOT_FOUND");
+  const b = await ownBrand(db, ctx, ch.brandId);
+  if (!b.languages.includes(data.language)) throw new BrandError("LANGUAGE_NOT_IN_BRAND");
+  await checkPreset(db, data.platform, data.defaultPresetKey);
+  const rows = await forOrg(db, ctx).update(channels, { ...data, defaultPresetKey: data.defaultPresetKey ?? null, updatedAt: new Date() }, eq(channels.id, channelId));
+  if (!rows[0]) throw new BrandError("NOT_FOUND");
+  return rows[0];
+}
+
+export async function removeChannel(db: Db, ctx: OrgContext, channelId: string) {
+  requireOwner(ctx);
+  const rows = await forOrg(db, ctx).delete(channels, eq(channels.id, channelId));
+  if (!rows[0]) throw new BrandError("NOT_FOUND");
+}
+
+// ---- reads (owner and editor) ----
+
+export async function listBrands(db: Db, ctx: OrgContext, opts: { includeArchived?: boolean } = {}) {
+  const rows = (await forOrg(db, ctx).select(brands, opts.includeArchived ? undefined : isNull(brands.archivedAt))) as (typeof brands.$inferSelect)[];
+  return rows.sort((a, b) => a.name.localeCompare(b.name, "sl"));
+}
+
+export async function getBrandDetail(db: Db, ctx: OrgContext, brandId: string) {
+  const brand = await ownBrand(db, ctx, brandId);
+  const s = forOrg(db, ctx);
+  const [profile] = brand.currentProfileVersionId
+    ? ((await s.select(brandProfileVersions, eq(brandProfileVersions.id, brand.currentProfileVersionId))) as (typeof brandProfileVersions.$inferSelect)[])
+    : [];
+  const chans = (await s.select(channels, eq(channels.brandId, brandId))) as (typeof channels.$inferSelect)[];
+  return { brand, profile: profile ?? null, channels: chans.sort((a, b) => a.platform.localeCompare(b.platform)) };
+}
+
+export async function listProfileVersions(db: Db, ctx: OrgContext, brandId: string) {
+  await ownBrand(db, ctx, brandId);
+  return db
+    .select({ id: brandProfileVersions.id, version: brandProfileVersions.version, note: brandProfileVersions.note, createdAt: brandProfileVersions.createdAt })
+    .from(brandProfileVersions)
+    .where(and(eq(brandProfileVersions.brandId, brandId), eq(brandProfileVersions.orgId, ctx.orgId)))
+    .orderBy(desc(brandProfileVersions.version));
+}
+
+/** Claude models a brand can choose (enabled text models, cheapest first). */
+export async function listTextModels(db: Db) {
+  return db
+    .select({ id: modelRegistry.id, label: modelRegistry.label, isDefault: modelRegistry.isDefault, inputPerMtok: modelRegistry.inputPerMtok, outputPerMtok: modelRegistry.outputPerMtok })
+    .from(modelRegistry)
+    .where(and(eq(modelRegistry.kind, "text"), eq(modelRegistry.enabled, true)))
+    .orderBy(modelRegistry.outputPerMtok);
+}
+
+/** Owner picks the brand's Claude model (null = the platform default). */
+export async function setBrandTextModel(db: Db, ctx: OrgContext, brandId: string, modelId: string | null) {
+  requireOwner(ctx);
+  if (modelId) {
+    const [m] = await db.select({ id: modelRegistry.id }).from(modelRegistry).where(and(eq(modelRegistry.id, modelId), eq(modelRegistry.kind, "text"), eq(modelRegistry.enabled, true)));
+    if (!m) throw new BrandError("NOT_FOUND");
+  }
+  const rows = await forOrg(db, ctx).update(brands, { textModelId: modelId, updatedAt: new Date() }, eq(brands.id, brandId));
+  if (!rows.length) throw new BrandError("NOT_FOUND");
+}

@@ -1,0 +1,63 @@
+{
+  "name": "postaja",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:int": "DATABASE_URL=$TEST_DATABASE_URL vitest run -c vitest.int.config.mts",
+    "test:e2e": "playwright test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-request-presigner": "^3.1146.0",
+    "@better-auth/mcp": "1.7.7",
+    "@better-auth/oauth-provider": "1.7.7",
+    "@better-auth/utils": "0.4.2",
+    "@modelcontextprotocol/server": "2.3.1",
+    "@pdf-lib/fontkit": "1.1.1",
+    "better-auth": "1.7.7",
+    "drizzle-orm": "^0.45.3",
+    "lucide-react": "1.52.0",
+    "next": "16.3.8",
+    "next-intl": "^4.14.9",
+    "nodemailer": "10.0.15",
+    "pdf-lib": "1.17.1",
+    "pg-boss": "12.37.0",
+    "postgres": "^3.4.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "satori": "0.35.0",
+    "sharp": "^0.34",
+    "stripe": "^23.0.0",
+    "unpdf": "1.8.1",
+    "wawoff2": "2.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "8.0.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

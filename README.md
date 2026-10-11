@@ -7,4 +7,4 @@ Multi-brand AI content studio — CGP per brand, one-click posts, carousels, ani
 - Decisions: [`docs/03-DECISIONS.md`](docs/03-DECISIONS.md)
 - Current state and how to start: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 
-© Data Vallis
+© David Tacer s.p.

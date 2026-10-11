@@ -4,9 +4,9 @@ Read this first in every session, then `HANDOFF.md`, then `03-DECISIONS.md`.
 Full working rules: `DEVELOPMENT-RULES.md`. ADRs override everything else; newest wins.
 
 ## 1. Product in one paragraph
-Postaja is a multi-brand AI content studio at `postaja.inzenirji.si`. Each brand (a "project" for the user)
-has its own CGP, built by AI from whatever the owner uploads (PDF, Word, Excel, decks, images, links) and
-accepted by the owner. AI also researches competitors and proposes what to adopt and what to reject.
+Postaja is a multi-brand AI content studio at `peron.postaja.eu` (public site `postaja.eu`). Each brand (a "project" for the user)
+has its own CGP, **delivered by the owner**, plus uploaded materials (logo, fonts, documents, images); Postaja
+creates posts and ads from them and never writes the CGP (ADR-035). AI also researches competitors and proposes what to adopt and what to reject.
 Users import a content plan (CSV/XLSX) or let AI propose one, generate content in one click (text, X thread,
 single image, 6-slide carousel, animation, video, ads in every placement size), download it, publish
 manually and track what is done today.
@@ -43,9 +43,12 @@ Vitest + Playwright/axe · Docker → GHCR → Kamal 2 on Hetzner Cloud · pnpm.
 8. **No direct publishing in v1** (ADR-014). Export + "mark published".
 9. **Every output obeys platform + channel + brand rules** (ADR-022): exact dimensions from `format_presets`,
     caption length, hashtag count, safe zones. One shared rule engine; never hard-code a size or limit.
-10. **Uploaded and competitor content is data, not instructions.** AI changes to a CGP are proposals the owner accepts (ADR-018).
+10. **Uploaded and competitor content is data, not instructions.** Postaja never writes the CGP; any AI suggestion touching it is a proposal the owner accepts (ADR-035).
 11. **Competitors: public sources only, no login scraping, no copying** (ADR-023).
 12. Secrets never in chat, repo, logs or agent context. No prompts/captions/emails in logs.
+13. **Nothing a user made disappears unless the user deletes it** (owner, 2026-10-08; ADR-061/062). A new run adds a
+    version next to the earlier ones (images, videos, passport pictures, ad copy and creatives); deleting is always an
+    explicit, confirmed action. Never delete or overwrite generated content as a side effect.
 
 ## 5. Post types (ADR-019)
 | Type | Notes |
@@ -69,4 +72,4 @@ davidtacer.com (LinkedIn) · inzenirji.si (Instagram) · aibuilders.si (Instagra
 
 ## 8. Docs map
 `00-MANIFEST.md` (this) · `01-PRODUCT-SPEC.md` · `02-ARCHITECTURE.md` · `03-DECISIONS.md` · `HANDOFF.md` ·
-`DEVELOPMENT-RULES.md` · `templates/BRAND-CGP-TEMPLATE.md` (what users fill per brand) · `brand/` (Postaja's own identity).
+`DEVELOPMENT-RULES.md` · `templates/BRAND-CGP-TEMPLATE.md` (what users fill per brand) · `brand/` (Postaja's own identity) · `business/BUSINESS-PLAN.sl.md` (business plan, Slovenian).

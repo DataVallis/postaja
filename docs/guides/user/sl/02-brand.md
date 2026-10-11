@@ -1,0 +1,66 @@
+# Brand
+
+Brand je projekt v Postaji. Vsak brand ima svoj CGP, kanale, datoteke, vizualno podobo, objave, oglase in po želji persono. Brande vidiš v meniju **Brandi**.
+
+## Nov brand
+
+1. **Brandi → Nov brand** (samo lastnik).
+2. Vpiši ime, kratko ime (slug), spletno stran in jezike objav.
+3. Klikni **Ustvari**.
+4. Odpre se **Nastavitev branda** (čarovnik), ki te vodi korak za korakom.
+
+## Nastavitev branda (čarovnik)
+
+Rezultat je tako dober, kot so podatki, ki jih vneseš. Čarovnik pri vsakem koraku pove, zakaj je pomemben in kaj vanj sodi:
+
+1. **Komunikacija (CGP)** – obvezno, vsaj 400 znakov: kdo ste, ponudba, publika, ton, besede, ki jih uporabljate in ne.
+2. **Logotip in pretekle objave** – logotip je obvezen za slike; vsaj 3 pretekle objave so slogovni vzor; pisava po želji.
+3. **Gradiva** – cenik, izdelki, pogosta vprašanja (priporočeno).
+4. **Teme in pravila** – stebri vsebine, pozivi k dejanju, prepovedane besede (priporočeno).
+5. **Barve in slog slik** – barve branda, slog ilustracij in česa na slikah ne sme biti (priporočeno).
+6. **Kanali** – vsaj en kanal je obvezen.
+7. **Vizualna podoba** – Claude pripravi predloge slik (obvezno za slike).
+8. **Povzetek** – kaj je urejeno, kaj manjka, in naslednji koraki.
+
+Levo vidiš korake z oznakami: zelena kljukica pomeni urejeno, rdeč klicaj obvezno, a manjka, prazen krog priporočeno. Vsak korak se shrani v brand (CGP in pravila kot nova verzija profila), zato lahko kadar koli nehaš in nadaljuješ z gumbom **Nastavitev** na strani branda. Dokler ni vse urejeno, stran branda pokaže, koliko je brand pripravljen in kaj manjka.
+
+## Profil (CGP)
+
+V zavihku **Profil (CGP)** so navodila, po katerih Postaja piše vse objave branda.
+
+- **CGP – navodila za AI**: kdo ste, publika, ton, kaj delate in česa ne. Prilepi ga ali klikni **Uvozi iz dokumenta** (Word, PDF, MD ali TXT). Besedilo se prenese dobesedno, brez AI.
+- **Stebri vsebine**: ena vrstica na steber, v obliki `Ime | delež % | opis`, skupaj največ 100 %.
+- **Prepovedane besede** in **CTA fraze**: Postaja jih upošteva in preverja.
+- **Največ znakov, hashtagov, emojijev**, **povezave v opisu** in **objava se mora končati s CTA**: pravila branda, ki veljajo poleg pravil platforme.
+- **Barve, slog slik** in **česa na slikah ne sme biti**.
+
+Vsako shranjevanje ustvari **novo verzijo**. Stare verzije vidiš v zavihku **Verzije**; vsaka objava si zapomni verzijo, po kateri je nastala.
+
+
+## Kanali
+
+V zavihku **Kanali** dodaš profile, kamor objavljaš:
+- platforma (Instagram, Facebook, LinkedIn, X, TikTok, YouTube) in profil (@ime);
+- jezik, število objav na dan in dneve objav (iz tega nastanejo dnevni cilji na nadzorni plošči);
+- privzeti format slik in dovoljeni tipi objav;
+- lastna omejitev hashtagov.
+
+Pod vsakim kanalom vidiš pravila, ki zanj **veljajo** (platforma + kanal + brand).
+
+## Datoteke
+
+V zavihek **Datoteke** povleci posamezne datoteke ali cel ZIP. Postaja jih razvrsti sama:
+- **Logotipi** (slike z »logo« v imenu ali gumb **Dodaj logotip**): uporabijo se na slikah.
+- **Fonti** (TTF, OTF, WOFF, WOFF2): morajo imeti č, š, ž, ć in đ.
+- **Partnerski logotipi**: logotipi partnerjev za skupne objave (npr. Polygon). Spusti jih v polje **Spusti partnerske logotipe sem** (več naenkrat ali v ZIP-u). Ime partnerja je ime datoteke (»Polygon-logo.png« → Polygon); popraviš ga v polju pod logotipom in ga potrdiš s kljukico ob polju. To ni logotip branda: pri vsaki objavi ali oglasu sam izbereš, ali naj bo na slikah. Če predloga na sliki napiše ime partnerja (npr. noga »CHERR.IO | Polygon«), Postaja namesto imena nariše njegov logotip; sicer ga nariše poleg logotipa branda.
+- **Viri**: dokumenti (PDF, Word, Excel, PowerPoint, CSV, TXT) in slike preteklih objav. Besedilo dokumentov je baza znanja: pri vsaki objavi Postaja vzame dele, ki se ujemajo z zahtevo. Slike preteklih objav uporabi za slog.
+
+Nalaga in briše lastnik; vsi člani lahko datoteke prenesejo.
+
+## AI model
+
+Na dnu zavihka **Profil (CGP)** lastnik izbere Claude model, ki za brand piše besedila in oblikuje slike. Ob vsakem modelu je cena na milijon žetonov.
+
+## Arhiviranje
+
+Gumb **Arhiviraj** (zgoraj desno) brand umakne iz dela. Arhiviranega branda ni mogoče urejati.

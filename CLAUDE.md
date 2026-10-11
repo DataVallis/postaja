@@ -8,3 +8,5 @@ Before any task read, in this order:
 
 Talk to the owner (David) in Slovenian. Code, docs, commits and PRs in English.
 Never read, print or ask for secret values; only name the variables.
+
+@AGENTS.md

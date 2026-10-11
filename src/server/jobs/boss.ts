@@ -1,0 +1,61 @@
+// Background jobs (ADR-007, ADR-042): pg-boss on the app's own Postgres (schema "pgboss"). The web process only sends;
+// workers run where RUN_WORKER=1 — on dev that is the web container itself, later a separate Kamal role.
+import { PgBoss } from "pg-boss";
+import { POST_TEXT_QUEUE, type JobQueue } from "../bulk/service";
+import { POST_IMAGE_QUEUE } from "../images/service";
+import { DESIGN_QUEUE } from "../design/service";
+import { AD_IMAGE_QUEUE } from "../ads/creatives";
+import { POST_VIDEO_QUEUE } from "../video/service";
+import { PERSONA_PASSPORT_QUEUE } from "../personas/service";
+import { COMPETITOR_FIND_QUEUE } from "../competitors/service";
+import { COMPETITOR_ANALYZE_QUEUE } from "../competitors/analysis";
+import { DEMO_QUEUE } from "../demos/service";
+import { PLAN_READ_QUEUE } from "../plans/service";
+
+let started: Promise<PgBoss> | undefined;
+
+/** One started pg-boss per process (it creates/updates its own schema on first start). */
+export function getBoss(url = process.env.DATABASE_URL): Promise<PgBoss> {
+  if (!url) throw new Error("DATABASE_URL is not set");
+  started ??= (async () => {
+    const boss = new PgBoss({ connectionString: url, schema: "pgboss", max: 4 });
+    boss.on("error", (e) => console.error("[jobs]", e instanceof Error ? e.message : "error"));
+    await boss.start();
+    // Text: one retry after an unexpected error; a generation never runs longer than 5 minutes.
+    await boss.createQueue(POST_TEXT_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 300 }).catch(() => undefined);
+    // Images (TASK-015): the provider can queue for a while; one retry, at most 10 minutes per post.
+    await boss.createQueue(POST_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 600 }).catch(() => undefined);
+    // Brand designs (TASK-017): one Claude call with pictures, a few renders; no automatic retry (the owner sees why).
+    await boss.createQueue(DESIGN_QUEUE, { retryLimit: 0, expireInSeconds: 1800 }).catch(() => undefined);
+    // Animations (TASK-023): one Claude call and a frame-by-frame render; one retry after an unexpected error.
+    await boss.createQueue(POST_VIDEO_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
+    // Ad creatives (TASK-021b): a plan, up to 3 illustrations and a render per placement × variant; one retry.
+    await boss.createQueue(AD_IMAGE_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 900 }).catch(() => undefined);
+    // Persona passports (TASK-024): up to 5 pictures one after another, each kept as soon as it is made; one retry.
+    await boss.createQueue(PERSONA_PASSPORT_QUEUE, { retryLimit: 1, retryDelay: 30, expireInSeconds: 1200 }).catch(() => undefined);
+    await boss.createQueue(COMPETITOR_FIND_QUEUE, { retryLimit: 0, expireInSeconds: 900 }).catch(() => undefined);
+    await boss.createQueue(COMPETITOR_ANALYZE_QUEUE, { retryLimit: 0, expireInSeconds: 1800 }).catch(() => undefined);
+    // Demos (TASK-040): one job builds the whole demo (design, 3 posts with images, an ad set); no automatic retry.
+    await boss.createQueue(DEMO_QUEUE, { retryLimit: 0, expireInSeconds: 3600 }).catch(() => undefined);
+    // Plan imports (ADR-078): Claude reads a long plan in parts; a run never takes longer than 10 minutes, no retry.
+    await boss.createQueue(PLAN_READ_QUEUE, { retryLimit: 0, expireInSeconds: 600 }).catch(() => undefined);
+    return boss;
+  })();
+  return started;
+}
+
+/** The app's queue: singleton per post and step, so the same post is never queued twice at once. */
+export function bossQueue(boss: PgBoss): JobQueue {
+  return {
+    async send(name, data, key) {
+      await boss.send(name, data, { singletonKey: key });
+    },
+  };
+}
+
+export async function stopBoss() {
+  if (!started) return;
+  const b = await started;
+  started = undefined;
+  await b.stop({ graceful: true, timeout: 20_000 }).catch(() => undefined);
+}
