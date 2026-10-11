@@ -8,11 +8,11 @@ import { image, makeDocx, makeXlsx } from "../../../tests/fixtures/files";
 import { addChannel, createBrand, saveProfile } from "../brands/service";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createFakeLlm, type FakeAnswer } from "../llm/fake";
-import { LlmError } from "../llm/types";
+import { LlmError, type LlmClient } from "../llm/types";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
 import { editPost } from "../posts/generate";
-import { confirmImport, discardImport, importView, listImports, reopenImport, setImportBrand, startImport, updateImport } from "./service";
+import { confirmImport, discardImport, importView, listImports, PLAN_READ_QUEUE, reopenImport, runReadJob, setImportBrand, startImport, updateImport } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -136,6 +136,65 @@ describe("reading a document plan", () => {
   it("documents need the AI: a provider error is reported, nothing stored", async () => {
     await expect(start(A, makeDocx([{ text: "Post 1" }]), "x.docx", [{ error: new LlmError("NOT_CONFIGURED") }]).id).rejects.toMatchObject({ code: "AI_FAILED", detail: "NOT_CONFIGURED" });
     expect((await sql`select count(*)::int n from plan_imports`)[0].n).toBe(0);
+  });
+});
+
+describe("reading in the background (ADR-078, incident 2026-10-11: a long Markdown plan timed out at the proxy)", () => {
+  const md = (posts: number) => new TextEncoder().encode(`# PetPrep plan\n\nPlatform: Instagram\n\n${Array.from({ length: posts }, (_, i) => `## Day ${i + 1}\n\nPost number ${i + 1}: ${"walk the dog. ".repeat(60)}`).join("\n\n")}`);
+  /** Answers each part with the posts it contains, in any order the parallel calls arrive. */
+  function partsLlm() {
+    const requests: string[] = [];
+    const client: LlmClient = {
+      async structured(req) {
+        requests.push(req.user);
+        const doc = req.user.slice(req.user.indexOf("<document>"));
+        const items = [...doc.matchAll(/^## Day (\d+)\n\n(.+)$/gm)].map((m) => ({ title: `Day ${m[1]}`, text: m[2].trim() }));
+        return { input: { sharedImageStyle: null, defaultPlatform: doc.includes("Platform: Instagram") ? "instagram" : null, items }, usage: { inputTokens: 100, outputTokens: 100, cacheWriteTokens: 0, cacheReadTokens: 0 } };
+      },
+    };
+    return { client, requests };
+  }
+  const memQueue = () => { const jobs: { name: string; data: object; key: string }[] = []; return { jobs, queue: { async send(name: string, data: object, key: string) { jobs.push({ name, data, key }); } } }; };
+
+  it("the upload returns at once with status reading; the job reads a long plan in parts and joins them in order", async () => {
+    const llm = partsLlm();
+    const { jobs, queue } = memQueue();
+    const bytes = md(40); // ~35k characters → 3 parts
+    const id = await startImport(db, { llm: llm.client, storage, queue }, A, { filename: "plan-objav-60-dni.md", bytes });
+    expect(llm.requests).toHaveLength(0); // nothing read in the request
+    expect(jobs).toEqual([{ name: PLAN_READ_QUEUE, data: { importId: id }, key: `plan-read:${id}` }]);
+    expect((await importView(db, A, id)).import).toMatchObject({ status: "reading", kind: "document", error: null });
+    expect((await storage.get((await importView(db, A, id)).import.storageKey)).byteLength).toBe(bytes.byteLength);
+
+    expect(await runReadJob(db, { llm: llm.client, storage }, { importId: id })).toBe("draft");
+    expect(llm.requests.length).toBeGreaterThanOrEqual(3);
+    expect(llm.requests[0]).toContain("(part 1 of");
+    const v = await importView(db, A, id);
+    expect(v.import.status).toBe("draft");
+    expect(v.items.map((i) => i.topic)).toEqual(Array.from({ length: 40 }, (_, i) => `Day ${i + 1}`));
+    expect(v.items.every((i) => i.platform === "instagram" && i.warnings.length === 0)).toBe(true); // platform from part 1
+    expect((await sql`select count(*)::int n from usage_ledger where state = 'settled'`)[0].n).toBe(llm.requests.length);
+    expect(await runReadJob(db, { llm: llm.client, storage }, { importId: id })).toBe("skipped"); // only once
+  });
+
+  it("a failed reading is kept on the import with the reason; it can be discarded but not confirmed", async () => {
+    const { queue } = memQueue();
+    const id = await startImport(db, { llm: createFakeLlm().client, storage, queue }, A, { filename: "x.docx", bytes: makeDocx([{ text: "Post 1" }]) });
+    const failing = createFakeLlm([{ error: new LlmError("PROVIDER", "anthropic 529") }]);
+    expect(await runReadJob(db, { llm: failing.client, storage }, { importId: id })).toBe("failed");
+    expect((await importView(db, A, id)).import).toMatchObject({ status: "failed", error: "AI_FAILED:PROVIDER" });
+    expect((await listImports(db, A))[0]).toMatchObject({ id, status: "failed", error: "AI_FAILED:PROVIDER" });
+    await expect(confirmImport(db, A, id)).rejects.toMatchObject({ code: "BAD_STATE" });
+    await discardImport(db, A, id);
+    expect((await importView(db, A, id)).import.status).toBe("discarded");
+  });
+
+  it("checks that need no AI still answer in the request; another org never reads the import", async () => {
+    const { jobs, queue } = memQueue();
+    await expect(startImport(db, { llm: createFakeLlm().client, storage, queue }, A, { filename: "x.png", bytes: await image("png") })).rejects.toMatchObject({ code: "UNSUPPORTED_TYPE" });
+    expect(jobs).toEqual([]);
+    const id = await startImport(db, { llm: createFakeLlm().client, storage, queue }, A, { filename: "x.md", bytes: md(2) });
+    await expect(importView(db, B, id)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 

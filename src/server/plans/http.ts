@@ -4,7 +4,7 @@ import type { Db } from "../db/client";
 import type { Storage } from "../files/storage";
 import type { LlmClient } from "../llm/types";
 import type { OrgContext } from "../tenancy/context";
-import { IMPORT_MAX_BYTES, ImportError, startImport } from "./service";
+import { IMPORT_MAX_BYTES, ImportError, startImport, type ReadQueue } from "./service";
 
 const MULTIPART_OVERHEAD = 64 * 1024;
 const STATUS: Record<ImportError["code"], number> = {
@@ -13,7 +13,8 @@ const STATUS: Record<ImportError["code"], number> = {
 };
 const json = (body: unknown, status: number) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
-export type ImportHttpDeps = { db: Db; storage: Storage; llm: LlmClient; appOrigin: string; getCtx: () => Promise<OrgContext | null> };
+/** `queue`: the AI reads the plan in the background (ADR-078); without it the request waits for the reading. */
+export type ImportHttpDeps = { db: Db; storage: Storage; llm: LlmClient; appOrigin: string; getCtx: () => Promise<OrgContext | null>; queue?: () => Promise<ReadQueue> };
 
 export async function handleImportUpload(req: Request, deps: ImportHttpDeps): Promise<Response> {
   if (req.headers.get("origin") !== deps.appOrigin) return json({ error: "BAD_ORIGIN" }, 403);
@@ -30,7 +31,7 @@ export async function handleImportUpload(req: Request, deps: ImportHttpDeps): Pr
   }
   if (!(file instanceof File)) return json({ error: "BAD_FORM" }, 400);
   try {
-    const id = await startImport(deps.db, { llm: deps.llm, storage: deps.storage }, ctx, { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) });
+    const id = await startImport(deps.db, { llm: deps.llm, storage: deps.storage, queue: deps.queue ? await deps.queue() : undefined }, ctx, { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) });
     return json({ id }, 201);
   } catch (e) {
     if (e instanceof ImportError) return json({ error: e.code, detail: e.detail }, STATUS[e.code]);

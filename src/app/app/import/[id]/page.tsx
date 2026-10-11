@@ -6,6 +6,7 @@ import { requireOrgPage } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { PLAN_FIELDS, PLAN_PLATFORMS, type ColumnMapping } from "@/server/plans/mapping";
 import { groupKey, ImportError, importView } from "@/server/plans/service";
+import { AutoRefresh } from "../../plan/auto-refresh";
 import type { PlanTable } from "@/server/plans/table";
 import { discardImportAction, reopenImportAction, saveImportAction, saveMappingAction, setImportBrandAction } from "../actions";
 
@@ -27,6 +28,40 @@ export default async function ImportReview({ params, searchParams }: { params: P
   const tbu = await getTranslations("Bulk");
   const f = await getFormatter();
   const r = v.import;
+  // Read in the background (ADR-078): wait here, or say why it failed.
+  const stale = v.stale;
+  if (r.status === "reading" || r.status === "failed") {
+    const failed = r.status === "failed" || stale;
+    const [code, detail] = (stale ? "TIMEOUT" : r.error ?? "FAILED").split(/:(.*)/s);
+    const tu = await getTranslations("Import.upload");
+    return (
+      <>
+        <AutoRefresh active={!failed} seconds={2} />
+        <PageHeader
+          eyebrow={<Link href="/app/import" className="hover:text-fg hover:underline">{t("title")}</Link>}
+          title={r.filename}
+          actions={<Badge tone={failed ? "danger" : "neutral"} dot>{t(`status.${failed ? "failed" : "reading"}`)}</Badge>}
+        />
+        {failed ? (
+          <Card className="grid justify-items-start gap-3 p-4 text-sm" data-testid="import-failed">
+            <p role="alert" className="text-danger">{tu.has(`errors.${code}`) ? tu(`errors.${code}`, { detail: detail ?? "" }) : tu("errors.failed")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/app/import" className={buttonClass("primary", "sm")}>{t("tryAgain")}</Link>
+              <form action={discardImportAction}>
+                <input type="hidden" name="importId" value={r.id} />
+                <button type="submit" className={buttonClass("secondary", "sm")}>{t("discard")}</button>
+              </form>
+            </div>
+          </Card>
+        ) : (
+          <Card className="grid gap-2 p-4 text-sm" data-testid="import-reading">
+            <p role="status" className="font-medium">{t("readingTitle")}</p>
+            <p className="text-muted">{t("readingHint")}</p>
+          </Card>
+        )}
+      </>
+    );
+  }
   const draft = r.status === "draft";
   const groupOf = new Map(v.groups.map((g) => [g.key, g]));
   const chan = new Map(v.channels.map((c) => [c.id, c]));

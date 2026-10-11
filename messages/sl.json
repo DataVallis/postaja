@@ -878,6 +878,8 @@
       "document": "dokument"
     },
     "status": {
+      "reading": "berem",
+      "failed": "ni uspelo",
       "draft": "za pregled",
       "imported": "uvoženo",
       "discarded": "zavrženo"
@@ -887,7 +889,7 @@
       "hint": "Excel (XLSX), CSV, Word (DOCX), PDF, MD ali TXT, do 20 MB. Več listov in več platform v eni datoteki je v redu.",
       "pick": "Izberi plan",
       "reading": "Berem …",
-      "readingHint": "Berem »{name}«. Word in PDF lahko trajata do minute.",
+      "readingHint": "Nalagam »{name}« …",
       "errors": {
         "EMPTY": "Datoteka je prazna.",
         "TOO_LARGE": "Datoteka je večja od 20 MB.",
@@ -898,7 +900,10 @@
         "SPEND_CAP": "Dosežen je mesečni limit organizacije (krediti, poraba ali število AI generacij). Kredite lahko dokupiš na strani Ekipa in paket.",
         "NO_MODEL": "AI model ni nastavljen.",
         "BAD_ORIGIN": "Zahteva ni prišla iz Postaje.",
-        "failed": "Nalaganje ni uspelo. Poskusi znova."
+        "failed": "Nalaganje ni uspelo. Poskusi znova.",
+        "TIMEOUT": "Branje je trajalo predolgo in je bilo ustavljeno. Naloži plan znova.",
+        "FAILED": "Branje plana ni uspelo. Naloži ga znova.",
+        "FORBIDDEN": "Član, ki je naložil plan, nima več dostopa."
       }
     },
     "readByAi": "Strukturo je prebral AI; vrednosti so prebrane dobesedno.",
@@ -1028,7 +1033,10 @@
     "handlesHint": "Kanal ustvarim le, če ga brand za to platformo še nima. Prazno = ne ustvari.",
     "applyBrand": "Uporabi brand",
     "brandChosen": "Plan je za brand {brand}: predlagam samo njegove kanale.",
-    "noBrandYet": "Brand še ni izbran: kanali niso predlagani, da objave ne pristanejo pri napačnem brandu."
+    "noBrandYet": "Brand še ni izbran: kanali niso predlagani, da objave ne pristanejo pri napačnem brandu.",
+    "tryAgain": "Naloži znova",
+    "readingTitle": "Berem plan …",
+    "readingHint": "Claude prebere vse objave v planu. Dolg Word ali Markdown plan lahko traja nekaj minut; stran se osveži sama, lahko jo tudi zapustiš."
   },
   "PostFormats": {
     "text": "besedilo",

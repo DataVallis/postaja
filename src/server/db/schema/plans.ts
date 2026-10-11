@@ -25,7 +25,9 @@ export const planImports = pgTable(
     storageKey: text("storage_key").notNull(),
     sha256: text("sha256").notNull(),
     kind: text("kind").$type<"table" | "document">().notNull(),
-    status: text("status").$type<"draft" | "imported" | "discarded">().notNull().default("draft"),
+    /** "reading": the AI reads it in the background (ADR-078); "failed": reading failed, `error` says why. */
+    status: text("status").$type<"reading" | "failed" | "draft" | "imported" | "discarded">().notNull().default("draft"),
+    error: text("error"),
     /** Parsed sheets (header + rows) for tables; null for documents. */
     tables: jsonb("tables").$type<unknown[] | null>(),
     /** One column mapping per table (see src/server/plans/mapping.ts). */
@@ -43,6 +45,6 @@ export const planImports = pgTable(
   (t) => [
     index("plan_imports_org_idx").on(t.orgId, t.createdAt),
     check("plan_imports_kind_ck", sql`${t.kind} in ('table','document')`),
-    check("plan_imports_status_ck", sql`${t.status} in ('draft','imported','discarded')`),
+    check("plan_imports_status_ck", sql`${t.status} in ('reading','failed','draft','imported','discarded')`),
   ],
 );
