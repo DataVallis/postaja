@@ -20,6 +20,9 @@ export const YEAR_MONTHS = 10;
 /** Agency pilot: 99 € once, 30 days of Studio with 3 brands. */
 export const PILOT = { name: "Agencijski pilot", priceEur: 99, days: 30, limits: { brands: 3, members: 3, creditsPerMonth: 1500 } } as const;
 
+/** Self-serve trial (TASK-037): 7 days, 1 brand, 1 member, 50 credits, Studio's features; no card. */
+export const TRIAL = { days: 7, limits: { brands: 1, members: 1, creditsPerMonth: 50 } } as const;
+
 export const CREDIT_PACK_PRICES = CREDIT_PACKS;
 
 /**

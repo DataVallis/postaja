@@ -45,6 +45,8 @@ export default defineConfig({
       STRIPE_SECRET_KEY: "sk_test_e2e_not_real",
       STRIPE_WEBHOOK_SECRET: "whsec_e2e_not_real",
       STRIPE_API_BASE: "http://127.0.0.1:3199",
+      // Public signup with a trial (TASK-037).
+      PUBLIC_SIGNUP: "1",
       // Bulk creation runs in the background (ADR-042): the E2E server runs the workers too.
       RUN_WORKER: "1",
     },

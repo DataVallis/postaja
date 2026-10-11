@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { getAuth } from "@/server/auth/auth";
 import { getCurrentUser } from "@/server/auth/session";
 import { oauthContinuation, toQueryString } from "@/server/mcp/oauth-flow";
+import Link from "next/link";
+import { publicSignupEnabled } from "@/server/signup/service";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </p>
         ) : null}
         <LoginForm callbackURL={oauth ?? "/app"} />
+        {publicSignupEnabled() && !oauth ? (
+          <p className="mt-6 text-sm text-muted">{t("noAccount")} <Link href="/signup" className="font-semibold underline underline-offset-4">{t("trial")}</Link></p>
+        ) : null}
       </div>
     </main>
   );

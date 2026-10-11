@@ -25,6 +25,9 @@ export const orgBilling = pgTable(
     pilotEndsAt: timestamp("pilot_ends_at", { withTimezone: true }),
     /** TASK-053: add-on quantities on the subscription (brand, member, persona). */
     addons: jsonb("addons").$type<Partial<Record<"brand" | "member" | "persona", number>>>().notNull().default({}),
+    /** TASK-037: the free trial of a self-serve signup — until when it runs, and when its ending was emailed. */
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+    trialNoticeAt: timestamp("trial_notice_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

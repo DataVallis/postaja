@@ -1,5 +1,7 @@
 // Workers (ADR-042, ADR-043, ADR-044). Two posts are written and two posts' images are made at a time per process: fast enough
 // for a day of posts across brands, gentle on the providers' rate limits and on the shared dev server.
+import { sendTrialNotices, TRIAL_NOTICE_QUEUE } from "../signup/service";
+import { createMailerFromEnv } from "../email/mailer";
 import { getDb } from "../db/client";
 import { getStorage } from "../files/storage";
 import { createAnthropicClient } from "../llm/anthropic";
@@ -51,6 +53,13 @@ export async function startWorkers() {
   });
   await boss.work<PlanReadJob>(PLAN_READ_QUEUE, { localConcurrency: 2, pollingIntervalSeconds: 1 }, async ([job]) => {
     await runReadJob(getDb(), deps, job.data);
+  });
+  // Trial ending (TASK-037): every morning, owners of trials that end within 48 hours get one email.
+  await boss.createQueue(TRIAL_NOTICE_QUEUE, { retryLimit: 1, retryDelay: 600, expireInSeconds: 600 }).catch(() => undefined);
+  await boss.schedule(TRIAL_NOTICE_QUEUE, "5 9 * * *", {}, { tz: "Europe/Ljubljana" });
+  await boss.work(TRIAL_NOTICE_QUEUE, { localConcurrency: 1, pollingIntervalSeconds: 30 }, async () => {
+    const n = await sendTrialNotices(getDb(), createMailerFromEnv(), process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "");
+    if (n) console.log(`[trial] ${n} trial-ending notices sent`);
   });
   // Database backups (TASK-030, ADR-063): production only — the config exists only where BACKUP_ENABLED=1.
   const backup = backupConfigFromEnv();

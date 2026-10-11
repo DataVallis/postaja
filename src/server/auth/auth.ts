@@ -15,6 +15,7 @@ import { magicLinkMail } from "../email/templates/magic-link";
 import { invitationMail } from "../email/templates/invitation";
 import { acceptPendingInvitations, firstMembershipOrgId, hasPendingInvitation, INVITATION_TTL_MS } from "../orgs/invitations";
 import { normalizeEmail, parseEmailList } from "./emails";
+import { pendingSignup } from "../signup/service";
 
 export const MAGIC_LINK_TTL_SECONDS = 600;
 
@@ -58,12 +59,13 @@ export function isSuperadminEmail(email: string, deps: Pick<AuthDeps, "superadmi
 }
 
 /**
- * Who may get an account (no public sign-up in v1, ADR-028):
+ * Who may get an account (ADR-028, ADR-085):
  * - emails in SUPERADMIN_EMAILS (bootstrap, role = superadmin);
- * - emails with a pending, unexpired organization invitation.
+ * - emails with a pending, unexpired organization invitation;
+ * - where public signup is on (PUBLIC_SIGNUP=1): emails with a fresh signup request from /signup (TASK-037).
  */
 export async function canSignUp(email: string, deps: Pick<AuthDeps, "superadminEmails" | "db">): Promise<boolean> {
-  return isSuperadminEmail(email, deps) || (await hasPendingInvitation(deps.db, email));
+  return isSuperadminEmail(email, deps) || (await hasPendingInvitation(deps.db, email)) || !!(await pendingSignup(deps.db, email));
 }
 
 export function createAuth(deps: AuthDeps) {
