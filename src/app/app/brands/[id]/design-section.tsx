@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, Sparkles, Wand2 } from "lucide-react";
+import { Check, Circle, Loader2, Palette, Sparkles, Wand2 } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, DataTable, selectClass, td, textareaClass } from "@/components/ui";
@@ -58,7 +58,18 @@ export async function DesignSection(props: {
       </div>
 
       {props.error ? <p role="alert" className="rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger">{t(`errors.${props.error}`)}</p> : null}
-      {working ? <p className="rounded-lg border border-signal/40 px-3 py-2 text-sm" aria-live="polite" data-testid="design-working">{latest.instruction ? t("revising") : t("working")}</p> : null}
+      {working ? (
+        // TASK-056: what Claude is doing while it designs (the steps of every run; no per-step tracking).
+        <Card className="grid gap-3 border-signal/40 p-5" data-testid="design-working">
+          <p className="flex items-center gap-2 text-sm font-semibold" aria-live="polite"><Loader2 aria-hidden className="size-4 animate-spin text-accent-text" />{latest.instruction ? t("revising") : t("working")}</p>
+          <ol className="grid gap-2 text-sm text-muted">
+            {(["read", "look", "draw", "check"] as const).map((k, i) => (
+              <li key={k} className="flex items-center gap-2"><span aria-hidden className="grid size-5 place-items-center rounded-full bg-raised text-[11px] font-semibold text-fg">{i + 1}</span>{t(`steps.${k}`, { n: props.inputs.examples })}</li>
+            ))}
+          </ol>
+          <p className="text-xs text-muted">{t("workingHint")}</p>
+        </Card>
+      ) : null}
       {latest?.status === "failed" && !working ? (
         <p role="alert" className="rounded-lg border border-danger/50 px-3 py-2 text-sm" data-testid="design-failed">
           {t("failed", { reason: t.has(`errors.${(latest.error ?? "FAILED").split(":")[0]}`) ? t(`errors.${(latest.error ?? "FAILED").split(":")[0]}`) : t("errors.FAILED") })}
@@ -67,12 +78,14 @@ export async function DesignSection(props: {
       ) : null}
 
       {!current ? (
-        <Card className="grid gap-4 p-5">
-          <ul className="grid gap-1 text-sm" data-testid="design-inputs">
-            <li>{props.inputs.cgp ? "✓" : "–"} {t("inputs.cgp")}</li>
-            <li>{props.inputs.examples ? "✓" : "–"} {t("inputs.examples", { n: props.inputs.examples })}</li>
-            <li>{props.inputs.logo ? "✓" : "–"} {t("inputs.logo")}</li>
-            <li>{props.inputs.font ? "✓" : "–"} {t("inputs.font")}</li>
+        <Card className="grid gap-5 p-6">
+          <ul className="grid gap-2 sm:grid-cols-2" data-testid="design-inputs">
+            {([["cgp", props.inputs.cgp], ["examples", props.inputs.examples > 0], ["logo", props.inputs.logo], ["font", props.inputs.font]] as const).map(([k, ok]) => (
+              <li key={k} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm ${ok ? "border-ok/30 bg-ok/5" : "border-line"}`}>
+                {ok ? <Check aria-hidden className="size-4 shrink-0 text-ok" /> : <Circle aria-hidden className="size-4 shrink-0 text-muted" />}
+                <span><span className="sr-only">{ok ? t("inputs.have") : t("inputs.missing")}: </span>{t(`inputs.${k}`, { n: props.inputs.examples })}</span>
+              </li>
+            ))}
           </ul>
           <p className="text-sm text-muted">{t("examplesHint")} <Link href={props.filesHref} className="underline underline-offset-4">{t("toFiles")}</Link></p>
           {canEdit ? createForm(true) : <p className="text-sm text-muted">{t("ownerOnly")}</p>}
@@ -103,11 +116,11 @@ export async function DesignSection(props: {
               ))}
             </nav>
           </div>
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-testid="design-templates">
+          <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" data-testid="design-templates">
             {current.spec!.templates.map((tp) => (
               <li key={tp.id} className="grid content-start gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- server-rendered PNG preview */}
-                <img src={`/api/designs/${current.id}/preview?template=${tp.id}&shape=${props.shape}`} alt={t("previewAlt", { name: tp.name })} className="w-full rounded-lg ring-1 ring-line" loading="lazy" />
+                <img src={`/api/designs/${current.id}/preview?template=${tp.id}&shape=${props.shape}`} alt={t("previewAlt", { name: tp.name })} className="w-full rounded-2xl shadow-xl shadow-black/30 ring-1 ring-line" loading="lazy" />
                 <p className="text-sm font-medium">{tp.name}</p>
                 <p className="text-xs text-muted">{tp.use}</p>
                 {/* TASK-054: picked templates limit the revision below to them. */}
@@ -140,10 +153,22 @@ export async function DesignSection(props: {
       )}
 
       {props.designs.length ? (
-        <DataTable testId="design-versions" head={[t("versionCol"), t("whatCol"), t("statusCol"), t("dateCol"), ""]}>
+        <DataTable testId="design-versions" head={[t("versionCol"), t("lookCol"), t("whatCol"), t("statusCol"), t("dateCol"), ""]}>
           {props.designs.map((d) => (
             <tr key={d.id}>
               <td className={`${td} font-medium`}>v{d.version}</td>
+              <td className={td}>
+                {/* TASK-056: each version at a glance — its first template and its colours. */}
+                {d.status === "ready" && d.spec ? (
+                  <span className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- server-rendered PNG preview */}
+                    <img src={`/api/designs/${d.id}/preview?template=${d.spec.templates[0]?.id}&shape=square`} alt="" loading="lazy" className="size-12 rounded-md object-cover ring-1 ring-line" />
+                    <span className="flex gap-1" aria-hidden>
+                      {[d.spec.palette.background, d.spec.palette.accent, d.spec.palette.text].map((c, i) => <span key={i} className="size-3 rounded-full ring-1 ring-line" style={{ backgroundColor: c }} />)}
+                    </span>
+                  </span>
+                ) : <span className="text-muted">—</span>}
+              </td>
               <td className={td}>{whatText(d)}</td>
               <td className={td}>
                 {d.id === current?.id ? <Badge tone="ok" dot>{t("inUse")}</Badge> : <Badge tone={d.status === "failed" ? "danger" : d.status === "generating" ? "signal" : "neutral"}>{t(`status.${d.status}`)}</Badge>}

@@ -839,7 +839,28 @@
     "costsTitle": "Poraba po brandih",
     "costsHint": "Ta mesec skupaj {total} €.",
     "costCol": "Ta mesec",
-    "noBrandCost": "Uvozi planov in drugo"
+    "noBrandCost": "Uvozi planov in drugo",
+    "hero": "Danes {n, plural, one {je v planu <a># objava</a>} two {sta v planu <a># objavi</a>} few {so v planu <a># objave</a>} other {je v planu <a># objav</a>}} {brands, plural, one {za # brand} two {za # branda} few {za # brande} other {za # brandov}}.",
+    "heroEmpty": "Danes ni nič v planu. <a>Prost dan.</a>",
+    "importPlan": "Uvozi plan",
+    "openFeed": "Odpri plan meseca",
+    "value": {
+      "title": "Ta mesec s Postajo",
+      "posts": "Objav napisanih ta mesec",
+      "brands": "{n, plural, one {za # brand} two {za # branda} few {za # brande} other {za # brandov}}",
+      "images": "Grafik ta mesec",
+      "imagesHint": "vsaka v podobi svojega branda",
+      "saved": "Prihranjenega časa",
+      "savedHint": "ocena: {text} min na objavo, {image} min na grafiko",
+      "worth": "Vrednost dela",
+      "worthHint": "ocena pri {rate} €/h"
+    },
+    "noImage": "Slika nastane na klik",
+    "noChannels": "brez kanalov",
+    "palette": "Barve branda",
+    "noDesign": "Vizualna podoba še ni narejena",
+    "upcoming": "{n, plural, =0 {nič v planu} one {# objava v planu} two {# objavi v planu} few {# objave v planu} other {# objav v planu}}",
+    "next": "naslednja {date}"
   },
   "PostsList": {
     "title": "Objave",
@@ -1066,7 +1087,8 @@
     "views": {
       "month": "Mesec",
       "week": "Teden",
-      "day": "Dan"
+      "day": "Dan",
+      "feed": "Feed"
     },
     "time": "Ura",
     "format": "Format",
@@ -1082,7 +1104,25 @@
     "downloadDay": "Prenesi dan (ZIP, {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}})",
     "show": "Prikaži:",
     "showDefault": "Privzeto (brez objavljenih)",
-    "openPublished": "odpri"
+    "openPublished": "odpri",
+    "feed": {
+      "channelsLabel": "Kanal",
+      "pickTitle": "Izberi kanal, katerega feed želiš videti",
+      "noChannels": "Brandi še nimajo kanalov.",
+      "prev": "Prejšnji mesec",
+      "next": "Naslednji mesec",
+      "thisMonth": "Ta mesec",
+      "imagesWeek": "Ustvari slike za naslednjih 7 dni ({n})",
+      "empty": "Ta mesec za ta kanal ni objav v planu.",
+      "counts": "{handle} · {n, plural, one {# objava} two {# objavi} few {# objave} other {# objav}} · {images} s sliko, {planned} brez slike",
+      "noImage": "Slika nastane na klik",
+      "hint": "Slike nastanejo, ko jih zahtevaš — za eno objavo, za teden ali za cel mesec. Do takrat feed kaže, kaj je pripravljeno.",
+      "selected": "Izbrana objava",
+      "noImageYet": "Slika še ni narejena",
+      "makeImage": "Ustvari sliko",
+      "noText": "Besedilo še ni napisano.",
+      "openPost": "Odpri objavo"
+    }
   },
   "Bulk": {
     "scope": "Obseg",
@@ -1254,7 +1294,9 @@
       "cgp": "CGP",
       "examples": "{n, plural, =0 {Ni primerov preteklih objav} one {# primer pretekle objave} two {# primera preteklih objav} few {# primeri preteklih objav} other {# primerov preteklih objav}}",
       "logo": "Logotip",
-      "font": "Pisava branda (neobvezno)"
+      "font": "Pisava branda (neobvezno)",
+      "have": "imaš",
+      "missing": "manjka"
     },
     "examplesHint": "Najboljši rezultat dobiš, če v Datoteke naložiš nekaj slik preteklih objav — Claude jih vidi in iz njih izpelje slog, generator slik pa jih uporabi kot referenco.",
     "toFiles": "Odpri Datoteke",
@@ -1310,7 +1352,15 @@
     "restoredTemplate": "Vrnjena predloga »{name}« iz v{v}",
     "restoreTemplateLabel": "Vrni eno predlogo iz te verzije",
     "restoreTemplate": "Vrni predlogo",
-    "restoreHint": "Izbrana predloga te verzije pride v trenutno podobo kot nova verzija. Brez AI klica, brez stroška."
+    "restoreHint": "Izbrana predloga te verzije pride v trenutno podobo kot nova verzija. Brez AI klica, brez stroška.",
+    "lookCol": "Videz",
+    "workingHint": "Običajno traja 1–2 minuti. Stran se osveži sama; lahko jo tudi zapustiš.",
+    "steps": {
+      "read": "Prebere CGP, barve in tvoj opis",
+      "look": "Pogleda logotip in pretekle objave ({n})",
+      "draw": "Nariše predloge za vse vrste objav",
+      "check": "Preveri, da se vsaka predloga izriše"
+    }
   },
   "Ideas": {
     "title": "Predlagaj ideje",

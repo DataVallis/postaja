@@ -15,6 +15,12 @@ const inter = localFont({
   variable: "--font-inter",
   display: "swap",
 });
+/** Accent face for a few words in page headlines (TASK-056); covers č š ž ć đ. */
+const serif = localFont({
+  src: [{ path: "./fonts/InstrumentSerif-Italic.woff2", weight: "400", style: "italic" }],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Meta");
@@ -25,7 +31,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const locale = await getLocale();
   const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang={locale} data-theme={theme} className={inter.variable}>
+    <html lang={locale} data-theme={theme} className={`${inter.variable} ${serif.variable}`}>
       <body className="antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
