@@ -1,5 +1,7 @@
-// What Postaja sells (business plan §4, owner 2026-10-08; prices without VAT). Stripe prices are found by lookup key,
-// so the code never needs price ids; `ensureStripeCatalog` creates the missing ones.
+// What Postaja sells (business plan §4, owner 2026-10-08; Studio 149 € and Agencija 499 € from 2026-10-11, ADR-080;
+// prices without VAT). Stripe prices are found by lookup key,
+// so the code never needs price ids; `ensureStripeCatalog` creates the missing ones and
+// replaces a price whose amount changed.
 import { CREDIT_PACKS } from "../db/schema";
 import type { OrgLimits } from "../orgs/service";
 
@@ -9,8 +11,8 @@ export type Interval = "month" | "year";
 
 export const PLAN_CATALOG: Record<PaidPlan, { name: string; priceEur: number; limits: Required<Pick<OrgLimits, "brands" | "members" | "creditsPerMonth">> }> = {
   solo: { name: "Solo", priceEur: 39, limits: { brands: 2, members: 1, creditsPerMonth: 400 } },
-  studio: { name: "Studio", priceEur: 99, limits: { brands: 6, members: 3, creditsPerMonth: 1500 } },
-  agency: { name: "Agencija", priceEur: 249, limits: { brands: 20, members: 10, creditsPerMonth: 5000 } },
+  studio: { name: "Studio", priceEur: 149, limits: { brands: 6, members: 3, creditsPerMonth: 1500 } },
+  agency: { name: "Agencija", priceEur: 499, limits: { brands: 20, members: 10, creditsPerMonth: 5000 } },
 };
 /** Yearly = 10 × the monthly price (two months free). */
 export const YEAR_MONTHS = 10;

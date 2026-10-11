@@ -1,6 +1,6 @@
 # Postaja — poslovni načrt
 
-Verzija 1 · 2026-10-08 · Lastnik in prodajalec: David Tacer s.p.
+Verzija 1.1 · 2026-10-11 (cene Studio 149 €, Agencija 499 € — lastnik 2026-10-11) · Lastnik in prodajalec: David Tacer s.p.
 Status: **predlog** — cene, garancija in prvi segment čakajo potrditev lastnika (§15).
 Jezik: slovenščina (lastnikov dokument, kot `guides/user/sl`). Tehnični del za razvoj je v angleščini v
 `docs/tasks/README.md` (TASK-035…045) in `docs/01-PRODUCT-SPEC.md` §12.
@@ -8,7 +8,7 @@ Jezik: slovenščina (lastnikov dokument, kot `guides/user/sl`). Tehnični del z
 
 Postajo prodajamo najprej **slovenskim agencijam in freelancerjem, ki vodijo 5–30 brandov**, kot orodje, ki pripravi
 mesec objav za vse stranke v enem popoldnevu — v tonu, jeziku in podobi vsake stranke. Cilj: 10 plačljivih strank do
-konca leta 2026, 40 do konca marca 2027 (~5.000 € MRR), večina pridobivanja in onboardinga avtomatizirana, lastnik ostane
+konca leta 2026, 40 do konca marca 2027 (~8.000 € MRR), večina pridobivanja in onboardinga avtomatizirana, lastnik ostane
 le na demo klicih in odobritvah.
 
 ---
@@ -106,8 +106,8 @@ strošek videa ne poje marže. Cene brez DDV.
 | Paket | Cena / mesec | Brandi | Člani | Krediti / mesec | Vključeno |
 | --- | --- | --- | --- | --- | --- |
 | Solo | 39 € | 2 | 1 | 400 | objave, slike, karuseli, LinkedIn PDF, uvoz plana, AI ideje, brez ponavljanja |
-| Studio | 99 € | 6 | 3 | 1.500 | + oglasni seti, animacije, raziskava konkurence |
-| Agencija | 249 € | 20 | 10 | 5.000 | + 1 persona z videom, onboarding klic, prednostna podpora |
+| Studio | 149 € | 6 | 3 | 1.500 | + oglasni seti, animacije, raziskava konkurence |
+| Agencija | 499 € | 20 | 10 | 5.000 | + 1 persona z videom, onboarding klic, prednostna podpora |
 | Partner | od 590 € | po dogovoru | po dogovoru | po dogovoru | + done-for-you onboarding, kasneje white-label |
 
 **Krediti** (1 kredit ≈ 0,05 € prodajne vrednosti; strošek iz `guides/user/sl/09-stroski.md`):
@@ -128,8 +128,11 @@ strošek videa ne poje marže. Cene brez DDV.
   ob prehodu na letno se 99 € odšteje. Za solo: 7-dnevni preizkus s kartico, 50 kreditov.
 
 **Primerjava s trgom:** Predis.ai Rise 79 $/mesec za 4 brande, Blaze Growth 149 $/mesec, Taplio Pro 199 $/mesec samo za
-LinkedIn. Agencija plača za Postajo 249 € za 20 brandov, to je **12,45 € na brand**, medtem ko stranki zaračuna
-300–1.500 € na brand. Cena ni ovira; ovira je zaupanje, zato garancija in vzorec.
+LinkedIn. Agencija plača za Postajo 499 € za 20 brandov, to je **~25 € na brand**, medtem ko stranki zaračuna
+300–1.500 € na brand. Cena izhaja iz vrednosti: z Postajo en človek pripravi objave za veliko strank, zato agencija
+prihrani vsaj eno zaposlitev (~2.500–3.000 €/mesec z dajatvami, ocena) — 499 € je petina tega. Studio (149 €) je za
+freelancerja ali podjetje z več brandi: en sam klient (≥ 300 €/mesec) pokrije naročnino. Solo ostane 39 € za mala
+podjetja, ki objavljajo sama (lastnik, 2026-10-11). Cena ni ovira; ovira je zaupanje, zato garancija in vzorec.
 
 ## 5. Upsell in dodatni prihodki
 
@@ -154,14 +157,14 @@ pomanjkanje. Vsak DFY brand je hkrati case study.
 
 ## 6. Ekonomika
 
-Tudi če stranka porabi **vse** kredite, ostane bruto marža 35–65 %; pri običajni porabi (~50 % kreditov) 65–80 %.
+Tudi če stranka porabi **vse** kredite, ostane bruto marža 64–65 %; pri običajni porabi (~50 % kreditov) ~80 %.
 Predpostavka: najvišji strošek ≈ 0,03 € na kredit (video 10 s = 1,05 € / 40 kreditov = 0,026 €).
 
 | Paket | Cena | Strošek AI pri 100 % kreditov | Plačilni ponudnik (~5 %) | Bruto marža (najslabše) | Bruto marža (50 % porabe) |
 | --- | --- | --- | --- | --- | --- |
 | Solo | 39 € | 12 € | 2 € | 64 % | 80 % |
-| Studio | 99 € | 45 € | 5 € | 50 % | 72 % |
-| Agencija | 249 € | 150 € | 12 € | 35 % | 65 % |
+| Studio | 149 € | 45 € | 7 € | 65 % | 80 % |
+| Agencija | 499 € | 150 € | 25 € | 65 % | 80 % |
 
 - **Fiksni stroški:** produkcijski strežnik Hetzner + Object Storage (nekaj deset €/mesec), domena, e-pošta, plačilni
   ponudnik. Pokrije jih že 1 stranka Studio.
@@ -169,7 +172,7 @@ Predpostavka: najvišji strošek ≈ 0,03 € na kredit (video 10 s = 1,05 € /
   besedilo stane 2 kredita.
 - **Znižanje stroška:** prompt caching CGP-ja pri Claude API (CGP je enak pri vsaki objavi branda), Batch API za
   množično ustvarjanje ponoreh.
-- **Cilj CAC:** ≤ 3 mesečne naročnine (Studio ≤ 300 €, Agencija ≤ 750 €).
+- **Cilj CAC:** ≤ 3 mesečne naročnine (Studio ≤ 450 €, Agencija ≤ 1.500 €).
 
 ## 7. Predstavitev
 
@@ -248,7 +251,7 @@ avtomatiziran (§11), lastnik odobri sporočilo in vodi demo.
 - »Imamo ChatGPT/Canvo« → »Koliko časa vam vzame, da ChatGPT piše v tonu vsake stranke in Canva izvozi 6 dimenzij? Tu je
   to en klik — poglejte vzorec.«
 - »Stranke ne smejo vedeti za AI« → Postaja izvozi navadne datoteke; besedilo je v tonu stranke; vi odobrite vsako objavo.
-- »Predrago« → izračun: 12 € na brand proti vaši uri dela; garancija 30 dni.
+- »Predrago« → izračun: ~25 € na brand proti vaši uri dela, oz. 499 € proti plači ene osebe; garancija 30 dni.
 - »Nimamo časa za uvajanje« → brande uvozimo mi (onboarding je bonus).
 
 **Pravno:** hladna e-pošta pravnim osebam v Sloveniji je omejena (ZEKom-2, GDPR) — preveri s pravnikom. Varnejše:
@@ -269,11 +272,11 @@ naj od Q1 2027 doda še toliko. Vse stopnje so predpostavke — popravi jih po p
 
 Največji padec je pri prvem odgovoru — zato je personaliziran vzorec za njihovo stranko najpomembnejši del lijaka.
 
-| Mejnik | Plačljive stranke | MRR (povprečno ~125 €/stranko) | Pogoj |
+| Mejnik | Plačljive stranke | MRR (povprečno ~200 €/stranko — predpostavka mešanice paketov po novih cenah) | Pogoj |
 | --- | --- | --- | --- |
-| 31. 12. 2026 | 10 (od tega 5 pilotov → plačljivi) | ~1.200 € | produkcija + ročni računi |
-| 31. 3. 2027 | 40 | ~5.000 € | samopostrežna registracija + plačila |
-| 30. 6. 2027 | 80 + 3–5 DFY brandov | ~12.000 € | HR trg, objavljanje/urnik |
+| 31. 12. 2026 | 10 (od tega 5 pilotov → plačljivi) | ~2.000 € | produkcija + ročni računi |
+| 31. 3. 2027 | 40 | ~8.000 € | samopostrežna registracija + plačila |
+| 30. 6. 2027 | 80 + 3–5 DFY brandov | ~18.000 € | HR trg, objavljanje/urnik |
 
 Pravilo (Hormozi): če od 100 kvalificiranih agencij, ki vidijo vzorec in ponudbo, ne kupi vsaj 5, je to **problem
 ponudbe**, ne prometa — ne povečuj kontaktov, popravi vzorec, garancijo ali paket.
@@ -395,7 +398,7 @@ Prvi pilot plača do 15. 11. 2026; 10 plačljivih strank do 31. 12. 2026.
 ## 15. Odločitve lastnika (odprte)
 
 - [ ] Prvi segment: agencije (priporočeno) ali solo founderji prek AI Builders?
-- [x] Cene iz §4 — potrjene (lastnik, 8. 10. 2026).
+- [x] Cene iz §4 — potrjene (lastnik, 8. 10. 2026); Studio dvignjen na 149 €, Agencija na 499 €, Solo ostane 39 € (lastnik, 11. 10. 2026).
 - [x] Plačilni ponudnik: **Stripe** (lastnik, 8. 10. 2026). DDV in račune ureja Stripe Tax / Stripe računi; računovodja naj potrdi OSS, obrnjeno davčno obveznost in davčno potrjevanje plačil s kartico.
 - [ ] Domena za Postajo.
 - [ ] Garancija 80 %: po meritvi na lastnih brandih?

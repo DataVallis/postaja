@@ -15,8 +15,8 @@ In **Team and plan** → **Plan and payment** the owner picks a plan (prices exc
 | Plan | Monthly | Yearly | Brands | Members | Credits a month |
 | --- | --- | --- | --- | --- | --- |
 | Solo | €39 | €390 | 2 | 1 | 400 |
-| Studio | €99 | €990 | 6 | 3 | 1500 |
-| Agency | €249 | €2490 | 20 | 10 | 5000 |
+| Studio | €149 | €1490 | 6 | 3 | 1500 |
+| Agency | €499 | €4990 | 20 | 10 | 5000 |
 
 Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT id. We email you the invoice. Card, plan changes and cancelling are under **Manage subscription**.
 

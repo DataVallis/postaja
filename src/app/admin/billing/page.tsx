@@ -12,7 +12,7 @@ import { ensureCatalogAction, setInvoiceNumberAction } from "./actions";
 export const dynamic = "force-dynamic";
 
 /** Payments (TASK-036, ADR-073): is Stripe set up, which prices exist, subscriptions, the latest webhook events. */
-export default async function BillingAdminPage({ searchParams }: { searchParams: Promise<{ created?: string; error?: string; all?: string; invoice?: string }> }) {
+export default async function BillingAdminPage({ searchParams }: { searchParams: Promise<{ created?: string; updated?: string; error?: string; all?: string; invoice?: string }> }) {
   const actor = await requireSuperadmin();
   const sp = await searchParams;
   const t = await getTranslations("Admin.billing");
@@ -43,7 +43,7 @@ export default async function BillingAdminPage({ searchParams }: { searchParams:
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 max-w-3xl text-sm text-muted">{t("intro")}</p>
       </div>
-      {sp.created !== undefined ? <p role="status" className="text-sm text-signal">{t("created", { n: Number(sp.created) })}</p> : null}
+      {sp.created !== undefined ? <p role="status" className="text-sm text-signal">{t("created", { n: Number(sp.created), u: Number(sp.updated ?? 0) })}</p> : null}
       {sp.error ? <p role="alert" className="text-sm text-danger">{t(`errors.${sp.error === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : "STRIPE"}`)}</p> : null}
 
       <section aria-labelledby="setup-h" className="grid gap-2 text-sm" data-testid="billing-setup">
