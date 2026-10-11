@@ -39,13 +39,29 @@ export async function pricesByLookupKey(stripe: Stripe, keys: string[]): Promise
 export const TAX_CODE = "txcd_10103001";
 
 /** Creates the products and prices that are missing (by lookup key); returns what exists afterwards. Idempotent. */
-export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: string[]; existing: string[] }> {
+export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: string[]; updated: string[]; existing: string[] }> {
   const want = catalogPrices();
   const have = await pricesByLookupKey(stripe, want.map((w) => w.key));
   const created: string[] = [];
+  const updated: string[] = [];
   const products = new Map<string, string>();
   for (const w of want) {
-    if (have.has(w.key)) continue;
+    if (have.has(w.key)) {
+      // A changed price in the catalogue (owner, 2026-10-11: Studio 149 €, Agencija 499 €): Stripe prices cannot be
+      // edited, so a new price takes over the lookup key and the old one is archived. Running subscriptions keep the
+      // price they were bought at until the owner moves them.
+      const old = await stripe.prices.retrieve(have.get(w.key)!);
+      if (old.unit_amount === w.cents) continue;
+      const product = typeof old.product === "string" ? old.product : old.product.id;
+      const next = await stripe.prices.create({
+        product, currency: "eur", unit_amount: w.cents, lookup_key: w.key, transfer_lookup_key: true, tax_behavior: "exclusive",
+        ...(w.interval ? { recurring: { interval: w.interval } } : {}),
+      });
+      await stripe.prices.update(old.id, { active: false });
+      have.set(w.key, next.id);
+      updated.push(w.key);
+      continue;
+    }
     let product = products.get(w.product);
     if (!product) {
       product = (await stripe.products.create({ name: w.product, tax_code: TAX_CODE, metadata: { postaja: "1" } })).id;
@@ -67,5 +83,5 @@ export async function ensureStripeCatalog(stripe: Stripe): Promise<{ created: st
     seen.add(prod.id);
     if (!prod.tax_code) await stripe.products.update(prod.id, { tax_code: TAX_CODE });
   }
-  return { created, existing: [...have.keys()] };
+  return { created, updated, existing: [...have.keys()] };
 }

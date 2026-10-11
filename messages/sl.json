@@ -315,7 +315,7 @@
       "present": "obstaja",
       "missing": "manjka",
       "ensure": "Pripravi cenik v Stripe",
-      "created": "Ustvarjenih cen: {n}.",
+      "created": "Ustvarjenih cen: {n}, posodobljenih cen: {u} (obstoječe naročnine ostanejo na stari ceni).",
       "subscriptions": "Naročnine",
       "events": "Zadnji dogodki Stripe",
       "none": "Še nič.",

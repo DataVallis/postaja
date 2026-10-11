@@ -315,7 +315,7 @@
       "present": "present",
       "missing": "missing",
       "ensure": "Create prices in Stripe",
-      "created": "Prices created: {n}.",
+      "created": "Prices created: {n}, prices updated: {u} (running subscriptions keep their old price).",
       "subscriptions": "Subscriptions",
       "events": "Latest Stripe events",
       "none": "Nothing yet.",

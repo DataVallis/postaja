@@ -338,8 +338,8 @@ Recognised columns: `date`, `channel`, `type`, `topic`, `prompt` (image prompt),
 - v1: no payments. Plans are set by the super admin. `comped` = never charged, limits as configured.
 - Phase 2: BYOK — an organization may use its own fal / LLM keys (encrypted at rest).
 - Phase 3 (proposed in `docs/business/BUSINESS-PLAN.sl.md` §4, owner to confirm): plans **Solo** (39 €/month, 2 brands,
-  1 member, 400 credits), **Studio** (99 €, 6 brands, 3 members, 1.500 credits, + ads, animation, competitor research),
-  **Agencija** (249 €, 20 brands, 10 members, 5.000 credits, + 1 persona), **Partner** (custom). No free plan; agency pilot
+  1 member, 400 credits), **Studio** (149 €, 6 brands, 3 members, 1.500 credits, + ads, animation, competitor research),
+  **Agencija** (499 €, 20 brands, 10 members, 5.000 credits, + 1 persona), **Partner** (custom). No free plan; agency pilot
   99 € / 30 days; 7-day trial for Solo. AI use is counted in **credits** (per-action price table as data, TASK-038); the €
   spend cap stays as a hard safety limit. Add-ons: credit packs, extra brand, extra member, persona.
 - Billing provider: Merchant of Record (Paddle / Lemon Squeezy) or Stripe — owner decision. Self-serve signup, trial,

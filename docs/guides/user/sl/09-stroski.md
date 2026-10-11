@@ -15,8 +15,8 @@ V **Ekipa in paket** → **Paket in plačilo** lastnik izbere paket (cene brez D
 | Paket | Mesečno | Letno | Brandi | Člani | Krediti na mesec |
 | --- | --- | --- | --- | --- | --- |
 | Solo | 39 € | 390 € | 2 | 1 | 400 |
-| Studio | 99 € | 990 € | 6 | 3 | 1500 |
-| Agencija | 249 € | 2490 € | 20 | 10 | 5000 |
+| Studio | 149 € | 1490 € | 6 | 3 | 1500 |
+| Agencija | 499 € | 4990 € | 20 | 10 | 5000 |
 
 Za agencije je na voljo **agencijski pilot**: 99 € enkratno, 30 dni paketa Studio za 3 brande (enkrat, pred prvo naročnino). Plačilo poteka prek Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti. Kartico, menjavo paketa in odpoved urediš z gumbom **Upravljaj naročnino**.
 
