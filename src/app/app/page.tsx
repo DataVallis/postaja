@@ -10,6 +10,8 @@ import { calendarPosts } from "@/server/posts/calendar";
 import { brandStreaks, costsByBrand, todayByChannel } from "@/server/posts/dashboard";
 import { brandCards, coverImages, HOURLY_EUR, MINUTES_SAVED, monthValue } from "@/server/posts/showcase";
 import { PostTile } from "./post-tile";
+import { FirstSteps } from "./first-steps";
+import { firstSteps, pendingSignup } from "@/server/signup/service";
 import { todayIn } from "@/lib/dates";
 import Link from "next/link";
 
@@ -28,6 +30,8 @@ export default async function Dashboard() {
   const superBadge = user.role === "superadmin" ? <Badge tone="signal">{ta("superadmin")}</Badge> : null;
 
   if (!org) {
+    // A self-serve signup (TASK-037) that has not created its organization yet.
+    if (await pendingSignup(getDb(), user.email)) redirect("/app/start");
     return (
       <>
         <PageHeader title={t("title")} description={<>{ta("signedInAs")} <strong data-testid="user-email">{user.email}</strong></>} actions={superBadge} />
@@ -43,6 +47,7 @@ export default async function Dashboard() {
     orgOverview(db, org), listOrgPosts(db, org, {}), listBrands(db, org), calendarPosts(db, org, today, today),
     todayByChannel(db, org, today), brandStreaks(db, org, today), costsByBrand(db, org), monthValue(db, org), brandCards(db, org, today),
   ]);
+  const steps = await firstSteps(db, org.orgId);
   const covers = await coverImages(db, org, todays.map((p) => p.id));
   const todayBrands = new Set(todays.map((p) => p.brandId)).size;
   const hours = Math.round(value.minutes / 60);
@@ -62,6 +67,7 @@ export default async function Dashboard() {
         actions={<>{superBadge}{brandList.length ? <><LinkButton href="/app/import">{t("importPlan")}</LinkButton><LinkButton href="/app/plan?view=feed" variant="primary"><FileText aria-hidden className="size-4" />{t("openFeed")}</LinkButton></> : null}</>}
       />
 
+      {steps.show ? <FirstSteps done={steps.done} firstBrandId={steps.firstBrandId} /> : null}
       {brandList.length === 0 ? (
         <EmptyState
           icon={<Layers aria-hidden className="size-8" />}

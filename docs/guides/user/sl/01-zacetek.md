@@ -8,7 +8,15 @@ Postaja piše in pripravi objave za družbena omrežja za več brandov hkrati. I
 2. Klikni **Pošlji povezavo**.
 3. V e-pošti odpri povezavo za prijavo. Povezava velja 10 minut in jo lahko uporabiš samo enkrat.
 
-Gesla ni. Prijaviš se lahko samo, če te je skrbnik Postaje dodal v organizacijo.
+Gesla ni. Prijaviš se, če te je skrbnik Postaje ali lastnik organizacije povabil, ali če si začel brezplačni preizkus.
+
+## Brezplačni preizkus
+
+1. Na strani za prijavo klikni **Preizkusi Postajo brezplačno**.
+2. Vpiši ime podjetja ali agencije in e-pošto ter klikni **Pošlji povezavo za začetek**.
+3. Odpri povezavo iz e-pošte (velja 10 minut), preveri ime in klikni **Začni 7-dnevni preizkus**.
+
+Preizkus traja 7 dni in ne potrebuje kartice: 1 brand, 1 član, 50 kreditov ter oglasni seti, animacije in raziskava konkurence (kot paket Studio; persona ni vključena). Na vrhu strani vidiš, koliko dni preizkusa je še ostalo; dan ali dva pred koncem dobiš e-pošto. Ko se preizkus konča, se novo ustvarjanje ustavi, vse ustvarjeno pa ostane za ogled in prenos. Paket izbereš kadar koli v **Ekipa in paket**.
 
 ## Organizacija in vloge
 
@@ -44,6 +52,8 @@ Prva stran po prijavi pokaže:
 - današnje objave v planu z gumbom **Prenesi današnje (ZIP)**;
 - **Današnji cilj po kanalih**: koliko objav kanal danes potrebuje, koliko jih manjka in niz zaporednih dni. Gumb **Ustvari** napiše manjkajoče, gumb **Predlagaj ideje** predlaga nove teme;
 - porabo AI ta mesec po brandih.
+
+Po brezplačnem preizkusu je na vrhu **Prvi koraki**: dodaj brand, vpiši CGP, uvozi plan, ustvari prvo objavo in jo prenesi. Vsak odprt korak je povezava do mesta, kjer ga narediš; ko so vsi narejeni, seznam izgine.
 
 ## Nič se ne izgubi
 

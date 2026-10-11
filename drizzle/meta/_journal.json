@@ -351,6 +351,13 @@
       "when": 1791745256187,
       "tag": "0049_billing_addons",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791748153392,
+      "tag": "0050_trial_signup",
+      "breakpoints": true
     }
   ]
 }

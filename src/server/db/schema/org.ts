@@ -71,6 +71,8 @@ export const orgSettings = pgTable(
     repeatThresholds: jsonb("repeat_thresholds").$type<{ reject: number; warn: number; windowDays: number }>()
       .notNull()
       .default({ reject: 0.9, warn: 0.82, windowDays: 180 }),
+    /** TASK-037: the first ZIP / PDF / plan download (the last of the first steps). */
+    firstDownloadAt: timestamp("first_download_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

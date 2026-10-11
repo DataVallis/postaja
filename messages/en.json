@@ -16,7 +16,9 @@
     "error": "Sending failed. Try again in a minute.",
     "linkInvalid": "The link is invalid or expired. Request a new one.",
     "oauthIntro": "Claude wants to connect to Postaja. Enter your email and we will send you a sign-in link. Open it in this browser.",
-    "oauthExpired": "The Claude connection request has expired. Start again in Claude."
+    "oauthExpired": "The Claude connection request has expired. Start again in Claude.",
+    "noAccount": "No account yet?",
+    "trial": "Try Postaja for free"
   },
   "App": {
     "signedInAs": "Signed in as",
@@ -860,7 +862,35 @@
     "palette": "Brand colours",
     "noDesign": "No visual identity yet",
     "upcoming": "{n, plural, =0 {nothing planned} one {# post planned} other {# posts planned}}",
-    "next": "next {date}"
+    "next": "next {date}",
+    "firstSteps": {
+      "title": "First steps",
+      "progress": "{n} of {total} done.",
+      "doneLabel": "done",
+      "openLabel": "open",
+      "steps": {
+        "brand": {
+          "title": "Add a brand",
+          "hint": "name, languages and the setup guide."
+        },
+        "cgp": {
+          "title": "Write the CGP",
+          "hint": "how the brand speaks — Postaja writes every post from it."
+        },
+        "plan": {
+          "title": "Import a plan",
+          "hint": "Excel, Word or PDF with topics; AI sorts it by day."
+        },
+        "post": {
+          "title": "Create the first post",
+          "hint": "text and images for a channel."
+        },
+        "download": {
+          "title": "Download a post",
+          "hint": "a ZIP with the text and images, ready to publish."
+        }
+      }
+    }
   },
   "PostsList": {
     "title": "Posts",
@@ -1802,7 +1832,11 @@
       "perMonth": "€{price} / month",
       "perYear": "€{price} / year",
       "featuresLabel": "What {plan} includes",
-      "basics": "Posts, images and carousels"
+      "basics": "Posts, images and carousels",
+      "bannerTrial": "Your trial runs for {days} more days (until {date}).",
+      "bannerTrialLink": "Choose a plan",
+      "bannerTrialEnded": "Your trial has ended: you can view and download what was made; choose a plan to create more.",
+      "trialUntil": "The free trial runs until {date}. Choose a plan any time."
     }
   },
   "Videos": {
@@ -2211,5 +2245,28 @@
     "inPlanOrAddon": "Included in {plan}, or as an add-on for €{price} / month.",
     "cta": "Choose a plan",
     "askOwner": "Ask the organization's owner to upgrade."
+  },
+  "Signup": {
+    "title": "Try Postaja free for {days} days",
+    "intro": "No card needed. The trial includes {brands} brand, {credits} credits, ad sets, animations and competitor research.",
+    "orgName": "Company or agency name",
+    "email": "Email",
+    "submit": "Send the link to start",
+    "sending": "Sending …",
+    "sent": "We sent you an email with a link. Open it in this browser (valid for 10 minutes) and confirm the start of your trial.",
+    "haveAccount": "Already have an account?",
+    "login": "Sign in",
+    "startTitle": "Start your trial",
+    "startIntro": "{days} days, {brands} brand, {credits} credits. When the trial ends everything you made stays; choose a plan to continue.",
+    "noCard": "No card needed. An administrator can change the organization name later.",
+    "start": "Start the {days}-day trial",
+    "errors": {
+      "DISABLED": "Trial signup is not open right now.",
+      "INVALID": "Enter a name (at least 2 characters) and a valid email.",
+      "TOO_MANY": "Too many attempts. Try again later.",
+      "NO_REQUEST": "The trial link has expired. Start again on the trial page.",
+      "HAS_ORG": "You already have an organization.",
+      "FAILED": "Something went wrong. Try again."
+    }
   }
 }

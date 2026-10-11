@@ -16,7 +16,9 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
   const block = billingBlock(billing, now);
   const state = live
     ? billing!.status === "past_due" ? t("pastDue") : billing!.cancelAtPeriodEnd ? t("endsOn", { date: date(billing!.currentPeriodEnd) }) : t("renewsOn", { date: date(billing!.currentPeriodEnd), interval: t(`intervals.${billing!.interval ?? "month"}`) })
-    : pilotRunning ? t("pilotUntil", { date: date(billing!.pilotEndsAt) }) : block ? t("ended") : null;
+    : pilotRunning ? t("pilotUntil", { date: date(billing!.pilotEndsAt) })
+    : billing?.trialEndsAt && billing.trialEndsAt > now ? t("trialUntil", { date: date(billing.trialEndsAt) })
+    : block ? t("ended") : null;
   const yearly = billing?.interval === "year";
   const addonPrice = (a: keyof typeof ADDONS) => yearly ? t("perYear", { price: ADDONS[a].priceEur * YEAR_MONTHS }) : t("perMonth", { price: ADDONS[a].priceEur });
   const canPilot = !billing || (billing.status === "none" && !billing.pilotEndsAt);

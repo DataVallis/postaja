@@ -20,3 +20,4 @@ export * from "./schema/reviews";
 export * from "./schema/demos";
 export * from "./schema/credits";
 export * from "./schema/billing";
+export * from "./schema/signup";

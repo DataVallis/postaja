@@ -77,7 +77,7 @@ export async function reserve(
   await db.transaction(async (tx) => {
     const [s] = await tx.select({ cap: orgSettings.spendCapMicroUsd, limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, a.orgId)).for("update");
     if (!s) throw new Error("ORG_NOT_FOUND");
-    const [bill] = await tx.select({ status: orgBilling.status, pastDueSince: orgBilling.pastDueSince, pilotEndsAt: orgBilling.pilotEndsAt }).from(orgBilling).where(eq(orgBilling.orgId, a.orgId));
+    const [bill] = await tx.select({ status: orgBilling.status, pastDueSince: orgBilling.pastDueSince, pilotEndsAt: orgBilling.pilotEndsAt, trialEndsAt: orgBilling.trialEndsAt }).from(orgBilling).where(eq(orgBilling.orgId, a.orgId));
     const blocked = billingBlock(bill, a.now ?? new Date());
     if (blocked) throw new BillingBlockedError(blocked);
     const max = s.limits?.generationsPerMonth;

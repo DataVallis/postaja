@@ -8,7 +8,15 @@ Postaja writes and prepares social media posts for several brands at once. From 
 2. Click **Send link**.
 3. Open the sign-in link in the email. The link is valid for 10 minutes and works only once.
 
-There is no password. You can sign in only if a Postaja administrator has added you to an organization.
+There is no password. You can sign in if a Postaja administrator or an organization's owner invited you, or if you started a free trial.
+
+## Free trial
+
+1. On the sign-in page click **Try Postaja for free**.
+2. Enter your company or agency name and your email and click **Send the link to start**.
+3. Open the link in the email (valid for 10 minutes), check the name and click **Start the 7-day trial**.
+
+The trial lasts 7 days and needs no card: 1 brand, 1 member, 50 credits, plus ad sets, animations and competitor research (like Studio; the persona is not included). The top of every page shows how many trial days are left; a day or two before the end you get an email. When the trial ends, creating new content stops; everything made stays viewable and downloadable. Choose a plan any time under **Team and plan**.
 
 ## Organization and roles
 
@@ -44,6 +52,8 @@ The first page after signing in shows:
 - today's planned posts with the **Download today (ZIP)** button;
 - **Today's goal per channel**: how many posts each channel needs today, how many are missing, and the streak of consecutive days. The **Create** button writes the missing ones, the **Suggest ideas** button suggests new topics;
 - AI spend this month per brand.
+
+After a free trial, **First steps** sit at the top: add a brand, write the CGP, import a plan, create the first post and download it. Each open step links to where it is done; once all are done the list disappears.
 
 ## Nothing gets lost
 

@@ -16,7 +16,9 @@
     "error": "Pošiljanje ni uspelo. Poskusi znova čez minuto.",
     "linkInvalid": "Povezava je neveljavna ali je potekla. Zahtevaj novo.",
     "oauthIntro": "Claude se želi povezati s Postajo. Vpiši e-pošto, poslali ti bomo povezavo za prijavo. Odpri jo v tem brskalniku.",
-    "oauthExpired": "Zahteva za povezavo s Claude je potekla. Začni znova v Claude."
+    "oauthExpired": "Zahteva za povezavo s Claude je potekla. Začni znova v Claude.",
+    "noAccount": "Še nimaš računa?",
+    "trial": "Preizkusi Postajo brezplačno"
   },
   "App": {
     "signedInAs": "Prijavljen si kot",
@@ -860,7 +862,35 @@
     "palette": "Barve branda",
     "noDesign": "Vizualna podoba še ni narejena",
     "upcoming": "{n, plural, =0 {nič v planu} one {# objava v planu} two {# objavi v planu} few {# objave v planu} other {# objav v planu}}",
-    "next": "naslednja {date}"
+    "next": "naslednja {date}",
+    "firstSteps": {
+      "title": "Prvi koraki",
+      "progress": "Narejeno {n} od {total}.",
+      "doneLabel": "narejeno",
+      "openLabel": "odprto",
+      "steps": {
+        "brand": {
+          "title": "Dodaj brand",
+          "hint": "ime, jeziki in vodnik po nastavitvi."
+        },
+        "cgp": {
+          "title": "Vpiši CGP",
+          "hint": "kako brand govori — iz tega Postaja piše vsako objavo."
+        },
+        "plan": {
+          "title": "Uvozi plan",
+          "hint": "Excel, Word ali PDF s temami; AI ga razvrsti po dnevih."
+        },
+        "post": {
+          "title": "Ustvari prvo objavo",
+          "hint": "besedilo in slike za kanal."
+        },
+        "download": {
+          "title": "Prenesi objavo",
+          "hint": "ZIP z besedilom in slikami, pripravljen za objavo."
+        }
+      }
+    }
   },
   "PostsList": {
     "title": "Objave",
@@ -1802,7 +1832,11 @@
       "perMonth": "{price} € / mesec",
       "perYear": "{price} € / leto",
       "featuresLabel": "Kaj vključuje {plan}",
-      "basics": "Objave, slike in karuseli"
+      "basics": "Objave, slike in karuseli",
+      "bannerTrial": "Preizkus traja še {days} dni (do {date}).",
+      "bannerTrialLink": "Izberi paket",
+      "bannerTrialEnded": "Preizkus je končan: ustvarjeno lahko pregleduješ in preneseš, za novo ustvarjanje izberi paket.",
+      "trialUntil": "Brezplačni preizkus velja do {date}. Paket izbereš kadar koli."
     }
   },
   "Videos": {
@@ -2211,5 +2245,28 @@
     "inPlanOrAddon": "Na voljo v paketu {plan} ali kot dodatek za {price} € / mesec.",
     "cta": "Izberi paket",
     "askOwner": "Za nadgradnjo prosi lastnika organizacije."
+  },
+  "Signup": {
+    "title": "Preizkusi Postajo {days} dni brezplačno",
+    "intro": "Brez kartice. V preizkusu: {brands} brand, {credits} kreditov, oglasni seti, animacije in raziskava konkurence.",
+    "orgName": "Ime podjetja ali agencije",
+    "email": "E-pošta",
+    "submit": "Pošlji povezavo za začetek",
+    "sending": "Pošiljam …",
+    "sent": "Poslali smo ti e-pošto s povezavo. Odpri jo v tem brskalniku (velja 10 minut) in potrdi začetek preizkusa.",
+    "haveAccount": "Že imaš račun?",
+    "login": "Prijava",
+    "startTitle": "Začni preizkus",
+    "startIntro": "{days} dni, {brands} brand, {credits} kreditov. Ko se preizkus konča, vse ustvarjeno ostane; za nadaljevanje izbereš paket.",
+    "noCard": "Kartice ne potrebuješ. Ime organizacije lahko pozneje spremeni skrbnik.",
+    "start": "Začni {days}-dnevni preizkus",
+    "errors": {
+      "DISABLED": "Prijava v preizkus trenutno ni odprta.",
+      "INVALID": "Vpiši ime (vsaj 2 znaka) in veljaven e-poštni naslov.",
+      "TOO_MANY": "Preveč poskusov. Poskusi znova čez nekaj časa.",
+      "NO_REQUEST": "Povezava za preizkus je potekla. Začni znova na strani za preizkus.",
+      "HAS_ORG": "Že imaš organizacijo.",
+      "FAILED": "Ni uspelo. Poskusi znova."
+    }
   }
 }
