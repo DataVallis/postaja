@@ -1,4 +1,4 @@
-// Self-serve signup and the trial (TASK-037, ADR-084): a signup request lets an unknown email get an account (only with
+// Self-serve signup and the trial (TASK-037, ADR-085): a signup request lets an unknown email get an account (only with
 // PUBLIC_SIGNUP=1, rate-limited); confirming creates a trial organization (7 days, 1 brand, 1 member, 50 credits) with
 // the person as owner; when the trial ends without a plan new AI work stops; owners get one email before it ends;
 // first steps come from the organization's data.

@@ -59,7 +59,7 @@ export function isSuperadminEmail(email: string, deps: Pick<AuthDeps, "superadmi
 }
 
 /**
- * Who may get an account (ADR-028, ADR-084):
+ * Who may get an account (ADR-028, ADR-085):
  * - emails in SUPERADMIN_EMAILS (bootstrap, role = superadmin);
  * - emails with a pending, unexpired organization invitation;
  * - where public signup is on (PUBLIC_SIGNUP=1): emails with a fresh signup request from /signup (TASK-037).

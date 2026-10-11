@@ -1,4 +1,4 @@
-// Self-serve signup and the free trial (TASK-037, ADR-084). Public signup is on only where PUBLIC_SIGNUP=1.
+// Self-serve signup and the free trial (TASK-037, ADR-085). Public signup is on only where PUBLIC_SIGNUP=1.
 // 1) /signup stores a request (email + organization name) and sends the normal magic link — the request is what lets an
 //    unknown email get an account (canSignUp); rate-limited per email and per IP (hashed, never stored raw);
 // 2) the link signs the person in and lands on /app/start, where they confirm and the trial organization is created:

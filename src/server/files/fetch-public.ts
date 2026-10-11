@@ -86,7 +86,7 @@ function nameFrom(u: URL, disposition: string | undefined): string {
 function once(u: URL, maxBytes: number, signal: AbortSignal, net: Net): Promise<{ status: number; location?: string; file?: FetchedFile }> {
   return new Promise((resolve, reject) => {
     const mod = u.protocol === "https:" ? https : http;
-    const req = mod.get(u, { lookup: net.lookup, signal, headers: { "user-agent": "Postaja/1.0 (+https://postaja.inzenirji.si)", accept: "*/*" }, agent: false }, (res) => {
+    const req = mod.get(u, { lookup: net.lookup, signal, headers: { "user-agent": "Postaja/1.0 (+https://postaja.eu)", accept: "*/*" }, agent: false }, (res) => {
       const status = res.statusCode ?? 0;
       if (status >= 300 && status < 400 && res.headers.location) {
         res.resume();

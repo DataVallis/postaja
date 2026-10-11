@@ -1,0 +1,83 @@
+name: Deploy prod
+
+# Production: https://peron.postaja.eu (ADR-084). Manual only, from `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      setup:
+        description: "First run: kamal setup -d prod (boots the prod database accessory, then deploys)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: prod
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PROD_HOST: ${{ vars.PROD_HOST }}
+      SUPERADMIN_EMAILS: ${{ vars.SUPERADMIN_EMAILS }}
+      SMTP_USER: ${{ vars.SMTP_USER }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+      BACKUP_ENABLED: ${{ vars.BACKUP_ENABLED }}
+      BACKUP_S3_ENDPOINT: ${{ vars.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_BUCKET: ${{ vars.BACKUP_S3_BUCKET }}
+      KAMAL_REGISTRY_USERNAME: ${{ github.actor }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      FAL_KEY: ${{ secrets.FAL_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required settings (names only)
+        run: |
+          missing=""
+          for v in PROD_HOST SUPERADMIN_EMAILS DATABASE_URL POSTGRES_PASSWORD BETTER_AUTH_SECRET SMTP_PASSWORD \
+                   S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY ANTHROPIC_API_KEY FAL_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          [ -z "$missing" ] || { echo "::error::Missing in GitHub environment 'prod':$missing"; exit 1; }
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Install Kamal
+        run: gem install kamal -v "~> 2.7" --no-document
+      - uses: docker/setup-buildx-action@v3
+      - name: SSH key and pinned host key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.PROD_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+      - name: First-time setup (database accessory + app; kamal-proxy behind host nginx already runs on this host)
+        if: inputs.setup
+        run: kamal setup -d prod
+      - name: Deploy
+        if: ${{ !inputs.setup }}
+        run: kamal deploy -d prod
+      - name: Smoke check
+        run: |
+          for i in $(seq 1 24); do
+            body=$(curl -fsS https://peron.postaja.eu/api/health || true)
+            echo "$body" | grep -q "\"sha\":\"${GITHUB_SHA}\"" && break
+            sleep 5
+          done
+          echo "$body"
+          echo "$body" | grep -q "\"sha\":\"${GITHUB_SHA}\"" && echo "$body" | grep -q '"db":"ok"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://peron.postaja.eu/login)" = "200"

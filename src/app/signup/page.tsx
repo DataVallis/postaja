@@ -9,7 +9,7 @@ import { SignupForm } from "./signup-form";
 
 export const dynamic = "force-dynamic";
 
-/** Public signup for a free trial (TASK-037, ADR-084); only where PUBLIC_SIGNUP=1. */
+/** Public signup for a free trial (TASK-037, ADR-085); only where PUBLIC_SIGNUP=1. */
 export default async function SignupPage() {
   if (!publicSignupEnabled()) notFound();
   if (await getCurrentUser()) redirect("/app/start");

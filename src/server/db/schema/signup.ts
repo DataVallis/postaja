@@ -1,4 +1,4 @@
-// Self-serve signup (TASK-037, ADR-084): someone asks for a trial with an email and an organization name; the magic
+// Self-serve signup (TASK-037, ADR-085): someone asks for a trial with an email and an organization name; the magic
 // link proves the email; the organization is created when they confirm in /app/start. Not tenant data (no org yet).
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
