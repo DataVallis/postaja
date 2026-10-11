@@ -1,7 +1,7 @@
 // Billing with Stripe (TASK-036, ADR-073): one row per organization that has a Stripe customer — the subscription's
 // state as the webhooks last reported it — and every processed webhook event once (idempotency).
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { organization } from "./org";
 
 export const SUBSCRIPTION_STATUSES = ["none", "active", "trialing", "past_due", "unpaid", "canceled", "incomplete", "incomplete_expired", "paused"] as const;
@@ -23,6 +23,8 @@ export const orgBilling = pgTable(
     pastDueSince: timestamp("past_due_since", { withTimezone: true }),
     /** The 99 € agency pilot: until when it runs; one pilot per organization. */
     pilotEndsAt: timestamp("pilot_ends_at", { withTimezone: true }),
+    /** TASK-053: add-on quantities on the subscription (brand, member, persona). */
+    addons: jsonb("addons").$type<Partial<Record<"brand" | "member" | "persona", number>>>().notNull().default({}),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -2,6 +2,7 @@
 // the illustration subject; fal draws one illustration per variant (the brand's past posts as style reference); Postaja
 // renders every chosen placement in its exact size, keeping text and logo out of the platform's UI (safe zone). Word
 // edits re-render on the stored illustrations for free. Download: a ZIP with a folder per placement and copy.csv.
+import { requireFeature } from "../billing/features";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "../db/client";
@@ -58,6 +59,7 @@ export async function setAdPartnerLogo(db: Db, queue: Queue, ctx: OrgContext, id
 
 export async function requestAdImages(db: Db, queue: Queue, ctx: OrgContext, id: string, mode: AdImageMode, opts: { partnerLogoId?: string | null } = {}) {
   z.enum(["new", "text"]).parse(mode);
+  await requireFeature(db, ctx, "ads");
   const a = await getAdSet(db, ctx, id);
   if (!a.copy.length) throw new AdError("BAD_STATE", "NO_COPY");
   if (!(await currentDesign(db, ctx, a.brandId))) throw new AdError("BAD_STATE", "NO_DESIGN");

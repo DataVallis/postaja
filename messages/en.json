@@ -1233,7 +1233,8 @@
       "LLM_PROVIDER": "Claude did not respond. Try again.",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "BAD_PICK": "The picked images no longer exist. Refresh the page and pick again.",
-      "NOT_RESTORABLE": "This image cannot come back without being drawn again: it was made with another version of the visual identity, or its illustration was deleted. Restore the whole version or use a correction."
+      "NOT_RESTORABLE": "This image cannot come back without being drawn again: it was made with another version of the visual identity, or its illustration was deleted. Restore the whole version or use a correction.",
+      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan."
     },
     "designLink": "Brand visual identity",
     "noDesign": "The brand has no visual identity yet, so images cannot be made.",
@@ -1479,7 +1480,8 @@
       "LANGUAGE": "The language is not one of the brand's.",
       "SPEND_CAP": "The organization's monthly limit is reached (credits, spend or number of AI generations). You can buy credits on Team and plan.",
       "NO_MODEL": "No Claude model is configured.",
-      "AI_FAILED": "Claude returned no usable copy. Try again."
+      "AI_FAILED": "Claude returned no usable copy. Try again.",
+      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan."
     },
     "creativesTitle": "Creatives",
     "creativeAlt": "{placement}, variant {n}",
@@ -1603,7 +1605,8 @@
       "LLM_PROVIDER": "Claude did not respond. Try again.",
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "BAD_ORIGIN": "Upload not allowed.",
-      "UNAUTHORIZED": "Your session has expired."
+      "UNAUTHORIZED": "Your session has expired.",
+      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan."
     },
     "generateAgain": "New passport picture",
     "inPostsTitle": "Persona in post images (default)",
@@ -1720,7 +1723,8 @@
       "canceled": "Invitation canceled.",
       "role": "Role changed.",
       "removed": "Member removed.",
-      "creditsRequested": "Credit request sent. The credits appear here once the payment is confirmed."
+      "creditsRequested": "Credit request sent. The credits appear here once the payment is confirmed.",
+      "addons": "Add-ons saved. The limits update in a few seconds."
     },
     "errors": {
       "FAILED": "Something went wrong. Try again.",
@@ -1735,7 +1739,9 @@
       "HAS_SUBSCRIPTION": "You already have a subscription; change the plan under Manage subscription.",
       "PILOT_USED": "The pilot is available once, before the first subscription.",
       "NO_CUSTOMER": "There is no payment for this organization yet.",
-      "NO_PRICE": "This price is not set up in Stripe yet. Please let us know."
+      "NO_PRICE": "This price is not set up in Stripe yet. Please let us know.",
+      "NO_SUBSCRIPTION": "Add-ons go on an active subscription. Choose a plan first.",
+      "ADDON_INVALID": "Enter a valid number of add-ons (Agency already includes the persona)."
     },
     "credits": {
       "title": "Credits",
@@ -1784,7 +1790,19 @@
       "bannerPastDue": "The subscription payment failed. Everything works until {until}, then creating stops.",
       "bannerBlocked": "The subscription payment failed; creating is stopped.",
       "bannerEnded": "The subscription has ended: you can view and download what was made; creating is stopped.",
-      "bannerLink": "Plan and payment"
+      "bannerLink": "Plan and payment",
+      "addons": {
+        "title": "Add-ons",
+        "hint": "Extra brands and members raise the plan's limits; the persona unlocks the brand's face. Stripe prorates the change.",
+        "brand": "Extra brands ({price} per brand)",
+        "member": "Extra members ({price} per member)",
+        "persona": "Persona ({price})",
+        "save": "Save add-ons"
+      },
+      "perMonth": "€{price} / month",
+      "perYear": "€{price} / year",
+      "featuresLabel": "What {plan} includes",
+      "basics": "Posts, images and carousels"
     }
   },
   "Videos": {
@@ -1846,7 +1864,8 @@
       "NO_COMPETITORS": "Keep or add at least one competitor first.",
       "NOTHING_ACCEPTED": "Mark Yes on at least one item first.",
       "TOO_LONG": "The CGP would be too long (50,000 characters at most).",
-      "FORBIDDEN": "Only the owner can do this."
+      "FORBIDDEN": "Only the owner can do this.",
+      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan."
     },
     "uploading": "Uploading …",
     "addScreenshots": "Add screenshots",
@@ -2168,5 +2187,29 @@
       "archived": "The brand is archived.",
       "failed": "Saving failed. Try again."
     }
+  },
+  "Upgrade": {
+    "features": {
+      "ads": {
+        "title": "Ad sets",
+        "what": "Ad copy and creatives for Meta, Google and LinkedIn from the brand's CGP and design."
+      },
+      "animation": {
+        "title": "Animations",
+        "what": "A short video from the post's image, for reels and stories."
+      },
+      "research": {
+        "title": "Competitor research",
+        "what": "Postaja finds competitors, reads their pages and ads, and suggests what to improve in the CGP."
+      },
+      "persona": {
+        "title": "Persona",
+        "what": "A steady face for the brand: images and videos with the same person speaking for the brand."
+      }
+    },
+    "inPlan": "Included in {plan} (€{price} / month) and up.",
+    "inPlanOrAddon": "Included in {plan}, or as an add-on for €{price} / month.",
+    "cta": "Choose a plan",
+    "askOwner": "Ask the organization's owner to upgrade."
   }
 }

@@ -2,6 +2,7 @@
 // offer, landing page); Claude writes three copy variants with each network's fields; every field is checked against the
 // network's limits, the brand's banned words and CTA buttons, with one automatic fix round. Copy can be edited and is
 // checked again on save. Export: copy.csv, one row per network × placement × variant (images follow in part B).
+import { requireFeature } from "../billing/features";
 import { and, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
@@ -57,6 +58,7 @@ type Deps = { llm: LlmClient; now?: Date };
 
 /** Creates the ad set and writes its copy right away (one Claude call, plus one fix round when a limit is broken). */
 export async function createAdSet(db: Db, deps: Deps, ctx: OrgContext, input: z.input<typeof createInput>): Promise<string> {
+  await requireFeature(db, ctx, "ads"); // TASK-053: Studio and Agencija
   const i = createInput.parse(input);
   const { brand } = await getBrandDetail(db, ctx, i.brandId).catch(() => { throw new AdError("NOT_FOUND"); });
   if (brand.archivedAt) throw new AdError("BAD_STATE");

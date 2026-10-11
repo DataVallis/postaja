@@ -2,6 +2,7 @@
 // an existing DNA (Claude structures it), edits the DNA fields, and builds the passport: uploads pictures of the person
 // and/or lets Postaja generate the standard set (front portrait from the DNA, then the other angles with a reference
 // model from the pictures already there, so it stays the same person). Members see it; the owner changes it.
+import { hasFeature, requireFeature } from "../billing/features";
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, lt, ne, or } from "drizzle-orm";
 import sharp from "sharp";
@@ -99,6 +100,7 @@ async function assertNoPersona(db: Db, ctx: OrgContext, brandId: string) {
 
 /** Owner fills in the DNA by hand (gender, age, ethnicity/skin and hair colour are required). */
 export async function createPersonaManual(db: Db, ctx: OrgContext, brandId: string, input: z.input<typeof manualInput>) {
+  await requireFeature(db, ctx, "persona"); // TASK-053: Agencija or the persona add-on
   requireOwner(ctx);
   const data = manualInput.safeParse(input);
   if (!data.success || !dnaComplete(data.data.dna as PersonaDna)) throw new PersonaError("INVALID");
@@ -109,6 +111,7 @@ export async function createPersonaManual(db: Db, ctx: OrgContext, brandId: stri
 
 /** Owner describes the person roughly (or pastes/imports a DNA); Claude fills in every field of the framework. */
 export async function createPersona(db: Db, deps: Pick<ImageDeps, "llm" | "now">, ctx: OrgContext, brandId: string, input: z.input<typeof textInput>) {
+  await requireFeature(db, ctx, "persona"); // TASK-053: Agencija or the persona add-on
   requireOwner(ctx);
   const data = textInput.safeParse(input);
   if (!data.success) throw new PersonaError("INVALID");
@@ -153,6 +156,7 @@ export async function drawablePersona(db: Db, ctx: OrgContext, brandId: string) 
  * the persona); null follows the brand's default ("Persona na slikah objav").
  */
 export async function postPersona(db: Db, ctx: OrgContext, brandId: string, choice: boolean | null = null) {
+  if (!(await hasFeature(db, ctx.orgId, "persona"))) return null; // TASK-053: without the feature images have no persona
   const p = await drawablePersona(db, ctx, brandId);
   return p && (choice ?? p.useInPosts) ? p : null;
 }
@@ -297,6 +301,7 @@ export async function passportEstimate(db: Db, ctx: OrgContext, personaId: strin
 
 /** Owner: queue a (new) passport picture (one run at a time). */
 export async function requestPassport(db: Db, queue: Queue, ctx: OrgContext, personaId: string) {
+  await requireFeature(db, ctx, "persona"); // TASK-053: Agencija or the persona add-on
   requireOwner(ctx);
   const p = await personaById(db, ctx, personaId);
   await brandFor(db, ctx, p.brandId, true);

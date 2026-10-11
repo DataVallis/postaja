@@ -1,4 +1,5 @@
 "use server";
+import { PlanFeatureError } from "@/server/billing/features";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
@@ -12,7 +13,7 @@ import { createPersona, createPersonaManual, deletePassportImage, deletePersona,
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const back = (brandId: string, error?: string) => `/app/brands/${brandId}?tab=persona${error ? `&personaError=${error}` : ""}`;
-const code = (e: unknown) => (e instanceof PersonaError ? e.code : imageFailureCode(e)?.split(":")[0] ?? "FAILED");
+const code = (e: unknown) => (e instanceof PersonaError || e instanceof PlanFeatureError ? e.code : imageFailureCode(e)?.split(":")[0] ?? "FAILED");
 const dnaOf = (f: FormData) => Object.fromEntries(DNA_FIELDS.map((k) => [k, str(f, `dna.${k}`)]));
 
 async function ctxOrLogin() {
