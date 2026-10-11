@@ -5,6 +5,8 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { Badge, buttonClass, Card, inputClass, PageHeader, STATUS_TONE } from "@/components/ui";
 import { microToUsd } from "@/lib/money/usd";
 import { requireOrgPage } from "@/server/auth/require";
+import { orgFeatures } from "@/server/billing/features";
+import { UpgradeCard } from "@/components/upgrade-card";
 import { getDb } from "@/server/db/client";
 import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
@@ -41,6 +43,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { slotError, imageError, videoError, personaVideoError, statusError } = await searchParams;
   const db = getDb();
+  const features = await orgFeatures(db, org.orgId);
   const post = await getPost(db, org, id).catch((e) => {
     if (e instanceof PostError) notFound();
     throw e;
@@ -184,10 +187,10 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         designHref={`/app/brands/${post.brandId}?tab=design`}
         pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
         versions={imageVersions}
-        persona={persona?.images.length ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
+        persona={persona?.images.length && features.has("persona") ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
         partners={{ options: partnerLogos, selected: post.partnerLogoId }}
       />
-      {persona && personaVideo ? (
+      {persona && personaVideo && features.has("persona") ? (
         <PersonaVideoSection
           postId={post.id} brandId={post.brandId} personaName={persona.persona.name}
           status={isPersonaVideo ? post.videoStatus : "none"} error={isPersonaVideo ? post.videoError : null} requestError={personaVideoError}
@@ -195,7 +198,8 @@ export default async function PostPage({ params, searchParams }: { params: Promi
           videos={personaVideo.videos}
         />
       ) : null}
-      {animatable.length || animations.length ? (
+      {(animatable.length || animations.length) && !features.has("animation") ? <UpgradeCard feature="animation" isOwner={org.role === "owner"} compact /> : null}
+      {(animatable.length || animations.length) && features.has("animation") ? (
         <AnimationSection
           postId={post.id} status={isPersonaVideo ? "none" : post.videoStatus} error={isPersonaVideo ? null : post.videoError} requestError={videoError}
           positions={animatable} position={post.videoPosition} motion={isPersonaVideo ? null : post.videoMotion} videos={animations}

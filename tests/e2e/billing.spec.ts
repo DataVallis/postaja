@@ -32,7 +32,8 @@ const serious = async (page: Page) =>
 
 
 // Payments (TASK-036): an owner buys Studio monthly through Stripe Checkout (stand-in); the signed webhooks make the
-// plan active with its limits; the portal opens; when Stripe reports the subscription cancelled, creating stops and the
+// plan active with its limits; Studio offers the persona as an upgrade, add-ons raise the limits and unlock it
+// (TASK-053); the portal opens; when Stripe reports the subscription cancelled, creating stops and the
 // app says so; a forged webhook is refused.
 test("payments: Studio through Checkout → webhook → plan and limits; portal; cancelled → banner; bad signature refused", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one flow is enough");
@@ -76,6 +77,41 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   await expect(p.getByTestId("billing-state")).toContainText("Naročnina je aktivna (mesečno)");
   await expect(p.getByRole("heading", { name: "Paket: Studio" })).toBeVisible();
   await expect(p.getByTestId("team-usage")).toContainText("0 / 6");
+
+  // Studio has no persona (TASK-053): the brand's Persona tab offers the upgrade instead of the tool.
+  await p.goto("/app/brands/new");
+  await p.getByLabel("Ime", { exact: true }).fill("Plačila brand");
+  await p.getByRole("button", { name: "Ustvari" }).click();
+  await p.getByRole("link", { name: "Preskoči na brand" }).click();
+  await expect(p).toHaveURL(/\/app\/brands\/[\w-]+$/);
+  const brandUrl = p.url().replace(/[?#].*$/, "");
+  await p.goto(`${brandUrl}?tab=persona`);
+  await expect(p.getByTestId("upgrade-persona")).toContainText("Na voljo v paketu Agencija ali kot dodatek za 49 € / mesec.");
+  await expect(p.getByTestId("persona-manual")).toHaveCount(0);
+  await p.goto(`${brandUrl}?tab=ads`);
+  await expect(p.getByTestId("upgrade-ads")).toHaveCount(0);
+
+  // Add-ons on the live subscription: two extra brands and the persona; Stripe's webhook then raises the limits.
+  await p.goto("/app/team");
+  const addons = p.getByTestId("billing-addons");
+  await addons.getByLabel(/Dodatni brandi/).fill("2");
+  await addons.getByLabel(/Persona/).check();
+  expect(await serious(p)).toEqual([]);
+  await addons.getByRole("button", { name: "Shrani dodatke" }).click();
+  await expect(p.getByRole("status").filter({ hasText: "Dodatki so shranjeni." })).toBeVisible();
+  const upd = ((await (await fetch("http://127.0.0.1:3199/stripe-log")).json()) as { path: string; form: Record<string, string> }[]).filter((l) => l.path === `/v1/subscriptions/sub_${stamp}`).at(-1)!;
+  expect(upd.form).toMatchObject({ "items[0][price]": "price_postaja_addon_brand_month", "items[0][quantity]": "2", "items[1][price]": "price_postaja_addon_persona_month", proration_behavior: "create_prorations" });
+  const withAddons = { ...sub("active"), items: { data: [
+    ...sub("active").items.data, { price: { lookup_key: "postaja_addon_brand_month" }, quantity: 2 }, { price: { lookup_key: "postaja_addon_persona_month" }, quantity: 1 },
+  ] } };
+  expect(await webhook(p, "customer.subscription.updated", withAddons)).toBe(200);
+  await p.reload();
+  await expect(p.getByTestId("team-usage")).toContainText("1 / 8");
+  await expect(addons.getByLabel(/Dodatni brandi/)).toHaveValue("2");
+  await p.goto(`${brandUrl}?tab=persona`);
+  await expect(p.getByTestId("persona-manual")).toBeVisible();
+
+  await p.goto("/app/team");
   await p.getByRole("button", { name: /Upravljaj naročnino/ }).click();
   await expect(p).toHaveURL(/\/stripe-page\/portal-/);
 

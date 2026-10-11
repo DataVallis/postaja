@@ -1,4 +1,5 @@
 "use server";
+import { PlanFeatureError } from "@/server/billing/features";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
@@ -12,7 +13,7 @@ import { bossQueue, getBoss } from "@/server/jobs/boss";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 const back = (brandId: string, error?: string) => `/app/brands/${brandId}?tab=competitors${error ? `&competitorError=${error}` : ""}`;
-const code = (e: unknown) => (e instanceof CompetitorError ? e.code : "FAILED");
+const code = (e: unknown) => (e instanceof CompetitorError || e instanceof PlanFeatureError ? e.code : "FAILED");
 
 /** "Najdi konkurente" (TASK-049): queued; the page refreshes until the run is done. */
 export async function findCompetitorsAction(f: FormData) {

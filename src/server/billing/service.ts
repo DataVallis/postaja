@@ -11,11 +11,11 @@ import { billingPayments, orgBilling, orgSettings, stripeEvents, user, type Subs
 import type { Actor } from "../orgs/service";
 import { insertPack } from "../credits/service";
 import type { OrgContext } from "../tenancy/context";
-import { CREDIT_PACK_PRICES, lookupKey, PAID_PLANS, PILOT, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
+import { ADDON_KEYS, ADDONS, addonFromLookupKey, CREDIT_PACK_PRICES, lookupKey, type Addons, PAID_PLANS, PILOT, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
 import { automaticTax, pricesByLookupKey } from "./stripe";
 
 export class BillingError extends Error {
-  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE") {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE" | "NO_SUBSCRIPTION" | "ADDON_INVALID") {
     super(code);
   }
 }
@@ -91,9 +91,13 @@ export async function portalUrl(db: Db, stripe: Stripe | null, ctx: OrgContext, 
 
 // ---- Webhooks ------------------------------------------------------------------------------------------------------
 
-/** The plan's limits on the organization (super-admin overrides of these three are replaced; others stay). */
-async function applyPlan(db: Db, orgId: string, plan: PaidPlan | "pilot") {
-  const limits = plan === "pilot" ? PILOT.limits : PLAN_CATALOG[plan].limits;
+/**
+ * The plan's limits on the organization plus the add-ons (extra brands and members, TASK-053); super-admin overrides of
+ * these three are replaced, other limits stay.
+ */
+async function applyPlan(db: Db, orgId: string, plan: PaidPlan | "pilot", addons: Addons = {}) {
+  const base = plan === "pilot" ? PILOT.limits : PLAN_CATALOG[plan].limits;
+  const limits = { ...base, brands: base.brands + (addons.brand ?? 0), members: base.members + (addons.member ?? 0) };
   const [s] = await db.select({ limits: orgSettings.limits }).from(orgSettings).where(eq(orgSettings.orgId, orgId));
   await db.update(orgSettings).set({ plan, limits: { ...(s?.limits ?? {}), ...limits }, updatedAt: new Date() }).where(eq(orgSettings.orgId, orgId));
 }
@@ -117,19 +121,26 @@ async function onSubscription(db: Db, sub: Stripe.Subscription, now: Date): Prom
   const customer = idOf(sub.customer);
   const orgId = (await orgOfCustomer(db, customer)) ?? (await orgExists(db, sub.metadata?.orgId));
   if (!orgId) return { orgId: null, outcome: "unknown-org" };
-  const item = sub.items?.data?.[0] as (Stripe.SubscriptionItem & { current_period_end?: number }) | undefined;
+  // The plan item and the add-on items (TASK-053), in any order.
+  const items = (sub.items?.data ?? []) as (Stripe.SubscriptionItem & { current_period_end?: number })[];
+  const item = items.find((i) => planFromLookupKey(i.price?.lookup_key)) ?? items[0];
   const found = planFromLookupKey(item?.price?.lookup_key);
+  const addons: Addons = {};
+  for (const i of items) {
+    const a = addonFromLookupKey(i.price?.lookup_key);
+    if (a) addons[a.addon] = (addons[a.addon] ?? 0) + (i.quantity ?? 1);
+  }
   const periodEnd = item?.current_period_end ?? (sub as unknown as { current_period_end?: number }).current_period_end;
   const status = sub.status as SubscriptionStatus;
   const before = await billingFor(db, orgId);
   const row = {
     stripeCustomerId: customer, stripeSubscriptionId: sub.id, status, plan: found?.plan ?? before?.plan ?? null, interval: found?.interval ?? null,
     currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null, cancelAtPeriodEnd: !!sub.cancel_at_period_end,
-    pastDueSince: status === "past_due" ? (before?.pastDueSince ?? now) : null, updatedAt: now,
+    pastDueSince: status === "past_due" ? (before?.pastDueSince ?? now) : null, addons, updatedAt: now,
   };
   await db.insert(orgBilling).values({ orgId, ...row }).onConflictDoUpdate({ target: orgBilling.orgId, set: row });
   if ((status === "active" || status === "trialing") && found) {
-    await applyPlan(db, orgId, found.plan);
+    await applyPlan(db, orgId, found.plan, addons);
     // A paid plan ends the pilot.
     if (before?.pilotEndsAt && before.pilotEndsAt > now) await db.update(orgBilling).set({ pilotEndsAt: now }).where(eq(orgBilling.orgId, orgId));
   }
@@ -259,4 +270,38 @@ export async function paymentsCsv(db: Db, actor: Actor, opts: { open?: boolean }
     r.buyerEmail, euro(r.netCents), euro(r.taxCents), euro(r.totalCents), r.currency, r.invoiceNumber ?? "", r.id,
   ].map((v) => cell(String(v))).join(";"));
   return [head.join(";"), ...lines].join("\r\n") + "\r\n";
+}
+
+// ---- Add-ons (TASK-053) ---------------------------------------------------------------------------------------------
+
+/**
+ * Owner: sets the add-on quantities on the live subscription (0 removes one). Stripe prorates the change; the
+ * subscription webhook then raises or lowers the limits. Monthly or yearly prices follow the subscription.
+ */
+export async function setAddons(db: Db, stripe: Stripe | null, ctx: OrgContext, wanted: Addons): Promise<void> {
+  if (ctx.role !== "owner") throw new BillingError("FORBIDDEN");
+  if (!stripe) throw new BillingError("NOT_CONFIGURED");
+  const b = await billingFor(db, ctx.orgId);
+  if (!b?.stripeSubscriptionId || !LIVE.includes(b.status)) throw new BillingError("NO_SUBSCRIPTION");
+  for (const a of ADDON_KEYS) {
+    const n = wanted[a] ?? 0;
+    if (!Number.isInteger(n) || n < 0 || n > ADDONS[a].max) throw new BillingError("ADDON_INVALID");
+  }
+  if ((wanted.persona ?? 0) > 0 && b.plan === "agency") throw new BillingError("ADDON_INVALID"); // already included
+  const sub = await stripe.subscriptions.retrieve(b.stripeSubscriptionId);
+  const interval = (b.interval ?? "month") as Interval;
+  const prices = await pricesByLookupKey(stripe, ADDON_KEYS.map((a) => lookupKey.addon(a, interval)));
+  const items: Stripe.SubscriptionUpdateParams.Item[] = [];
+  for (const a of ADDON_KEYS) {
+    const n = wanted[a] ?? 0;
+    const current = sub.items.data.find((i) => addonFromLookupKey(i.price?.lookup_key)?.addon === a);
+    if (current) items.push(n > 0 ? { id: current.id, quantity: n } : { id: current.id, deleted: true });
+    else if (n > 0) {
+      const price = prices.get(lookupKey.addon(a, interval));
+      if (!price) throw new BillingError("NO_PRICE");
+      items.push({ price, quantity: n });
+    }
+  }
+  if (!items.length) return;
+  await stripe.subscriptions.update(b.stripeSubscriptionId, { items, proration_behavior: "create_prorations", metadata: { orgId: ctx.orgId } });
 }

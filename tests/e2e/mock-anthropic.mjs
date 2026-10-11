@@ -111,7 +111,7 @@ function fal(req, res) {
 }
 
 // Stripe stand-in (TASK-036) via STRIPE_API_BASE: every catalogue price exists; customers, Checkout and portal
-// sessions are recorded (GET /stripe-log) and point at a local page. The E2E then sends signed webhooks itself.
+// sessions and subscription updates are recorded (GET /stripe-log) and point at a local page. The E2E then sends signed webhooks itself.
 const stripeLog = [];
 let stripeSeq = 0;
 function stripe(req, res) {
@@ -124,7 +124,13 @@ function stripe(req, res) {
       const keys = [...u.searchParams.entries()].filter(([k]) => k.startsWith("lookup_keys")).map(([, v]) => v);
       return send({ object: "list", data: keys.map((k) => ({ id: `price_${k}`, object: "price", lookup_key: k, active: true })), has_more: false });
     }
+    // A subscription holds only its plan item (Studio monthly); updates (add-ons, TASK-053) are recorded.
+    const subMatch = u.pathname.match(/^\/v1\/subscriptions\/([\w-]+)$/);
+    if (req.method === "GET" && subMatch) {
+      return send({ id: subMatch[1], object: "subscription", status: "active", items: { object: "list", data: [{ id: `si_plan_${subMatch[1]}`, object: "subscription_item", quantity: 1, price: { id: "price_postaja_studio_month", lookup_key: "postaja_studio_month" } }] } });
+    }
     const form = Object.fromEntries(new URLSearchParams(body));
+    if (req.method === "POST" && subMatch) { stripeLog.push({ path: u.pathname, form }); return send({ id: subMatch[1], object: "subscription" }); }
     stripeLog.push({ path: u.pathname, form });
     const id = `${Date.now().toString(36)}${++stripeSeq}`; // unique across runs: the E2E database outlives the mock
     if (u.pathname === "/v1/customers") return send({ id: `cus_e2e_${id}`, object: "customer" });
@@ -140,7 +146,7 @@ http
     if (req.url?.startsWith("/fal-")) return fal(req, res);
     if (req.url === "/stripe-log") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(stripeLog)); return; }
     if (req.url?.startsWith("/stripe-page/")) { res.writeHead(200, { "content-type": "text/html" }); res.end("<!doctype html><title>Stripe test</title><h1>Stripe test checkout</h1>"); return; }
-    if (/^\/v1\/(prices|customers|checkout|billing_portal)/.test(req.url ?? "")) return stripe(req, res);
+    if (/^\/v1\/(prices|customers|checkout|billing_portal|subscriptions)/.test(req.url ?? "")) return stripe(req, res);
     if (req.method !== "POST" || !req.url?.startsWith("/v1/messages")) { res.writeHead(404).end(); return; }
     let body = "";
     req.on("data", (c) => (body += c));

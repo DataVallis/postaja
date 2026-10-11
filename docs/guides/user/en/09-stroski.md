@@ -20,6 +20,18 @@ In **Team and plan** → **Plan and payment** the owner picks a plan (prices exc
 
 Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT id. We email you the invoice. Card, plan changes and cancelling are under **Manage subscription**.
 
+**What each plan includes:** every plan makes posts, images and carousels. **Studio** and **Agency** add ad sets, animations and competitor research. The **persona** comes with Agency or as an add-on. The agency pilot and the trial include everything Studio has. Where a plan lacks a tool, Postaja shows which plan has it and a **Choose a plan** button instead (editors are asked to contact the owner).
+
+**Add-ons** (on an active subscription, under **Plan and payment** → **Add-ons**):
+
+| Add-on | Monthly | Yearly |
+| --- | --- | --- |
+| Extra brand | €15 | €150 |
+| Extra member | €9 | €90 |
+| Persona (not for Agency, which includes it) | €49 | €490 |
+
+Extra brands and members are added to the plan's limits. Stripe prorates the change; the limits update within seconds.
+
 If a payment fails, Postaja keeps working for 7 days; after that, or when the subscription or pilot ends, creating new content stops. Everything already made stays viewable and downloadable.
 
 ## Credits

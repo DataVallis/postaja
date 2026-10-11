@@ -1,4 +1,5 @@
 "use server";
+import { PlanFeatureError } from "@/server/billing/features";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -130,7 +131,7 @@ export async function requestImagesAction(f: FormData): Promise<void> {
   try {
     await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, mode, undefined, personaChoice(f));
   } catch (e) {
-    error = e instanceof ImageJobError ? e.code : "FAILED";
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
@@ -147,7 +148,7 @@ export async function reviseImagesAction(f: FormData): Promise<void> {
     const only = f.getAll("slide").map((v) => Number(v));
     await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), { ...personaChoice(f), only, redraw: f.get("redraw") === "1" });
   } catch (e) {
-    error = e instanceof ImageJobError ? e.code : "FAILED";
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
@@ -184,7 +185,7 @@ export async function setPartnerLogoAction(f: FormData): Promise<void> {
   try {
     await setPostPartnerLogo(getDb(), bossQueue(await getBoss()), ctx, id, String(f.get("partnerLogoId") ?? "") || null);
   } catch (e) {
-    error = e instanceof ImageJobError ? e.code : "FAILED";
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?imageError=${error}` : ""}#images`);
@@ -199,7 +200,7 @@ export async function requestAnimationAction(f: FormData): Promise<void> {
   try {
     await requestAnimation(getDb(), bossQueue(await getBoss()), ctx, id, { position: Number(f.get("position") ?? 0), motion: String(f.get("motion") ?? "") });
   } catch (e) {
-    error = e instanceof ImageJobError ? e.code : "FAILED";
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?videoError=${error}` : ""}#animation`);
@@ -214,7 +215,7 @@ export async function requestPersonaVideoAction(f: FormData): Promise<void> {
   try {
     await requestPersonaVideo(getDb(), bossQueue(await getBoss()), ctx, id, { durationS: Number(f.get("durationS") ?? 5) as 5, wish: String(f.get("wish") ?? "") });
   } catch (e) {
-    error = e instanceof ImageJobError ? e.code : "FAILED";
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/posts/${id}`);
   redirect(`/app/posts/${id}${error ? `?personaVideoError=${error}` : ""}#persona-video`);
@@ -236,7 +237,7 @@ export async function restoreImageVersionAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const postId = String(f.get("postId") ?? "");
   let error: string | null = null;
-  await restoreImageVersion(getDb(), ctx, postId, String(f.get("runId") ?? "")).catch((e) => { error = e instanceof ImageJobError ? e.code : "FAILED"; });
+  await restoreImageVersion(getDb(), ctx, postId, String(f.get("runId") ?? "")).catch((e) => { error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED"; });
   revalidatePath(`/app/posts/${postId}`);
   redirect(`/app/posts/${postId}${error ? `?imageError=${error}` : ""}#images`);
 }
@@ -248,7 +249,7 @@ export async function restoreSlideAction(f: FormData): Promise<void> {
   const postId = String(f.get("postId") ?? "");
   let error: string | null = null;
   await restoreSlideFromVersion(getDb(), bossQueue(await getBoss()), ctx, postId, String(f.get("runId") ?? ""), Number(f.get("position") ?? -1))
-    .catch((e) => { error = e instanceof ImageJobError ? e.code : "FAILED"; });
+    .catch((e) => { error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED"; });
   revalidatePath(`/app/posts/${postId}`);
   redirect(`/app/posts/${postId}${error ? `?imageError=${error}` : ""}#images`);
 }

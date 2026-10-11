@@ -5,7 +5,8 @@ import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
 import { createMailerFromEnv } from "@/server/email/mailer";
 import { CreditError, requestCredits } from "@/server/credits/service";
-import { BillingError, checkoutUrl, portalUrl, type CheckoutItem } from "@/server/billing/service";
+import { BillingError, checkoutUrl, portalUrl, setAddons, type CheckoutItem } from "@/server/billing/service";
+import { ADDON_KEYS, type Addons } from "@/server/billing/catalog";
 import { getStripe } from "@/server/billing/stripe";
 import { cancelInvitation, inviteToTeam, removeMember, setMemberRole, TeamError } from "@/server/orgs/team";
 
@@ -86,4 +87,24 @@ export async function portalAction() {
     redirect(back(`?error=${e instanceof BillingError ? e.code : "FAILED"}#billing-h`));
   }
   redirect(url);
+}
+
+/** Add-ons on the live subscription (TASK-053): extra brands, extra members, the persona. Stripe prorates. */
+export async function setAddonsAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const wanted: Addons = {};
+  for (const a of ADDON_KEYS) {
+    const v = str(f, a);
+    if (v !== "") wanted[a] = a === "persona" ? (v === "1" || v === "on" ? 1 : 0) : Number(v);
+  }
+  let q = "?ok=addons";
+  try {
+    await setAddons(getDb(), getStripe(), ctx, wanted);
+  } catch (e) {
+    if (!(e instanceof BillingError)) console.error("add-ons failed", e instanceof Error ? e.message.slice(0, 200) : "error");
+    q = `?error=${e instanceof BillingError ? e.code : "FAILED"}`;
+  }
+  revalidatePath("/app/team");
+  redirect(back(`${q}#billing-h`));
 }

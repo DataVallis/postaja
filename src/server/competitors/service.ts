@@ -1,6 +1,7 @@
 // Competitors of a brand (TASK-049, spec §4.3, ADR-066). "Najdi konkurente" queues a run; the worker asks Claude (web
 // search + CGP) as the member who asked and stores new suggestions (known ones are skipped). Members keep or remove
 // suggestions and add their own; nothing is removed unless a member removes it.
+import { requireFeature } from "../billing/features";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
@@ -57,6 +58,7 @@ export async function listCompetitors(db: Db, ctx: OrgContext, brandId: string) 
 
 /** Any member: Claude looks for competitors (one run per brand at a time; a run stuck for 15 minutes no longer blocks). */
 export async function requestFind(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, brandId: string, hint = "") {
+  await requireFeature(db, ctx, "research"); // TASK-053: Studio and Agencija
   const { brand } = await brandOf(db, ctx, brandId);
   if (brand.archivedAt) throw new CompetitorError("ARCHIVED");
   const wish = z.string().trim().max(1000).safeParse(hint);

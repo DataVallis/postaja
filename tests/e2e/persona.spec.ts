@@ -38,6 +38,7 @@ test("persona: AI fills in the DNA, the passport is generated from it, the owner
   await page.getByLabel("Ime", { exact: true }).fill("Persona E2E");
   await page.getByLabel("Kratko ime (slug)").fill(`persona-${stamp}`);
   await page.getByLabel("E-pošta lastnika").fill(owner);
+  await page.getByLabel("Plan").selectOption("pro"); // hand-managed plans keep every feature, the persona too (TASK-053)
   await page.getByRole("button", { name: "Ustvari" }).click();
   await expect(page.getByRole("heading", { name: "Persona E2E" })).toBeVisible();
 

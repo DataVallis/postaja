@@ -3,6 +3,7 @@
 // Postaja renders it frame by frame with the same renderer as the still and encodes an MP4. No generative video model
 // touches a post, so every image can be animated and every letter stays exact. Kling 3.0 (model registry, kind video)
 // is kept for AI-influencer videos with a persona (phase 2).
+import { requireFeature } from "../billing/features";
 import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { getBrandDetail } from "../brands/service";
@@ -50,6 +51,7 @@ const requestInput = z.object({ position: z.number().int().min(0).max(19), motio
 
 /** Any member. Claims the post's video (one at a time) and queues the job. `motion` is the owner's optional wish. */
 export async function requestAnimation(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, input: z.input<typeof requestInput>) {
+  await requireFeature(db, ctx, "animation"); // TASK-053: Studio and Agencija
   const parsed = requestInput.safeParse(input);
   if (!parsed.success) throw new ImageJobError("INVALID");
   const { position, motion } = parsed.data;

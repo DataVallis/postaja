@@ -2,6 +2,7 @@
 // ads; "Analiziraj" queues a run that reads each kept competitor's public website (SSRF-safe fetch) and asks Claude for
 // a report: profiles, adopt / reject learnings with evidence, topic gaps. Members tick the learnings; the owner sends
 // the accepted ones to the CGP as a pending draft (ADR-035/038: never the active CGP). Every report stays.
+import { requireFeature } from "../billing/features";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import sharp from "sharp";
 import { z } from "zod";
@@ -101,6 +102,7 @@ export async function listItems(db: Db, ctx: OrgContext, brandId: string) {
 
 /** Any member: one run per brand at a time (shared with "find"), at least one kept competitor. */
 export async function requestAnalyze(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, brandId: string) {
+  await requireFeature(db, ctx, "research"); // TASK-053: Studio and Agencija
   const { brand } = await getBrandDetail(db, ctx, brandId).catch(() => { throw new CompetitorError("NOT_FOUND"); });
   if (brand.archivedAt) throw new CompetitorError("ARCHIVED");
   const kept = (await forOrg(db, ctx).select(competitors, and(eq(competitors.brandId, brandId), eq(competitors.status, "kept"))!)) as Competitor[];

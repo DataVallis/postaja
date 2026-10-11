@@ -23,6 +23,8 @@ import { latestReviews, listApprovalLinks } from "@/server/reviews/service";
 import { ApprovalSection } from "./approval-section";
 import { listDesigns } from "@/server/design/service";
 import { brandReadiness } from "@/server/brands/readiness";
+import { orgFeatures } from "@/server/billing/features";
+import { UpgradeCard } from "@/components/upgrade-card";
 import { DesignSection } from "./design-section";
 import { ModelSection } from "./model-section";
 import { listTextModels } from "@/server/brands/service";
@@ -71,6 +73,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const f = await getFormatter();
   const isOwner = org.role === "owner";
   const ready = isOwner && !brand.archivedAt ? await brandReadiness(db, org, brand.id) : null;
+  const features = await orgFeatures(db, org.orgId);
   const rules = profile?.rules ?? { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] };
   const effective = await Promise.all(
     channels.map(async (c) => {
@@ -142,13 +145,16 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
         <div className="mt-6"><ApprovalSection brandId={brand.id} links={approvalLinkList} from={nextMonday} to={addDays(nextMonday, 6)} archived={brand.archivedAt !== null} now={new Date(`${today}T00:00:00Z`).getTime()} /></div>
       ) : null}
 
-      {tab === "ads" ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
-      {tab === "persona" ? (
+      {tab === "ads" && !features.has("ads") ? <UpgradeCard feature="ads" isOwner={isOwner} /> : null}
+      {tab === "ads" && features.has("ads") ? <AdsSection brandId={brand.id} archived={brand.archivedAt !== null} languages={brand.languages} networks={adNets} sets={adSetList} error={sp.adError} /> : null}
+      {tab === "persona" && !features.has("persona") ? <UpgradeCard feature="persona" isOwner={isOwner} /> : null}
+      {tab === "persona" && features.has("persona") ? (
         <PersonaSection brandId={brand.id} isOwner={isOwner} archived={brand.archivedAt !== null} error={sp.personaError} saved={sp.saved === "1"}
           data={personaData} sources={files.sources.filter((s) => s.kind !== "image").map((s) => ({ id: s.id, filename: s.filename }))} dnaCost={dnaCost} passport={passport}
           posts={recentPosts.filter((x) => x.status !== "skipped").map((x) => ({ id: x.id, label: (x.plan?.topic || x.topicSummary || x.brief).slice(0, 90), date: x.scheduledOn, hasVideo: withPersonaVideo.has(x.id) }))} />
       ) : null}
-      {tab === "competitors" ? (
+      {tab === "competitors" && !features.has("research") ? <UpgradeCard feature="research" isOwner={isOwner} /> : null}
+      {tab === "competitors" && features.has("research") ? (
         <CompetitorsSection brandId={brand.id} list={competitorData.competitors} run={competitorData.run} archived={brand.archivedAt !== null} error={sp.competitorError} maxCost={findCost === null ? "—" : `${microToUsd(findCost)} €`}
           analyzeCost={analyzeCost === null ? "—" : `${microToUsd(analyzeCost)} €`} items={competitorItemsMap} reports={competitorReportList} reportId={sp.report} isOwner={isOwner} />
       ) : null}

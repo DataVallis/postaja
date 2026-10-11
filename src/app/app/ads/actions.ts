@@ -1,4 +1,5 @@
 "use server";
+import { PlanFeatureError } from "@/server/billing/features";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { deleteCreativeVersion, requestAdImages, restoreCreativeVersion, setAdPartnerLogo, setAdSlides } from "@/server/ads/creatives";
@@ -9,7 +10,7 @@ import { getDb } from "@/server/db/client";
 import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 
-const code = (e: unknown) => (e instanceof AdError ? e.code : "FAILED");
+const code = (e: unknown) => (e instanceof AdError ? e.code : e instanceof PlanFeatureError ? e.code : "FAILED");
 
 /** "Ustvari oglas" on the brand's Oglasi tab: the ad set and its copy (one Claude call, plus a fix round). */
 export async function createAdSetAction(f: FormData) {
@@ -81,7 +82,7 @@ export async function requestAdImagesAction(f: FormData) {
   try {
     await requestAdImages(getDb(), bossQueue(await getBoss()), ctx, id, f.get("mode") === "text" ? "text" : "new");
   } catch (e) {
-    error = e instanceof AdError ? (e.detail ?? e.code) : "FAILED";
+    error = e instanceof AdError ? (e.detail ?? e.code) : e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/ads/${id}`);
   redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);
@@ -97,7 +98,7 @@ export async function setAdPartnerLogoAction(f: FormData) {
   try {
     await setAdPartnerLogo(getDb(), bossQueue(await getBoss()), ctx, id, String(f.get("partnerLogoId") ?? "") || null);
   } catch (e) {
-    error = e instanceof AdError ? (e.detail ?? e.code) : "FAILED";
+    error = e instanceof AdError ? (e.detail ?? e.code) : e instanceof PlanFeatureError ? e.code : "FAILED";
   }
   revalidatePath(`/app/ads/${id}`);
   redirect(`/app/ads/${id}${error ? `?imageError=${error}` : ""}#creatives`);

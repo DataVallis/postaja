@@ -1233,7 +1233,8 @@
       "LLM_PROVIDER": "Claude se ni odzval. Poskusi znova.",
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "BAD_PICK": "Izbrane slike ne obstajajo več. Osveži stran in izberi znova.",
-      "NOT_RESTORABLE": "Te slike ni mogoče vrniti brez novega risanja: narejena je bila z drugo verzijo vizualne podobe ali je bila njena ilustracija izbrisana. Vrni celo verzijo ali uporabi popravek."
+      "NOT_RESTORABLE": "Te slike ni mogoče vrniti brez novega risanja: narejena je bila z drugo verzijo vizualne podobe ali je bila njena ilustracija izbrisana. Vrni celo verzijo ali uporabi popravek.",
+      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket."
     },
     "designLink": "Vizualna podoba branda",
     "noDesign": "Brand še nima vizualne podobe, zato slik še ni mogoče narediti.",
@@ -1479,7 +1480,8 @@
       "LANGUAGE": "Jezik ni med jeziki branda.",
       "SPEND_CAP": "Dosežen je mesečni limit organizacije (krediti, poraba ali število AI generacij). Kredite lahko dokupiš na strani Ekipa in paket.",
       "NO_MODEL": "Model Claude ni nastavljen.",
-      "AI_FAILED": "Claude ni vrnil uporabnih besedil. Poskusi znova."
+      "AI_FAILED": "Claude ni vrnil uporabnih besedil. Poskusi znova.",
+      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket."
     },
     "creativesTitle": "Kreative",
     "creativeAlt": "{placement}, različica {n}",
@@ -1603,7 +1605,8 @@
       "LLM_PROVIDER": "Claude se ni odzval. Poskusi znova.",
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "BAD_ORIGIN": "Nalaganje ni dovoljeno.",
-      "UNAUTHORIZED": "Prijava je potekla."
+      "UNAUTHORIZED": "Prijava je potekla.",
+      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket."
     },
     "generateAgain": "Nova passport slika",
     "inPostsTitle": "Persona na slikah objav (privzeto)",
@@ -1720,7 +1723,8 @@
       "canceled": "Vabilo je preklicano.",
       "role": "Vloga je spremenjena.",
       "removed": "Član je odstranjen.",
-      "creditsRequested": "Zahteva za kredite je poslana. Ko je plačilo potrjeno, se krediti prikažejo tukaj."
+      "creditsRequested": "Zahteva za kredite je poslana. Ko je plačilo potrjeno, se krediti prikažejo tukaj.",
+      "addons": "Dodatki so shranjeni. Omejitve se posodobijo v nekaj sekundah."
     },
     "errors": {
       "FAILED": "Ni uspelo. Poskusi znova.",
@@ -1735,7 +1739,9 @@
       "HAS_SUBSCRIPTION": "Naročnino že imaš; paket zamenjaš v upravljanju naročnine.",
       "PILOT_USED": "Pilot je mogoč samo enkrat in pred prvo naročnino.",
       "NO_CUSTOMER": "Ni še nobenega plačila za to organizacijo.",
-      "NO_PRICE": "Ta cena v Stripe še ni pripravljena. Obvesti nas."
+      "NO_PRICE": "Ta cena v Stripe še ni pripravljena. Obvesti nas.",
+      "NO_SUBSCRIPTION": "Dodatke dodaš k aktivni naročnini. Najprej izberi paket.",
+      "ADDON_INVALID": "Vpiši veljavno število dodatkov (Agencija persono že vključuje)."
     },
     "credits": {
       "title": "Krediti",
@@ -1784,7 +1790,19 @@
       "bannerPastDue": "Plačilo naročnine ni uspelo. Do {until} vse deluje, potem se ustvarjanje ustavi.",
       "bannerBlocked": "Plačilo naročnine ni uspelo, ustvarjanje je ustavljeno.",
       "bannerEnded": "Naročnina je končana: ustvarjeno lahko pregleduješ in preneseš, novo ustvarjanje je ustavljeno.",
-      "bannerLink": "Paket in plačilo"
+      "bannerLink": "Paket in plačilo",
+      "addons": {
+        "title": "Dodatki",
+        "hint": "Dodatni brandi in člani povečajo omejitve paketa; persona odklene obraz branda. Stripe sorazmerno obračuna spremembo.",
+        "brand": "Dodatni brandi ({price} na brand)",
+        "member": "Dodatni člani ({price} na člana)",
+        "persona": "Persona ({price})",
+        "save": "Shrani dodatke"
+      },
+      "perMonth": "{price} € / mesec",
+      "perYear": "{price} € / leto",
+      "featuresLabel": "Kaj vključuje {plan}",
+      "basics": "Objave, slike in karuseli"
     }
   },
   "Videos": {
@@ -1846,7 +1864,8 @@
       "NO_COMPETITORS": "Najprej obdrži ali dodaj vsaj enega konkurenta.",
       "NOTHING_ACCEPTED": "Najprej pri vsaj eni točki označi Da.",
       "TOO_LONG": "CGP bi bil predolg (največ 50.000 znakov).",
-      "FORBIDDEN": "To lahko naredi lastnik."
+      "FORBIDDEN": "To lahko naredi lastnik.",
+      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket."
     },
     "uploading": "Nalagam …",
     "addScreenshots": "Dodaj posnetke zaslona",
@@ -2168,5 +2187,29 @@
       "archived": "Brand je arhiviran.",
       "failed": "Shranjevanje ni uspelo. Poskusite znova."
     }
+  },
+  "Upgrade": {
+    "features": {
+      "ads": {
+        "title": "Oglasni seti",
+        "what": "Oglasna besedila in kreative za Meta, Google in LinkedIn iz CGP-ja in dizajna branda."
+      },
+      "animation": {
+        "title": "Animacije",
+        "what": "Kratek video iz slike objave, za reels in zgodbe."
+      },
+      "research": {
+        "title": "Raziskava konkurence",
+        "what": "Postaja poišče konkurente, prebere njihove strani in oglase ter predlaga, kaj izboljšati v CGP-ju."
+      },
+      "persona": {
+        "title": "Persona",
+        "what": "Stalen obraz branda: slike in videi z isto osebo, ki govori v imenu branda."
+      }
+    },
+    "inPlan": "Na voljo v paketu {plan} ({price} € / mesec) in višje.",
+    "inPlanOrAddon": "Na voljo v paketu {plan} ali kot dodatek za {price} € / mesec.",
+    "cta": "Izberi paket",
+    "askOwner": "Za nadgradnjo prosi lastnika organizacije."
   }
 }

@@ -2,6 +2,7 @@
 // Claude writes the shot (first frame + motion) from the post and the persona's DNA; the reference model (Nano Banana
 // Pro edit) makes the first frame from the passport pictures, so it is the same person; Kling 3.0 animates it; ffmpeg
 // fits it to 1080×1920 with a silent track. Every paid step is reserved first and settled or released.
+import { requireFeature } from "../billing/features";
 import { and, eq, inArray, lt, or } from "drizzle-orm";
 import sharp from "sharp";
 import { z } from "zod";
@@ -46,6 +47,7 @@ const requestInput = z.object({ durationS: z.union([z.literal(5), z.literal(10)]
 
 /** Any member. Claims the post's video for the persona (one video per post) and queues the job. */
 export async function requestPersonaVideo(db: Db, queue: Queue, ctx: OrgContext, postId: string, input: z.input<typeof requestInput>) {
+  await requireFeature(db, ctx, "persona"); // TASK-053: Agencija or the persona add-on
   const parsed = requestInput.safeParse(input);
   if (!parsed.success) throw new ImageJobError("INVALID");
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as PostRow[];
