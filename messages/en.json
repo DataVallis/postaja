@@ -503,6 +503,7 @@
         "UNSUPPORTED_TYPE": "this file type is not accepted (e.g. SVG, old .doc/.xls or a ZIP inside a ZIP).",
         "INVALID_FILE": "the file is damaged or not what it claims to be.",
         "MISSING_GLYPHS": "the font lacks {detail}.",
+        "FONT_UNSUPPORTED": "this font cannot be drawn. Upload a static version (e.g. the Regular or Bold file, TTF/OTF).",
         "DUPLICATE": "this file is already uploaded.",
         "LIMIT_REACHED": "the maximum number of files of this kind is reached.",
         "ARCHIVED": "the brand is archived.",

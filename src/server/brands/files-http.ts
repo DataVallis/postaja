@@ -10,7 +10,7 @@ export const MULTIPART_OVERHEAD = 64 * 1024;
 
 const STATUS: Record<FileError["code"], number> = {
   FORBIDDEN: 403, NOT_FOUND: 404, ARCHIVED: 409, EMPTY: 400, TOO_LARGE: 413, UNSUPPORTED_TYPE: 415,
-  INVALID_FILE: 422, MISSING_GLYPHS: 422, DUPLICATE: 409, LIMIT_REACHED: 409,
+  INVALID_FILE: 422, MISSING_GLYPHS: 422, FONT_UNSUPPORTED: 422, DUPLICATE: 409, LIMIT_REACHED: 409,
 };
 
 const json = (body: unknown, status: number) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });

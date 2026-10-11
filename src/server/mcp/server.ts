@@ -23,6 +23,7 @@ const FILE_MESSAGES: Partial<Record<FileError["code"], string>> = {
   UNSUPPORTED_TYPE: "Postaja does not accept this file type (images, PDF, Word, Excel, PowerPoint, text, fonts and ZIP are accepted).",
   INVALID_FILE: "The file could not be read (damaged or not what its name says).",
   MISSING_GLYPHS: "The font lacks Slovenian letters (č š ž) required by the brand.",
+  FONT_UNSUPPORTED: "Postaja cannot draw text in this font. Upload a static TTF/OTF (e.g. the Regular or Bold file) instead.",
 };
 
 function message(e: unknown): string | null {

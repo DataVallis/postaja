@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { and, eq, getTableColumns, ne, sql } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { brandAssets, brands, brandSources, type AssetKind, type SourceKind } from "../db/schema";
-import { inspectFont, woff2ToSfnt, woffToSfnt } from "../files/font";
+import { inspectFont, isVariableFont, staticInstance, woff2ToSfnt, woffToSfnt } from "../files/font";
+import { fontRenderError } from "../design/font-check";
 import { reencodeImage } from "../files/images";
 import { ExtractError, materialText } from "../files/extract";
 import { CONTENT_TYPES, sniff, type Sniffed } from "../files/sniff";
@@ -21,7 +22,7 @@ export class FileError extends Error {
   constructor(
     public readonly code:
       | "FORBIDDEN" | "NOT_FOUND" | "ARCHIVED" | "EMPTY" | "TOO_LARGE" | "UNSUPPORTED_TYPE"
-      | "INVALID_FILE" | "MISSING_GLYPHS" | "DUPLICATE" | "LIMIT_REACHED",
+      | "INVALID_FILE" | "MISSING_GLYPHS" | "FONT_UNSUPPORTED" | "DUPLICATE" | "LIMIT_REACHED",
     public readonly detail?: string,
   ) {
     super(code);
@@ -114,10 +115,14 @@ async function prepare(slot: Slot, filename: string, input: Uint8Array, brandLan
     // Web fonts are converted to TTF/OTF once here, because the renderer (Satori) cannot read WOFF2.
     let sfnt = input;
     let info;
+    let variable = false;
     try {
       if (type === "woff") sfnt = woffToSfnt(input);
       if (type === "woff2") sfnt = await woff2ToSfnt(input);
       info = inspectFont(sfnt);
+      // Variable fonts (most of Google Fonts) are stored as their default instance: the renderer cannot read them.
+      variable = isVariableFont(sfnt);
+      if (variable) sfnt = staticInstance(sfnt);
     } catch {
       throw new FileError("INVALID_FILE");
     }
@@ -125,7 +130,9 @@ async function prepare(slot: Slot, filename: string, input: Uint8Array, brandLan
     if (flavor !== "ttf" && flavor !== "otf") throw new FileError("INVALID_FILE");
     // Brands writing Slovenian need č š ž (and ć đ in names); others keep the font with the gap recorded.
     if (info.missingGlyphs.length && brandLanguages.includes("sl")) throw new FileError("MISSING_GLYPHS", info.missingGlyphs.join(" "));
-    const meta = { family: info.family, missingGlyphs: info.missingGlyphs, ...(sfnt !== input ? { convertedFrom: type } : {}) };
+    // A font the renderer cannot draw would break every design and image of the brand: refuse it at the door.
+    if (await fontRenderError(sfnt)) throw new FileError("FONT_UNSUPPORTED");
+    const meta = { family: info.family, missingGlyphs: info.missingGlyphs, ...(type === "woff" || type === "woff2" ? { convertedFrom: type } : {}), ...(variable ? { variable: true } : {}) };
     return { bytes: sfnt, ext: flavor, contentType: CONTENT_TYPES[flavor], table: "asset", kind: "font", meta };
   }
   if (type === "text") {

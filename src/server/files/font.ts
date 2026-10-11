@@ -122,6 +122,66 @@ export function inspectFont(bytes: Uint8Array): FontInfo {
   }
 }
 
+/** OpenType Font Variations tables. Satori (opentype.js) cannot parse a font that carries them. */
+const VARIATION_TABLES = new Set(["fvar", "gvar", "avar", "cvar", "HVAR", "VVAR", "MVAR", "STAT"]);
+
+/** Whether the font is a variable font (has an `fvar` table). Throws FONT_* for malformed data. */
+export function isVariableFont(bytes: Uint8Array): boolean {
+  try {
+    return tables(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)).has("fvar");
+  } catch (e) {
+    if (e instanceof RangeError) throw new Error("FONT_TRUNCATED");
+    throw e;
+  }
+}
+
+const checksum = (b: Uint8Array): number => {
+  const padded = new Uint8Array((b.length + 3) & ~3);
+  padded.set(b);
+  const v = new DataView(padded.buffer);
+  let sum = 0;
+  for (let i = 0; i < padded.length; i += 4) sum = (sum + v.getUint32(i)) >>> 0;
+  return sum;
+};
+
+/**
+ * A variable font → its default instance as a static font: the variation tables are dropped, the default outlines
+ * (glyf/CFF) stay. Google Fonts ship most families only as variable TTFs, which the renderer cannot read
+ * (incident 2026-10-10). A static font is returned unchanged. Throws FONT_* for malformed data.
+ */
+export function staticInstance(bytes: Uint8Array): Uint8Array {
+  try {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const all = tables(v);
+    if (!all.has("fvar")) return bytes;
+    const keep = [...all.entries()].filter(([tag]) => !VARIATION_TABLES.has(tag)).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const num = keep.length;
+    let size = 12 + num * 16;
+    for (const [, t] of keep) size += (t.length + 3) & ~3;
+    const out = new Uint8Array(size);
+    const o = new DataView(out.buffer);
+    let searchRange = 1, entrySelector = 0;
+    while (searchRange * 2 <= num) { searchRange *= 2; entrySelector++; }
+    o.setUint32(0, v.getUint32(0)); o.setUint16(4, num); o.setUint16(6, searchRange * 16); o.setUint16(8, entrySelector); o.setUint16(10, num * 16 - searchRange * 16);
+    let at = 12 + num * 16;
+    let headAt = -1;
+    keep.forEach(([tag, t], i) => {
+      const data = bytes.subarray(t.offset, t.offset + t.length);
+      out.set(data, at);
+      if (tag === "head") { headAt = at; o.setUint32(at + 8, 0); } // checkSumAdjustment is recomputed below
+      const d = 12 + i * 16;
+      for (let k = 0; k < 4; k++) o.setUint8(d + k, tag.charCodeAt(k));
+      o.setUint32(d + 4, checksum(out.subarray(at, at + t.length))); o.setUint32(d + 8, at); o.setUint32(d + 12, t.length);
+      at += (t.length + 3) & ~3;
+    });
+    if (headAt >= 0) o.setUint32(headAt + 8, (0xb1b0afba - checksum(out)) >>> 0);
+    return out;
+  } catch (e) {
+    if (e instanceof RangeError) throw new Error("FONT_TRUNCATED");
+    throw e;
+  }
+}
+
 /** Upper bound for a converted font (a decompression guard for WOFF/WOFF2). */
 export const MAX_SFNT_BYTES = 30 * 1024 * 1024;
 

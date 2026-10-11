@@ -22,3 +22,35 @@ fb.setupNameTable({"familyName": "Tiny Sans", "styleName": "Regular"})
 fb.setupOS2()
 fb.setupPost()
 fb.save(os.path.join(os.path.dirname(__file__), "TinySans.ttf"))
+
+# TinyPlain.ttf: the same font without č š ž ć đ (an English brand may use it; a Slovenian one may not).
+plain = "abc"
+pnames = [".notdef"] + [f"uni{ord(c):04X}" for c in plain]
+fb = FontBuilder(1000, isTTF=True)
+fb.setupGlyphOrder(pnames)
+fb.setupCharacterMap({ord(c): f"uni{ord(c):04X}" for c in plain})
+fb.setupGlyf({n: box() for n in pnames})
+fb.setupHorizontalMetrics({n: (500, 50) for n in pnames})
+fb.setupHorizontalHeader(ascent=800, descent=-200)
+fb.setupNameTable({"familyName": "Tiny Plain", "styleName": "Regular"})
+fb.setupOS2()
+fb.setupPost()
+fb.save(os.path.join(os.path.dirname(__file__), "TinyPlain.ttf"))
+
+# TinySansVar.ttf: TinySans as a variable font (wght 400–700), like most Google Fonts downloads. The renderer
+# (Satori) cannot read variable fonts; uploads store the default instance (incident 2026-10-10).
+from fontTools.ttLib import TTFont
+from fontTools.ttLib.tables.TupleVariation import TupleVariation
+fb = FontBuilder(1000, isTTF=True)
+fb.setupGlyphOrder(names)
+fb.setupCharacterMap({ord(c): f"uni{ord(c):04X}" for c in chars})
+fb.setupGlyf({n: box() for n in names})
+fb.setupHorizontalMetrics({n: (500, 50) for n in names})
+fb.setupHorizontalHeader(ascent=800, descent=-200)
+fb.setupNameTable({"familyName": "Tiny Sans Var", "styleName": "Regular"})
+fb.setupOS2()
+fb.setupPost()
+fb.setupFvar([("wght", 400, 400, 700, "Weight")], [])
+# Bold widens every box by 40 units to the right (4 contour points + 4 phantom points).
+fb.setupGvar({n: [TupleVariation({"wght": (0, 1, 1)}, [(0, 0), (0, 0), (40, 0), (40, 0), (0, 0), (0, 0), (0, 0), (0, 0)])] for n in names[1:]})
+fb.save(os.path.join(os.path.dirname(__file__), "TinySansVar.ttf"))
