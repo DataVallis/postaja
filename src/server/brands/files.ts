@@ -15,8 +15,12 @@ import { unzip, type ZipEntry } from "../files/zip";
 import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 
-/** "partner" = a partner's logo (TASK-046), named, chosen per post or ad; never the brand's own logo. */
-export type Slot = "logo" | "partner" | "font" | "source";
+/**
+ * "partner" = a partner's logo (TASK-046), named, chosen per post or ad; never the brand's own logo.
+ * "reference" = a picture that must appear in images as it is (a certificate, a product, a screen — TASK-057); never a
+ * style example. Any member may add one while correcting images.
+ */
+export type Slot = "logo" | "partner" | "font" | "source" | "reference";
 
 export class FileError extends Error {
   constructor(
@@ -31,13 +35,14 @@ export class FileError extends Error {
 
 const MB = 1024 * 1024;
 /** Upload size limits per slot (bytes, inclusive). */
-export const MAX_BYTES: Record<Slot, number> = { logo: 10 * MB, partner: 10 * MB, font: 10 * MB, source: 50 * MB };
+export const MAX_BYTES: Record<Slot, number> = { logo: 10 * MB, partner: 10 * MB, font: 10 * MB, source: 50 * MB, reference: 20 * MB };
 /** Files per brand and slot. */
-export const MAX_FILES: Record<Slot, number> = { logo: 10, partner: 30, font: 20, source: 200 };
+export const MAX_FILES: Record<Slot, number> = { logo: 10, partner: 30, font: 20, source: 200, reference: 100 };
 
 const ALLOWED: Record<Slot, Sniffed[]> = {
   logo: ["png", "jpeg", "webp"],
   partner: ["png", "jpeg", "webp"],
+  reference: ["png", "jpeg", "webp"],
   font: ["ttf", "otf", "woff", "woff2"],
   source: ["pdf", "docx", "xlsx", "pptx", "text", "png", "jpeg", "webp"],
 };
@@ -107,6 +112,7 @@ async function prepare(slot: Slot, filename: string, input: Uint8Array, brandLan
     }
     const meta = { width: img.width, height: img.height };
     if (slot === "partner") return { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "asset", kind: "partner", meta };
+    if (slot === "reference") return { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "asset", kind: "reference", meta };
     return slot === "logo"
       ? { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "asset", kind: "logo", meta }
       : { bytes: img.bytes, ext: img.ext, contentType: img.contentType, table: "source", kind: "image", meta };
@@ -147,7 +153,10 @@ async function prepare(slot: Slot, filename: string, input: Uint8Array, brandLan
 
 export type UploadResult = { id: string; table: "source" | "asset"; kind: SourceKind | AssetKind };
 
-/** Owner only. Validates, stores in S3, then records the row; if the row cannot be written the object is removed. */
+/**
+ * Owner only (reference pictures: any member). Validates, stores in S3, then records the row; if the row cannot be
+ * written the object is removed.
+ */
 export async function uploadBrandFile(
   db: Db,
   storage: Storage,
@@ -156,7 +165,7 @@ export async function uploadBrandFile(
   slot: Slot,
   file: { filename: string; bytes: Uint8Array; name?: string },
 ): Promise<UploadResult> {
-  requireOwner(ctx);
+  if (slot !== "reference") requireOwner(ctx);
   const brand = await brandOf(db, ctx, brandId);
   if (brand.archivedAt) throw new FileError("ARCHIVED");
   if (file.bytes.byteLength === 0) throw new FileError("EMPTY");
@@ -238,6 +247,7 @@ export async function listBrandFiles(db: Db, ctx: OrgContext, brandId: string) {
     sources: sources.sort(byDate),
     logos: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "logo").sort(byDate),
     fonts: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "font").sort(byDate),
+    references: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "reference").sort(byDate),
     partners: (assets as (typeof brandAssets.$inferSelect)[]).filter((a) => a.kind === "partner").sort((a, b) => (a.meta.name ?? "").localeCompare(b.meta.name ?? "", "sl")),
   };
 }
@@ -305,7 +315,7 @@ export async function uploadAuto(
   file: { filename: string; bytes: Uint8Array; name?: string },
   slot?: Slot,
 ): Promise<AutoResult[]> {
-  requireOwner(ctx);
+  if (slot !== "reference") requireOwner(ctx); // TASK-057: any member adds a reference picture
   const brand = await brandOf(db, ctx, brandId);
   if (brand.archivedAt) throw new FileError("ARCHIVED");
   const name = cleanFilename(file.filename);

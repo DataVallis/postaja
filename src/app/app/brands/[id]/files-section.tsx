@@ -113,6 +113,30 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
         {canUpload ? <Dropzone brandId={brandId} slot="partner" /> : null}
       </div>
 
+      {/* TASK-057: pictures added while correcting post images, shown on them as they are. */}
+      {files.references.length ? (
+        <div className="grid content-start gap-3" data-testid="references-section">
+          <div>
+            <h3 className="font-semibold">{t("references")}</h3>
+            <p className="mt-1 max-w-2xl text-sm text-muted">{t("referencesHint")}</p>
+          </div>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="references">
+            {files.references.map((l) => (
+              <li key={l.id} className="grid min-w-0 gap-2">
+                <a href={href("asset", l.id)} className="relative block h-24 overflow-hidden rounded-xl bg-paper ring-1 ring-line focus-visible:outline-2 focus-visible:outline-fg">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- private presigned redirect, not optimisable */}
+                  <img src={href("asset", l.id)} alt={l.filename} className="absolute inset-0 h-full w-full object-contain p-2" />
+                </a>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate text-muted">{l.filename}</span>
+                  {isOwner ? <Delete brandId={brandId} table="asset" id={l.id} label={t("delete", { name: l.filename })} /> : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="grid gap-3">
         <h3 className="font-semibold">{t("sources")}</h3>
         <p className="text-sm text-muted">{t("knowledgeHint")}</p>

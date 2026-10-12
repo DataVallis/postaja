@@ -59,7 +59,7 @@ export type MediaStatus = (typeof MEDIA_STATUSES)[number];
 export type PostVisual = {
   designId: string;
   /** `verbatim`: the illustration is the plan's image prompt, sent to the image model unchanged (TASK-052). */
-  slides: { templateId: string; slots: Record<string, string>; illustration: string | null; verbatim?: boolean; /** Transient (ADR-076): a correction asked to draw this illustration again; never stored. */ redraw?: boolean }[];
+  slides: { templateId: string; slots: Record<string, string>; illustration: string | null; verbatim?: boolean; /** Transient (ADR-076): a correction asked to draw this illustration again; never stored. */ redraw?: boolean; /** Transient (TASK-057): which of the owner's reference pictures (1-based) this image shows; never stored. */ references?: number[] }[];
   /** The owner's last correction in words (TASK-017 follow-up), shown on the post page. */
   revision?: string;
   /** TASK-054: the images (0-based) that correction was limited to; absent = all images. */

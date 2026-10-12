@@ -885,6 +885,46 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect((await keys(id, "background"))[0]).toBe(bgAfter[0]);
   });
 
+  it("TASK-057: a tagged reference picture is edited into the picked illustration as it is; the rest stays", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    // Any member adds a reference picture (never a style example); only owners add logos.
+    await expect(uploadBrandFile(db, storage, editorA, brandA, "logo", { filename: "l.png", bytes: await png(300, 100, "#ff0000") })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const cert = await uploadBrandFile(db, storage, editorA, brandA, "reference", { filename: "Certificate (EN)@2x.png", bytes: await png(800, 600, "#ffffff") });
+    expect(cert).toMatchObject({ table: "asset", kind: "reference" });
+    const other = await uploadBrandFile(db, storage, B, brandB, "reference", { filename: "tuj.png", bytes: await png(200, 200, "#000000") });
+    jobs.length = 0;
+    await requestImages(db, q, editorA, id, "revise", "Slika 1 naj v telefonu vsebuje certifikat @Certificate (EN)@2x.png", { refs: [`asset:${other.id}`, "asset:../x"] });
+    expect(jobs[0].data).toEqual({ postId: id, mode: "revise", instruction: "Slika 1 naj v telefonu vsebuje certifikat @Certificate (EN)@2x.png", refs: [`asset:${cert.id}`] });
+    const answer = [{ ...three[0], illustration: "A hand holding a phone; on its screen the certificate R1, readable", references: [1, 7] }, three[1], { ...three[2], references: [1] }];
+    const claude = fakeClaude({ plans: [{ slides: answer }] });
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls[0].user).toContain('R1: "Certificate (EN)@2x.png"');
+    expect(claude.calls[0].images?.map((b) => b.caption)).toEqual(["Current image 1:", "Current image 2:", "Current image 3:", 'Reference R1 "Certificate (EN)@2x.png":']);
+    // Image 1 is edited with the reference model from its current picture + the certificate; image 3 is unchanged
+    // (Claude asked for the reference there too, but neither its description nor anything else changed — still edited).
+    expect(fal.calls.map((c) => [c.model, c.references?.length])).toEqual([["fal-ai/nano-banana-pro/edit", 2], ["fal-ai/nano-banana-pro/edit", 2]]);
+    expect(fal.calls[0].prompt).toContain("Edit image 1, the current picture");
+    expect(fal.calls[0].prompt).toContain('image 2 ("Certificate (EN)@2x.png")');
+    expect(fal.calls[0].negativePrompt).toBeUndefined();
+    expect(await ledgerRows()).toBe(paid0 + 2);
+    const bgAfter = await keys(id, "background");
+    expect(bgAfter[0]).not.toBe(bgBefore[0]);
+    const [{ visual }] = await sql`select visual from posts where id = ${id}`;
+    expect(visual.slides.some((x: object) => "references" in x)).toBe(false);
+    // Picked images only: the reference is drawn only into image 1.
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Certifikat @certificate (en)@2x.png večji.", { only: [0] });
+    expect(jobs[0].data).toMatchObject({ only: [0], refs: [`asset:${cert.id}`] });
+    const fal2 = fakeImages();
+    await runImages(jobs, fakeClaude({ plans: [{ slides: answer }] }), fal2.client);
+    expect(fal2.calls).toHaveLength(1);
+    expect((await keys(id, "background"))[2]).toBe(bgAfter[2]);
+  });
+
   it("an image made with another design version cannot come back without being planned again", async () => {
     const { id, q, jobs } = await carousel();
     jobs.length = 0;

@@ -13,6 +13,7 @@ import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate"
 import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishedUrlAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
 import { listImageVersions, listPostMedia } from "@/server/images/service";
+import { referenceChoices } from "@/server/images/references";
 import { currentDesign, listPartnerLogos } from "@/server/design/service";
 import { aiPersonPosts } from "@/server/download/service";
 import { postReviewsFor } from "@/server/reviews/service";
@@ -53,7 +54,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
-  const imageVersions = await listImageVersions(db, org, post.id);
+  const [imageVersions, refChoices] = await Promise.all([listImageVersions(db, org, post.id), referenceChoices(db, org, post.brandId)]);
   const partnerLogos = await listPartnerLogos(db, org, post.brandId);
   const aiPerson = (await aiPersonPosts(db, org, [post.id])).has(post.id);
   const clientReviews = await postReviewsFor(db, org, post.id);
@@ -187,6 +188,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         designHref={`/app/brands/${post.brandId}?tab=design`}
         pdf={wantsPdf(ctx?.channel.platform ?? null, media.length)}
         versions={imageVersions}
+        references={{ brandId: post.brandId, choices: refChoices }}
         persona={persona?.images.length && features.has("persona") ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
         partners={{ options: partnerLogos, selected: post.partnerLogoId }}
       />

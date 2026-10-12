@@ -34,7 +34,7 @@ const serious = async (page: Page) =>
 
 test("images: brand design by Claude, revision, versions, a post's images, word edits, bulk carousel", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one full flow is enough");
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const stamp = Date.now();
   const owner = `slike-${stamp}@example.test`;
   const today = todayIn();
@@ -190,6 +190,19 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await revise.getByLabel("Kaj naj AI popravi na slikah?").fill("Ilustracija naj bo svetlejša.");
   await revise.getByRole("button", { name: "Popravi slike" }).click();
   await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 1);
+  await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
+  // TASK-057: a reference picture added here and tagged in the request is edited into the illustration as it is.
+  const refs = images.getByTestId("image-references");
+  await refs.getByTestId("reference-upload").setInputFiles({ name: "Certifikat (SL)@2x.png", mimeType: "image/png", buffer: await sharp({ create: { width: 400, height: 300, channels: 3, background: "#ffffff" } }).png().toBuffer() });
+  const item = refs.getByTestId("image-reference").filter({ hasText: "Certifikat (SL)@2x.png" });
+  await expect(item.getByRole("checkbox")).toBeChecked();
+  await revise.getByLabel("Kaj naj AI popravi na slikah?").fill("V telefonu naj bo certifikat");
+  await item.getByRole("button", { name: "Označi Certifikat (SL)@2x.png v besedilu" }).click();
+  await expect(revise.getByLabel("Kaj naj AI popravi na slikah?")).toHaveValue("V telefonu naj bo certifikat @Certifikat (SL)@2x.png ");
+  expect(await serious(p)).toEqual([]);
+  await revise.getByRole("button", { name: "Popravi slike" }).click();
+  await expect.poll(async () => (await (await fetch("http://127.0.0.1:3199/fal-log")).json()).length, { timeout: 30_000 }).toBe(falLog.length + 2);
+  expect((await (await fetch("http://127.0.0.1:3199/fal-log")).json()).at(-1)).toMatchObject({ model: "fal-ai/nano-banana-pro/edit", references: 2 });
   await expect(images.getByTestId("images-status")).toHaveText("Pripravljene", { timeout: 30_000 });
   // TASK-033: every earlier run is kept as a version; the oldest one can be restored and the words come back with it.
   const imgVersions = images.getByTestId("image-versions");

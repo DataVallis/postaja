@@ -28,7 +28,7 @@ export async function handleUpload(req: Request, brandId: string, deps: HttpDeps
   if (!ctx) return json({ error: "UNAUTHORIZED" }, 401);
   // No slot (or "auto") = sort each file (and each entry of a ZIP) automatically; a slot forces e.g. "this is the logo".
   const raw = new URL(req.url).searchParams.get("slot") ?? "auto";
-  if (raw !== "auto" && raw !== "logo" && raw !== "partner" && raw !== "font" && raw !== "source") return json({ error: "BAD_SLOT" }, 400);
+  if (raw !== "auto" && raw !== "logo" && raw !== "partner" && raw !== "font" && raw !== "source" && raw !== "reference") return json({ error: "BAD_SLOT" }, 400);
   const slot = raw === "auto" ? undefined : (raw as Slot);
   // Sorting and partner logos accept a ZIP; a forced logo/font/source slot takes one file.
   const max = slot && slot !== "partner" ? MAX_BYTES[slot] : Math.max(MAX_ZIP_BYTES, MAX_BYTES.source);

@@ -144,6 +144,8 @@ export function postVisualSchema(spec: DesignSpec) {
       illustration: z.string().max(1500).nullable(),
       /** Corrections only (ADR-076): draw this image's illustration again even when its description stays the same. */
       redraw: z.boolean().optional(),
+      /** Corrections with reference pictures only (TASK-057): which references (1-based, R1…) this image must show. */
+      references: z.array(z.number().int()).max(10).optional(),
     })).min(1).max(MAX_SLIDES),
   });
 }
@@ -155,6 +157,8 @@ export type VisualRevision = {
   previews: ImageBlock[];
   /** TASK-054: the owner picked these images (0-based); every other image stays exactly as it is. */
   only?: number[];
+  /** TASK-057: pictures the owner supplied (shown after the current images, as R1, R2, …). */
+  references?: { name: string }[];
 };
 
 export function postVisualRequest(spec: DesignSpec, p: PostVisualInputs, invalid?: { draft: unknown; errors: string }, revise?: VisualRevision): Omit<StructuredRequest, "model"> {
@@ -200,6 +204,9 @@ Rules:
         : "",
       revise
         ? `Apply the owner's request to the current images and submit all images again. Change only what the request asks for (and what it implies); keep every other image, template, word and illustration description exactly as it is — identical text — so unchanged illustrations are reused at no cost. If the request is about the picture itself (subject, colours, mood, composition), rewrite that image's illustration description; if it is about words, change the slots; if it is about layout, pick another of the brand's templates. If the owner says something is wrong in a picture that its description did not ask for (letters, logos, made-up text, objects or people that should not be there), set redraw=true for that image — also when its description stays the same, e.g. the plan's imagePrompt. Adding or removing images only when asked.`
+        : "",
+      revise?.references?.length
+        ? `<owner_references>\n${revise.references.map((r, i) => `R${i + 1}: "${r.name}"`).join("\n")}\n</owner_references>\nThe owner supplied these reference pictures (shown after the current images; the request may tag them as @file-name). For every image that must show one of them, set references to their numbers (e.g. [1]) — only where the request asks for it, and only on images whose template shows an illustration (pick such a template if needed). The picture is then edited with the reference shown faithfully, so describe in the illustration where and how it appears (e.g. "the certificate R1 on the phone screen, readable, straight on") and keep everything else of the current picture. Never copy a reference's words into the slots unless asked.`
         : "",
       invalid ? `Your previous answer did not validate. Fix:\n${invalid.errors}\n<previous>${JSON.stringify(invalid.draft).slice(0, 8000)}</previous>` : "",
     ].filter(Boolean).join("\n"),
