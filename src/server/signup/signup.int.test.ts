@@ -17,8 +17,9 @@ import { firstSteps, hashIp, markDownload, pendingSignup, requestSignup, sendTri
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
-const { db, mailer, signIn, session } = makeTestAuth(url, { superadmins: "boss@datavallis.com" });
-const NOW = new Date("2026-10-11T08:00:00Z");
+const { db, signIn, session } = makeTestAuth(url, { superadmins: "boss@datavallis.com" });
+/** Now (whole seconds): a signup request counts for a day of real time, so the tests cannot use a fixed date. */
+const NOW = new Date(Math.floor(Date.now() / 1000) * 1000);
 const DAY = 86_400_000;
 const deps = { superadminEmails: new Set<string>(), db };
 
@@ -69,7 +70,7 @@ describe("signup", () => {
     expect(o).toMatchObject({ name: "Pekarna Ana", slug: "pekarna-ana" });
     expect((await db.select().from(orgSettings).where(eq(orgSettings.orgId, A.orgId)))[0]).toMatchObject({ plan: "trial", limits: { brands: 1, members: 1, creditsPerMonth: 50 } });
     expect((await db.select().from(member).where(eq(member.organizationId, A.orgId)))[0]).toMatchObject({ userId: A.userId, role: "owner" });
-    expect((await db.select().from(orgBilling).where(eq(orgBilling.orgId, A.orgId)))[0].trialEndsAt!.toISOString()).toBe("2026-10-18T08:00:00.000Z");
+    expect((await db.select().from(orgBilling).where(eq(orgBilling.orgId, A.orgId)))[0].trialEndsAt!.toISOString()).toBe(new Date(NOW.getTime() + 7 * DAY).toISOString());
     expect((await db.select().from(auditLog).where(eq(auditLog.orgId, A.orgId))).map((r) => r.action)).toEqual(["org.signup"]);
     // The request is used: no second organization, and signing up again while a member is refused.
     await expect(startTrial(db, { userId: A.userId, email: "ana@pekarna.si" })).rejects.toMatchObject({ code: "NO_REQUEST" });
