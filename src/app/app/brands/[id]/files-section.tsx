@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { listBrandFiles } from "@/server/brands/files";
-import { deleteBrandFileAction, renamePartnerLogoAction } from "../actions";
+import { deleteBrandFileAction, moveToReferenceAction, renamePartnerLogoAction } from "../actions";
 import { AddLogoButton, Dropzone, FontSample } from "../file-uploads";
 
 type Files = Awaited<ReturnType<typeof listBrandFiles>>;
@@ -113,13 +113,14 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
         {canUpload ? <Dropzone brandId={brandId} slot="partner" /> : null}
       </div>
 
-      {/* TASK-057: pictures added while correcting post images, shown on them as they are. */}
-      {files.references.length ? (
+      {/* TASK-057: pictures shown on post images as they are (certificates, products, screens); any member adds them. */}
+      {files.references.length || !archived ? (
         <div className="grid content-start gap-3" data-testid="references-section">
           <div>
             <h3 className="font-semibold">{t("references")}</h3>
             <p className="mt-1 max-w-2xl text-sm text-muted">{t("referencesHint")}</p>
           </div>
+          {files.references.length === 0 ? <p className="text-sm text-muted">{t("noReferences")}</p> : null}
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="references">
             {files.references.map((l) => (
               <li key={l.id} className="grid min-w-0 gap-2">
@@ -134,6 +135,7 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
               </li>
             ))}
           </ul>
+          {!archived ? <Dropzone brandId={brandId} slot="reference" /> : null}
         </div>
       ) : null}
 
@@ -150,7 +152,7 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
                   <th className="py-2 pr-4 text-right font-medium">{t("size")}</th>
                   <th className="hidden py-2 pr-4 font-medium sm:table-cell">{t("added")}</th>
                   <th className="py-2 pr-4 font-medium">{t("status")}</th>
-                  {isOwner ? <th className="w-10 py-2"><span className="sr-only">{t("actions")}</span></th> : null}
+                  {isOwner ? <th className="py-2"><span className="sr-only">{t("actions")}</span></th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -166,7 +168,20 @@ export async function FilesSection({ brandId, files, isOwner, archived, language
                         : s.status === "failed" ? (t.has(`failReasons.${s.error}`) ? t(`failReasons.${s.error as "NO_TEXT"}`) : t("statuses.failed"))
                         : t(`statuses.${s.status}`)}
                     </td>
-                    {isOwner ? <td className="py-1"><Delete brandId={brandId} table="source" id={s.id} label={t("delete", { name: s.filename })} /></td> : null}
+                    {isOwner ? (
+                      <td className="py-1">
+                        <div className="flex items-center gap-1">
+                          {s.kind === "image" ? (
+                            <form action={moveToReferenceAction}>
+                              <input type="hidden" name="brandId" value={brandId} />
+                              <input type="hidden" name="fileId" value={s.id} />
+                              <button type="submit" className="whitespace-nowrap rounded-md px-2 py-1 text-xs text-muted hover:bg-signal/15 hover:text-fg" aria-label={t("moveToReferenceLabel", { name: s.filename })}>{t("moveToReference")}</button>
+                            </form>
+                          ) : null}
+                          <Delete brandId={brandId} table="source" id={s.id} label={t("delete", { name: s.filename })} />
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-type Slot = "logo" | "partner" | "font" | "source";
+type Slot = "logo" | "partner" | "font" | "source" | "reference";
 type Result = { name: string; ok: true; slot: Slot } | { name: string; ok: false; error: string; detail?: string };
 type Row = { key: string; name: string; state: "waiting" | "uploading" | "done"; results: Result[] };
 
@@ -57,7 +57,7 @@ function ResultLine({ r }: { r: Result }) {
  * Drop files or a ZIP. Without `slot` Postaja sorts each file; with slot "partner" (TASK-047) every image — also inside
  * a ZIP — becomes a partner logo named after its file ("Polygon-logo.png" → "Polygon").
  */
-export function Dropzone({ brandId, needsDiacritics = false, slot }: { brandId: string; needsDiacritics?: boolean; slot?: "partner" }) {
+export function Dropzone({ brandId, needsDiacritics = false, slot }: { brandId: string; needsDiacritics?: boolean; slot?: "partner" | "reference" }) {
   const t = useTranslations("Brands.files");
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
@@ -92,21 +92,21 @@ export function Dropzone({ brandId, needsDiacritics = false, slot }: { brandId: 
       >
         <div className="pointer-events-none flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-full bg-ink text-paper dark:bg-paper dark:text-ink"><Icon d={UP} /></span>
-          <p className={slot ? "font-semibold" : "text-lg font-semibold"}>{over ? t("dropNow") : slot ? t("partnerDropTitle") : t("dropTitle")}</p>
+          <p className={slot ? "font-semibold" : "text-lg font-semibold"}>{over ? t("dropNow") : slot ? t(`${slot}DropTitle`) : t("dropTitle")}</p>
         </div>
         <p className="pointer-events-none max-w-xl text-sm text-muted">
-          {slot ? t("partnerDropBody") : <>{t("dropBody")} {needsDiacritics ? t("dropFontsSl") : null}</>}
+          {slot ? t(`${slot}DropBody`) : <>{t("dropBody")} {needsDiacritics ? t("dropFontsSl") : null}</>}
         </p>
         <button type="button" onClick={() => input.current?.click()} disabled={busy} className="rounded-lg bg-signal px-4 py-2 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-60">
-          {busy ? t("uploading") : slot ? t("partnerChoose") : t("chooseFiles")}
+          {busy ? t("uploading") : slot ? t(`${slot}Choose`) : t("chooseFiles")}
         </button>
         <input
           ref={input}
           type="file"
           multiple
           hidden
-          {...(slot ? { accept: "image/png,image/jpeg,image/webp,.zip,application/zip" } : {})}
-          aria-label={slot ? t("partnerChoose") : t("chooseFiles")}
+          {...(slot === "partner" ? { accept: "image/png,image/jpeg,image/webp,.zip,application/zip" } : slot ? { accept: "image/png,image/jpeg,image/webp" } : {})}
+          aria-label={slot ? t(`${slot}Choose`) : t("chooseFiles")}
           onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ""; void upload(f); }}
         />
       </div>

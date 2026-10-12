@@ -466,7 +466,8 @@
         "logo": "logotip",
         "font": "font",
         "source": "vir",
-        "partner": "partnerski logotip"
+        "partner": "partnerski logotip",
+        "reference": "referenčna slika"
       },
       "addLogo": "Dodaj logotip",
       "logos": "Logotipi",
@@ -537,7 +538,13 @@
       "partnerChoose": "Izberi logotipe",
       "partnerRename": "Shrani ime za {name}",
       "references": "Referenčne slike",
-      "referencesHint": "Slike, ki se na slikah objav pokažejo točno take, kot so (certifikat, izdelek, zaslon). Dodaš jih pri popravku slik objave in jih tam označiš z @ime-datoteke."
+      "referencesHint": "Slike, ki se na slikah objav pokažejo točno take, kot so (certifikat, izdelek, zaslon aplikacije). Pri popravku slik objave jih izbereš ali označiš z @ime-datoteke. Niso vzorec sloga.",
+      "noReferences": "Še ni referenčnih slik.",
+      "referenceDropTitle": "Povleci referenčne slike sem",
+      "referenceDropBody": "PNG, JPG ali WEBP, do 20 MB. Shranijo se med referenčne slike, ne med pretekle objave.",
+      "referenceChoose": "Izberi referenčne slike",
+      "moveToReference": "Med referenčne",
+      "moveToReferenceLabel": "Premakni {name} med referenčne slike"
     },
     "cgpImport": {
       "fromComputer": "Uvozi iz dokumenta",

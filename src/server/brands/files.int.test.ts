@@ -15,7 +15,7 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createBrand, setBrandArchived } from "./service";
 import { sniff } from "../files/sniff";
-import { brandFileUrl, cleanFilename, deleteBrandFile, listBrandFiles, MAX_BYTES, MAX_FILES, uploadBrandFile } from "./files";
+import { brandFileUrl, cleanFilename, deleteBrandFile, listBrandFiles, MAX_BYTES, MAX_FILES, moveSourceToReference, uploadBrandFile } from "./files";
 
 const url = process.env.TEST_DATABASE_URL!;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
@@ -344,5 +344,31 @@ describe("uploadAuto: drop anything, incl. a ZIP", () => {
     const woff = makeWoff(realFont("TinyPlain"));
     expect(await uploadAuto(db, s3, A, brandA, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: false, error: "MISSING_GLYPHS" }]);
     expect(await uploadAuto(db, s3, B, brandB, { filename: "Plain.woff", bytes: woff })).toMatchObject([{ ok: true, slot: "font" }]);
+  });
+});
+
+describe("reference pictures (TASK-057)", () => {
+  it("an image material moves to the references (same file, no new upload); not for editors or other orgs; a known one only drops the material", async () => {
+    const pic = await image("png", 400, 300);
+    const src = await uploadBrandFile(db, s3, A, brandA, "source", { filename: "Certificate (EN)@2x.png", bytes: pic });
+    const [before] = await db.select().from(brandSources).where(eq(brandSources.id, src.id));
+    await expect(moveSourceToReference(db, s3, editorA, src.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(moveSourceToReference(db, s3, B, src.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const id = await moveSourceToReference(db, s3, A, src.id);
+    const files = await listBrandFiles(db, A, brandA);
+    expect(files.sources).toHaveLength(0);
+    expect(files.references.map((r) => [r.id, r.filename, r.storageKey])).toEqual([[id, "Certificate (EN)@2x.png", before.storageKey]]);
+    expect(await s3.exists(before.storageKey)).toBe(true);
+    await expect(moveSourceToReference(db, s3, A, src.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    // The same picture uploaded again as a material and moved: the material goes, the one reference stays.
+    const again = await uploadBrandFile(db, s3, A, brandA, "source", { filename: "copy.png", bytes: pic });
+    const [copy] = await db.select().from(brandSources).where(eq(brandSources.id, again.id));
+    expect(await moveSourceToReference(db, s3, A, again.id)).toBe(id);
+    expect((await listBrandFiles(db, A, brandA)).references).toHaveLength(1);
+    expect(await s3.exists(copy.storageKey)).toBe(false);
+    // Editors add reference pictures themselves; a document is never one.
+    await uploadBrandFile(db, s3, editorA, brandA, "reference", { filename: "zaslon.png", bytes: await image("png", 300, 600) });
+    const doc = await uploadBrandFile(db, s3, A, brandA, "source", { filename: "a.pdf", bytes: pdf() });
+    await expect(moveSourceToReference(db, s3, A, doc.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
