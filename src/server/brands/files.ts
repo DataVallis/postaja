@@ -276,6 +276,35 @@ export async function deleteBrandFile(db: Db, storage: Storage, ctx: OrgContext,
   await storage.delete(row.storageKey).catch((e) => console.error("brand file object not deleted", row.storageKey, (e as Error).name));
 }
 
+/**
+ * Owner only (TASK-057): an image material becomes a reference picture — same file, same name, no new upload; it is
+ * then no longer a past post (style example). When the brand already has it as a reference, only the material goes.
+ */
+export async function moveSourceToReference(db: Db, storage: Storage, ctx: OrgContext, sourceId: string): Promise<string> {
+  requireOwner(ctx);
+  const moved = await db.transaction(async (tx) => {
+    const s = forOrg(tx as unknown as Db, ctx);
+    const [src] = (await s.select(brandSources, and(eq(brandSources.id, sourceId), eq(brandSources.kind, "image"))!)) as (typeof brandSources.$inferSelect)[];
+    if (!src) throw new FileError("NOT_FOUND");
+    const [same] = (await s.select(brandAssets, and(eq(brandAssets.brandId, src.brandId), eq(brandAssets.sha256, src.sha256))!)) as (typeof brandAssets.$inferSelect)[];
+    if (same && same.kind !== "reference") throw new FileError("DUPLICATE"); // the same picture is already a logo or partner
+    const [{ n }] = await tx.select({ n: sql<number>`count(*)::int` }).from(brandAssets).where(and(eq(brandAssets.orgId, ctx.orgId), eq(brandAssets.brandId, src.brandId), eq(brandAssets.kind, "reference")));
+    if (!same && n >= MAX_FILES.reference) throw new FileError("LIMIT_REACHED");
+    // The row goes first, so the storage key (unique per table) is never held twice by a living picture.
+    await s.delete(brandSources, eq(brandSources.id, src.id));
+    if (same) return { id: same.id, orphan: src.storageKey };
+    const id = crypto.randomUUID();
+    await s.insert(brandAssets, {
+      id, brandId: src.brandId, filename: src.filename, storageKey: src.storageKey, contentType: src.contentType, sizeBytes: src.sizeBytes,
+      sha256: src.sha256, kind: "reference", meta: {}, createdBy: ctx.userId,
+    });
+    return { id, orphan: null };
+  });
+  // The material's own copy of a picture the brand already had as a reference.
+  if (moved.orphan) await storage.delete(moved.orphan).catch(() => undefined);
+  return moved.id;
+}
+
 /** A ZIP upload may be larger than a single file; its entries still obey the per-slot limits. */
 export const MAX_ZIP_BYTES = 100 * MB;
 

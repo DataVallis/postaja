@@ -7,7 +7,7 @@ import { getDb } from "@/server/db/client";
 import { PLATFORMS, POST_TYPES } from "@/server/db/schema";
 import { addChannel, BrandError, createBrand, removeChannel, saveProfile, setBrandArchived, setBrandTextModel, updateChannel } from "@/server/brands/service";
 import { LANGUAGES } from "@/server/brands/schemas";
-import { deleteBrandFile, renamePartnerLogo } from "@/server/brands/files";
+import { deleteBrandFile, moveSourceToReference, renamePartnerLogo } from "@/server/brands/files";
 import { getStorage } from "@/server/files/storage";
 import { discardDraft } from "@/server/mcp/service";
 import { DesignError, requestDesign, activateDesign, restoreDesignTemplate } from "@/server/design/service";
@@ -164,6 +164,14 @@ export async function deleteBrandFileAction(f: FormData): Promise<void> {
   if (!ctx) return;
   const table = str(f, "table") === "asset" ? "asset" : "source";
   await deleteBrandFile(getDb(), getStorage(), ctx, table, str(f, "fileId")).catch(() => undefined);
+  revalidatePath(`/app/brands/${str(f, "brandId")}`, "layout");
+}
+
+/** Owner only (checked in the service): an image material becomes a reference picture (TASK-057). */
+export async function moveToReferenceAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  await moveSourceToReference(getDb(), getStorage(), ctx, str(f, "fileId")).catch(() => undefined);
   revalidatePath(`/app/brands/${str(f, "brandId")}`, "layout");
 }
 

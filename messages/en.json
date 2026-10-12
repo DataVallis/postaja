@@ -466,7 +466,8 @@
         "logo": "logo",
         "font": "font",
         "source": "source",
-        "partner": "partner logo"
+        "partner": "partner logo",
+        "reference": "reference picture"
       },
       "addLogo": "Add logo",
       "logos": "Logos",
@@ -537,7 +538,13 @@
       "partnerChoose": "Choose logos",
       "partnerRename": "Save name for {name}",
       "references": "Reference pictures",
-      "referencesHint": "Pictures shown on post images exactly as they are (a certificate, a product, a screen). Add them when correcting a post's images and tag them there as @file-name."
+      "referencesHint": "Pictures shown on post images exactly as they are (a certificate, a product, an app screen). Pick or tag them as @file-name when correcting a post's images. They are not style examples.",
+      "noReferences": "No reference pictures yet.",
+      "referenceDropTitle": "Drop reference pictures here",
+      "referenceDropBody": "PNG, JPG or WEBP, up to 20 MB. Stored as reference pictures, not as past posts.",
+      "referenceChoose": "Choose reference pictures",
+      "moveToReference": "To references",
+      "moveToReferenceLabel": "Move {name} to reference pictures"
     },
     "cgpImport": {
       "fromComputer": "Import from a document",

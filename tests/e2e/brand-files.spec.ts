@@ -141,6 +141,16 @@ test("owner uploads logo, font and sources, downloads and deletes; wrong files a
   await expect(p.getByTestId("sources")).not.toContainText("izdelki.csv");
   await expect(p.getByTestId("sources")).toContainText("Brief – č.pdf");
 
+  // TASK-057: reference pictures are added in their own place, and an image material moves there in one click.
+  await p.getByLabel("Izberi referenčne slike").setInputFiles(file("Certificate (EN)@2x.png", "image/png", await image("png", 800, 600)));
+  await expect(p.getByTestId("references")).toContainText("Certificate (EN)@2x.png");
+  await p.getByLabel("Izberi datoteke").setInputFiles(file("izdelek.png", "image/png", await image("png", 500, 500)));
+  await expect(p.getByTestId("sources")).toContainText("izdelek.png");
+  await p.getByRole("button", { name: "Premakni izdelek.png med referenčne slike" }).click();
+  await expect(p.getByTestId("references")).toContainText("izdelek.png");
+  await expect(p.getByTestId("sources")).not.toContainText("izdelek.png");
+  expect(await serious(p)).toEqual([]);
+
   // An English-only brand: no diacritics requirement, and channels can only be English.
   await p.goto("/app/brands/new");
   await p.getByLabel("Ime", { exact: true }).fill("AI Builders");
