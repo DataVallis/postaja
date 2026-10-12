@@ -2165,11 +2165,12 @@
       "short": "{n} znakov — priporočamo vsaj {min}. Dodajte ton, publiko, ponudbo in primere."
     },
     "images": {
-      "logoOk": "Logotip je naložen.",
+      "logoOk": "Logotipi: {n} naloženih.",
       "logoMissing": "Logotip manjka (obvezno za slike).",
-      "examples": "Pretekle objave: {n} (priporočeno vsaj {min})",
+      "examples": "Pretekle objave (slike vaših objav, ne logotipi): {n} od priporočenih {min}.",
       "fontOk": "Pisava: {n}",
-      "fontNone": "Pisava ni naložena (neobvezno — sicer Postaja izbere pisavo sama)."
+      "fontNone": "Pisava ni naložena (neobvezno — sicer Postaja izbere pisavo sama).",
+      "logoDoneMore": "Logotip je urejen — obvezni del tega koraka je opravljen. Za še bolj prepoznavne slike priporočamo še {k, plural, one {# preteklo objavo} two {# pretekli objavi} few {# pretekle objave} other {# preteklih objav}}; lahko pa kar nadaljujete z »Naprej«."
     },
     "materials": {
       "none": "Gradiv še ni."
