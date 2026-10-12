@@ -118,13 +118,18 @@ export default async function BrandSetupPage({ params, searchParams }: { params:
           {step === "images" ? (
             <>
               {why("images")}
+              {files.logos.length && (ready.steps.images.detail.examples as number) < EXAMPLES_MIN ? (
+                <p role="status" className="rounded-lg border border-ok/40 p-3 text-sm" data-testid="setup-images-logo-done">
+                  {t("images.logoDoneMore", { k: EXAMPLES_MIN - (ready.steps.images.detail.examples as number) })}
+                </p>
+              ) : null}
               <ul className="grid gap-1 text-sm" data-testid="setup-images-status">
-                <li className="flex items-center gap-2">{icon(files.logos.length ? "done" : "missing")}{files.logos.length ? t("images.logoOk") : t("images.logoMissing")}</li>
+                <li className="flex items-center gap-2">{icon(files.logos.length ? "done" : "missing")}{files.logos.length ? t("images.logoOk", { n: files.logos.length }) : t("images.logoMissing")}</li>
                 <li className="flex items-center gap-2">{icon((ready.steps.images.detail.examples as number) >= EXAMPLES_MIN ? "done" : "recommended")}{t("images.examples", { n: ready.steps.images.detail.examples as number, min: EXAMPLES_MIN })}</li>
                 <li className="flex items-center gap-2">{icon(files.fonts.length ? "done" : "recommended")}{files.fonts.length ? t("images.fontOk", { n: files.fonts.length }) : t("images.fontNone")}</li>
               </ul>
               <Dropzone brandId={id} needsDiacritics={brand.languages.includes("sl")} />
-              <div><AddLogoButton brandId={id} /></div>
+              {files.logos.length ? null : <div><AddLogoButton brandId={id} /></div>}
               {nextLinks()}
             </>
           ) : null}
