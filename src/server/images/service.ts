@@ -25,17 +25,18 @@ import { passportReferences, personaPicture, postPersona } from "../personas/ser
 import { markAiPng } from "./ai-label";
 import { repeatsCaption } from "./repeat";
 import { personaIllustrationPrompt } from "../personas/scene";
+import { loadReferences, referenceChoices, resolveReferences, type ReferenceImage } from "./references";
 
 export const POST_IMAGE_QUEUE = "post-image";
 /** new: plan and draw again; text: redraw the stored plan; revise: Claude applies the owner's words to the current images. */
 export type ImageMode = "new" | "text" | "revise";
 /** `only` (TASK-054): a correction limited to these images (0-based); `redraw`: draw their illustrations again. */
-export type PostImageJob = { postId: string; mode: ImageMode; instruction?: string; only?: number[]; redraw?: boolean };
+export type PostImageJob = { postId: string; mode: ImageMode; instruction?: string; only?: number[]; redraw?: boolean; refs?: string[] };
 export const REVISION_MAX = 1000;
 export { MAX_SLIDES } from "../design/ai";
 
 export class ImageJobError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL" | "NO_PERSONA" | "BAD_PICK" | "NOT_RESTORABLE") {
+  constructor(public readonly code: "NOT_FOUND" | "BAD_STATE" | "INVALID" | "NO_DESIGN" | "INVALID_OUTPUT" | "NOT_ANIMATABLE" | "NO_VIDEO_MODEL" | "NO_PERSONA" | "BAD_PICK" | "NOT_RESTORABLE" | "NO_REF_MODEL") {
     super(code);
   }
 }
@@ -87,7 +88,7 @@ export async function setPostPartnerLogo(db: Db, queue: { send(name: string, dat
 }
 
 /** Any member. Claims the post's images (a second request while one runs is refused) and queues the job. */
-export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean; partnerLogoId?: string | null; only?: number[]; redraw?: boolean } = {}) {
+export async function requestImages(db: Db, queue: { send(name: string, data: object, key: string): Promise<void> }, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, opts: { withPersona?: boolean; partnerLogoId?: string | null; only?: number[]; redraw?: boolean; refs?: string[] } = {}) {
   z.enum(["new", "text", "revise"]).parse(mode);
   const words = instruction?.trim() ?? "";
   if (mode === "revise" && (!words || words.length > REVISION_MAX)) throw new ImageJobError("INVALID");
@@ -99,6 +100,8 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   // TASK-054: which images the correction may change (all when none are picked).
   const only = opts.only?.length ? pickedSlides(opts.only, p.visual!.slides.length) : undefined;
   if (!(await currentDesign(db, ctx, p.brandId))) throw new ImageJobError("NO_DESIGN");
+  // TASK-057: picked reference pictures and those the request tags as @file-name (this brand's pictures only).
+  const refs = mode === "revise" ? resolveReferences(opts.refs ?? [], words, await referenceChoices(db, ctx, p.brandId)) : [];
   // TASK-046: the partner logo for this post's images (undefined = keep, null = none); only this brand's partners.
   if (opts.partnerLogoId && !(await isPartnerLogo(db, ctx, p.brandId, opts.partnerLogoId))) throw new ImageJobError("INVALID");
   const claimed = await forOrg(db, ctx).update(
@@ -115,7 +118,7 @@ export async function requestImages(db: Db, queue: { send(name: string, data: ob
   );
   if (!claimed.length) throw new ImageJobError("BAD_STATE");
   await queue.send(POST_IMAGE_QUEUE, {
-    postId, mode, ...(mode === "revise" ? { instruction: words } : {}), ...(only ? { only } : {}), ...(opts.redraw ? { redraw: true } : {}),
+    postId, mode, ...(mode === "revise" ? { instruction: words } : {}), ...(only ? { only } : {}), ...(opts.redraw ? { redraw: true } : {}), ...(refs.length ? { refs } : {}),
   } satisfies PostImageJob, `post:${postId}:image`);
 }
 
@@ -136,7 +139,7 @@ export function mergePicked(before: PostVisual["slides"], answer: PostVisual["sl
   const slides = only ? before.map((b, i) => (picked.has(i) ? (answer[i] ?? b) : b)) : answer;
   return slides.map((s, i) => {
     const c = { ...s };
-    if (!picked.has(i) || !c.illustration) delete c.redraw;
+    if (!picked.has(i) || !c.illustration) { delete c.redraw; delete c.references; }
     else if (redraw) c.redraw = true;
     return c;
   });
@@ -192,7 +195,7 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
           return { templateId: s.templateId, slots, illustration: owner, verbatim: true };
         }
         const illustration = s.illustration?.trim() || owner || p.plan.topic || p.brief;
-        return { templateId: s.templateId, slots, illustration, ...(owner && illustration === owner ? { verbatim: true } : {}), ...(revise && s.redraw ? { redraw: true } : {}) };
+        return { templateId: s.templateId, slots, illustration, ...(owner && illustration === owner ? { verbatim: true } : {}), ...(revise && s.redraw ? { redraw: true } : {}), ...(revise?.references?.length && s.references?.length ? { references: [...new Set(s.references.filter((r) => r >= 1 && r <= revise.references!.length))] } : {}) };
       });
       const problems: string[] = [];
       if (owner && !revise && !slides.some((s) => s.illustration !== null) && spec.templates.some(needsIllustration)) {
@@ -278,11 +281,43 @@ async function drawIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: {
   return { ...out, model: model.modelKey };
 }
 
+/** TASK-057: what the reference model is asked: keep the current picture, show the owner's pictures faithfully. */
+export function referenceEditPrompt(description: string, spec: DesignSpec, hasCurrent: boolean, names: string[]): string {
+  const refs = names.map((n, k) => `image ${k + (hasCurrent ? 2 : 1)} ("${n}")`).join(", ");
+  return [
+    hasCurrent
+      ? `Edit image 1, the current picture: keep its composition, style, colours, light and everything not mentioned here. Change only this: ${description}`
+      : illustrationPrompt(description, spec),
+    `The owner's reference picture${names.length > 1 ? "s are" : " is"} ${refs}: show ${names.length > 1 ? "them" : "it"} exactly as given — the same layout, words, numbers, seals and details, sharp and undistorted, in correct perspective where it sits (e.g. on a screen or a sheet of paper).`,
+    "Add no other text, letters or logos.",
+  ].join("\n");
+}
+
+/** TASK-057: one picture from the reference model (the current picture + the owner's references), booked as an illustration. */
+async function editWithReferences(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[]) {
+  if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
+  const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "image_ref"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
+  if (!model) throw new ImageJobError("NO_REF_MODEL");
+  const gen = generationSize(shape.width, shape.height);
+  const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action: "illustration" });
+  let out;
+  try {
+    out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references });
+  } catch (e) {
+    await release(db, ledgerId);
+    throw e;
+  }
+  const billed = billedMegapixels(out.width, out.height);
+  await db.update(usageLedger).set({ state: "settled", megapixels: billed, costMicroUsd: price(billed) }).where(eq(usageLedger.id, ledgerId));
+  return { ...out, model: model.modelKey };
+}
+
 /**
  * Makes the images of one post as `ctx` (the member who asked). Throws ImageError / SpendCapError / LlmError /
  * ImageJobError for expected outcomes; the caller records them on the post.
  */
-export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, pick: { only?: number[]; redraw?: boolean } = {}) {
+export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string, mode: ImageMode, instruction?: string, pick: { only?: number[]; redraw?: boolean; refs?: string[] } = {}) {
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as (typeof posts.$inferSelect)[];
   if (!p) throw new ImageJobError("NOT_FOUND");
   const design = await currentDesign(db, ctx, p.brandId);
@@ -304,6 +339,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   // Re-plan for new images, or when the words were planned for another design version.
   const replan = mode === "new" || revising || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
   let visual: PostVisual;
+  let ownerRefs: ReferenceImage[] = [];
   if (revising) {
     const previews: ImageBlock[] = [];
     for (const m of old.filter((x) => x.kind === "slide").sort((a, b) => a.position - b.position).slice(0, 10)) {
@@ -311,10 +347,13 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         previews.push({ ...toBlock(new Uint8Array(await sharp(await deps.storage.get(m.storageKey)).resize({ width: 540 }).jpeg({ quality: 80 }).toBuffer())), caption: `Current image ${m.position + 1}:` });
       } catch { /* a missing image is described by the plan alone */ }
     }
+    // TASK-057: the owner's reference pictures, shown after the current images.
+    ownerRefs = pick.refs?.length ? await loadReferences(db, deps.storage, ctx, p.brandId, pick.refs) : [];
+    previews.push(...ownerRefs.map((r) => r.block));
     // TASK-054: only the picked images may change (positions outside the post are ignored — the plan may have changed).
     const only = pick.only?.filter((i) => i >= 0 && i < p.visual!.slides.length);
     const scope = only?.length ? only : undefined;
-    const planned = await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews, ...(scope ? { only: scope } : {}) });
+    const planned = await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews, ...(scope ? { only: scope } : {}), ...(ownerRefs.length ? { references: ownerRefs.map((r) => ({ name: r.name })) } : {}) });
     visual = { ...planned, slides: mergePicked(p.visual!.slides, planned.slides, scope, !!pick.redraw), revision: instruction!.trim(), ...(scope ? { revisedSlides: scope } : {}) };
   } else {
     visual = replan ? await planVisual(db, deps, ctx, p, spec, design.id, where) : p.visual!;
@@ -331,9 +370,11 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   };
   // ADR-076: a correction may ask for a picture to be drawn again with the same description (made-up letters, a logo).
   const redraw = new Set(visual.slides.flatMap((s, i) => (s.redraw ? [i] : [])));
-  visual = { ...visual, slides: visual.slides.map((s) => { const c = { ...s }; delete c.redraw; return c; }) };
+  // TASK-057: which images show which of the owner's reference pictures (0-based into ownerRefs); never stored.
+  const withRefs = new Map(visual.slides.flatMap((s, i) => (s.references?.length && ownerRefs.length ? [[i, s.references.map((r) => r - 1).filter((r) => r >= 0 && r < ownerRefs.length)] as const] : [])));
+  visual = { ...visual, slides: visual.slides.map((s) => { const c = { ...s }; delete c.redraw; delete c.references; return c; }) };
   const reuse = (i: number, slide: PostVisual["slides"][number]) =>
-    !replan || (revising && !redraw.has(i) && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
+    !replan || (revising && !redraw.has(i) && !withRefs.has(i) && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
 
   const oldIllustrations = new Map(old.filter((m) => m.kind === "background").map((m) => [m.position, m]));
   let references: string[] | null = null;
@@ -353,7 +394,14 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
       } else {
         let prompt: string;
         let out: Awaited<ReturnType<typeof generateIllustration>>;
-        if (persona) {
+        const refsHere = withRefs.get(i);
+        if (refsHere?.length) {
+          // TASK-057: the current picture (when there is one) edited so the owner's pictures appear as they are.
+          const current = prev ? `data:image/jpeg;base64,${(await sharp(await deps.storage.get(prev.storageKey)).jpeg({ quality: 90 }).toBuffer()).toString("base64")}` : null;
+          prompt = referenceEditPrompt(slide.illustration ?? p.brief, spec, !!current, refsHere.map((r) => ownerRefs[r].name));
+          out = await editWithReferences(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), [...(current ? [current] : []), ...refsHere.map((r) => ownerRefs[r].dataUri)]);
+          if (prev?.aiPerson) aiSlides.add(i);
+        } else if (persona) {
           references ??= await passportReferences(db, deps.storage, ctx, persona.id, 4);
           prompt = personaIllustrationPrompt(persona.dna, slide.illustration ?? p.brief);
           out = await personaPicture(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references);
@@ -366,7 +414,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         illustration = out.bytes;
         const k = key(ctx.orgId, postId, "jpg");
         await deps.storage.put(k, out.bytes, "image/jpeg");
-        newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt, aiPerson: !!persona });
+        newRows.push({ id: crypto.randomUUID(), postId, kind: "background", position: i, storageKey: k, contentType: "image/jpeg", width: out.width, height: out.height, sizeBytes: out.bytes.byteLength, model: out.model, prompt, aiPerson: !!persona || aiSlides.has(i) });
         if (persona) aiSlides.add(i);
       }
     }
@@ -425,7 +473,7 @@ export async function runImageJob(db: Db, deps: ImageDeps, job: PostImageJob): P
     throw e;
   }
   try {
-    await renderPostImages(db, deps, ctx, p.id, job.mode, job.instruction, { only: job.only, redraw: job.redraw });
+    await renderPostImages(db, deps, ctx, p.id, job.mode, job.instruction, { only: job.only, redraw: job.redraw, refs: job.refs });
     return "done";
   } catch (e) {
     const code = imageFailureCode(e);

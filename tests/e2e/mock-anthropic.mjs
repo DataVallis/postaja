@@ -188,6 +188,11 @@ http
           const at = picked ? Number(picked[1].split(",")[0]) - 1 : 0;
           if (head) { slides[at].slots.headline = head[1].trim(); slides[0].slots.headline = head[1].trim(); }
           if (/ilustracij/i.test(ask) && slides[at].illustration) slides[at].illustration = `${slides[at].illustration} (revised)`;
+          // TASK-057: reference pictures supplied → the first illustrated image shows R1.
+          if (/<owner_references>/.test(user)) {
+            const i = slides.findIndex((x) => x.illustration);
+            if (i >= 0) { slides[i].references = [1]; slides[i].illustration = `${slides[i].illustration}; the certificate R1 on a phone screen`; }
+          }
           return reply(tool, { slides });
         }
         const plan = JSON.parse(user.match(/<plan>(.*)<\/plan>/)[1]);

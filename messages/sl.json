@@ -535,7 +535,9 @@
       "partnerDropTitle": "Spusti partnerske logotipe sem",
       "partnerDropBody": "PNG, JPG ali WebP, več naenkrat ali v ZIP-u. Ime partnerja je ime datoteke (»Polygon-logo.png« → Polygon).",
       "partnerChoose": "Izberi logotipe",
-      "partnerRename": "Shrani ime za {name}"
+      "partnerRename": "Shrani ime za {name}",
+      "references": "Referenčne slike",
+      "referencesHint": "Slike, ki se na slikah objav pokažejo točno take, kot so (certifikat, izdelek, zaslon). Dodaš jih pri popravku slik objave in jih tam označiš z @ime-datoteke."
     },
     "cgpImport": {
       "fromComputer": "Uvozi iz dokumenta",
@@ -1264,7 +1266,8 @@
       "NOT_CONFIGURED": "Ključ za Claude (Anthropic) ni nastavljen.",
       "BAD_PICK": "Izbrane slike ne obstajajo več. Osveži stran in izberi znova.",
       "NOT_RESTORABLE": "Te slike ni mogoče vrniti brez novega risanja: narejena je bila z drugo verzijo vizualne podobe ali je bila njena ilustracija izbrisana. Vrni celo verzijo ali uporabi popravek.",
-      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket."
+      "PLAN_FEATURE": "Tvoj paket tega ne vključuje. Nadgradiš ga v Ekipa in paket.",
+      "NO_REF_MODEL": "Model za slike z referencami ni nastavljen. Obvesti skrbnika."
     },
     "designLink": "Vizualna podoba branda",
     "noDesign": "Brand še nima vizualne podobe, zato slik še ni mogoče narediti.",
@@ -1308,7 +1311,24 @@
     "redraw": "Ilustracijo nariši znova — izbranim slikam ali vsem, če ne izbereš nobene (vsaka taka slika z ilustracijo je ena nova, plačana ilustracija)",
     "revisedSlides": "slike {list}",
     "restoreSlide": "Obnovi sliko {n}",
-    "restoreSlideHint": "Gumb »Obnovi sliko« vrne samo tisto sliko (besedilo in ilustracijo), druge slike ostanejo. Brez stroška."
+    "restoreSlideHint": "Gumb »Obnovi sliko« vrne samo tisto sliko (besedilo in ilustracijo), druge slike ostanejo. Brez stroška.",
+    "references": {
+      "title": "Referenčne slike (neobvezno)",
+      "hint": "Slika, ki naj se na sliki objave pokaže točno taka, kot je (certifikat, izdelek, zaslon). Izberi do {max} med slikami branda ali naloži novo; v besedilu jo označi z @ime-datoteke. Popravljena ilustracija se nariše znova (plačana ilustracija).",
+      "tag": "Označi",
+      "tagLabel": "Označi {name} v besedilu",
+      "upload": "Naloži referenčno sliko",
+      "uploading": "Nalagam …",
+      "none": "Brand še nima slik. Naloži referenčno sliko.",
+      "errors": {
+        "UNSUPPORTED_TYPE": "Samo PNG, JPG ali WEBP.",
+        "TOO_LARGE": "Slika je prevelika (največ 20 MB).",
+        "DUPLICATE": "Ta slika je že med slikami branda.",
+        "LIMIT_REACHED": "Brand ima že največ referenčnih slik.",
+        "FORBIDDEN": "Nimaš dovoljenja.",
+        "FAILED": "Nalaganje ni uspelo."
+      }
+    }
   },
   "Design": {
     "title": "Vizualna podoba",

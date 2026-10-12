@@ -535,7 +535,9 @@
       "partnerDropTitle": "Drop partner logos here",
       "partnerDropBody": "PNG, JPG or WebP, several at once or in a ZIP. The partner's name is the file name (\"Polygon-logo.png\" → Polygon).",
       "partnerChoose": "Choose logos",
-      "partnerRename": "Save name for {name}"
+      "partnerRename": "Save name for {name}",
+      "references": "Reference pictures",
+      "referencesHint": "Pictures shown on post images exactly as they are (a certificate, a product, a screen). Add them when correcting a post's images and tag them there as @file-name."
     },
     "cgpImport": {
       "fromComputer": "Import from a document",
@@ -1264,7 +1266,8 @@
       "NOT_CONFIGURED": "The Claude (Anthropic) key is not set.",
       "BAD_PICK": "The picked images no longer exist. Refresh the page and pick again.",
       "NOT_RESTORABLE": "This image cannot come back without being drawn again: it was made with another version of the visual identity, or its illustration was deleted. Restore the whole version or use a correction.",
-      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan."
+      "PLAN_FEATURE": "Your plan does not include this. Upgrade it under Team and plan.",
+      "NO_REF_MODEL": "No model for images with references is set up. Tell the administrator."
     },
     "designLink": "Brand visual identity",
     "noDesign": "The brand has no visual identity yet, so images cannot be made.",
@@ -1308,7 +1311,24 @@
     "redraw": "Draw the illustration again — for the picked images, or all of them if none is picked (each such image with an illustration is one new, paid illustration)",
     "revisedSlides": "images {list}",
     "restoreSlide": "Restore image {n}",
-    "restoreSlideHint": "\"Restore image\" brings back only that image (words and illustration); the other images stay. No cost."
+    "restoreSlideHint": "\"Restore image\" brings back only that image (words and illustration); the other images stay. No cost.",
+    "references": {
+      "title": "Reference pictures (optional)",
+      "hint": "A picture that must appear on the post image exactly as it is (a certificate, a product, a screen). Pick up to {max} of the brand's pictures or upload a new one; tag it in the request as @file-name. The corrected illustration is drawn again (a paid illustration).",
+      "tag": "Tag",
+      "tagLabel": "Tag {name} in the request",
+      "upload": "Upload a reference picture",
+      "uploading": "Uploading …",
+      "none": "The brand has no pictures yet. Upload a reference picture.",
+      "errors": {
+        "UNSUPPORTED_TYPE": "Only PNG, JPG or WEBP.",
+        "TOO_LARGE": "The picture is too large (max 20 MB).",
+        "DUPLICATE": "This picture is already among the brand's pictures.",
+        "LIMIT_REACHED": "The brand already has the most reference pictures.",
+        "FORBIDDEN": "You are not allowed to do this.",
+        "FAILED": "Upload failed."
+      }
+    }
   },
   "Design": {
     "title": "Visual identity",

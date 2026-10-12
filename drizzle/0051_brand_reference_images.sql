@@ -1,0 +1,2 @@
+ALTER TABLE "brand_assets" DROP CONSTRAINT "brand_assets_kind_ck";--> statement-breakpoint
+ALTER TABLE "brand_assets" ADD CONSTRAINT "brand_assets_kind_ck" CHECK ("brand_assets"."kind" in ('logo','partner','font','reference'));

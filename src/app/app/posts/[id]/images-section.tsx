@@ -4,6 +4,8 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, inputClass, selectClass, textareaClass } from "@/components/ui";
 import type { MediaStatus, PostVisual } from "@/server/db/schema";
+import type { ReferenceChoice } from "@/server/images/references";
+import { ReferencePicker } from "./reference-picker";
 import { deleteImageVersionAction, requestImagesAction, restoreImageVersionAction, restoreSlideAction, reviseImagesAction, saveSlidesAction, setPartnerLogoAction } from "../actions";
 
 type Media = { id: string; position: number; width: number; height: number };
@@ -34,6 +36,8 @@ export async function ImagesSection(props: {
   pdf?: boolean;
   /** TASK-033: earlier versions of the images (kept until deleted). */
   versions?: { id: string; createdAt: Date; revision: string | null; revisedSlides: number[] | null; designId: string | null; slides: { id: string; position: number; width: number; height: number }[] }[];
+  /** TASK-057: the brand's pictures that a correction can show as they are. */
+  references?: { brandId: string; choices: ReferenceChoice[] } | null;
 }) {
   const t = await getTranslations("Images");
   const fmt = await getFormatter();
@@ -190,6 +194,7 @@ export async function ImagesSection(props: {
           <label htmlFor="image-instruction" className="text-sm font-semibold">{t("reviseLabel")}</label>
           <p id="image-instruction-hint" className="text-xs text-muted">{t("reviseHint")}{props.media.length > 1 ? ` ${t("pickHint")}` : ""}</p>
           <textarea id="image-instruction" name="instruction" rows={3} required maxLength={1000} aria-describedby="image-instruction-hint" placeholder={t("revisePlaceholder")} className={textareaClass} />
+          {props.references ? <ReferencePicker brandId={props.references.brandId} choices={props.references.choices} textareaId="image-instruction" /> : null}
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" name="redraw" value="1" className="mt-0.5 size-4 accent-signal" data-testid="image-redraw" />
             <span>{t("redraw")}</span>

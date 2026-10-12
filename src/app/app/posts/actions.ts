@@ -146,7 +146,7 @@ export async function reviseImagesAction(f: FormData): Promise<void> {
   try {
     // TASK-054: the picked images ("slide" = 0-based positions) and whether their illustrations are drawn again.
     const only = f.getAll("slide").map((v) => Number(v));
-    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), { ...personaChoice(f), only, redraw: f.get("redraw") === "1" });
+    await requestImages(getDb(), bossQueue(await getBoss()), ctx, id, "revise", String(f.get("instruction") ?? ""), { ...personaChoice(f), only, redraw: f.get("redraw") === "1", refs: f.getAll("ref").map(String) });
   } catch (e) {
     error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
   }
