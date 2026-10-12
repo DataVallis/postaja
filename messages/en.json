@@ -2145,11 +2145,12 @@
       "short": "{n} characters — we recommend at least {min}. Add tone, audience, offer and examples."
     },
     "images": {
-      "logoOk": "The logo is uploaded.",
+      "logoOk": "Logos: {n} uploaded.",
       "logoMissing": "The logo is missing (required for images).",
-      "examples": "Past posts: {n} (at least {min} recommended)",
+      "examples": "Past posts (images of your posts, not logos): {n} of the recommended {min}.",
       "fontOk": "Fonts: {n}",
-      "fontNone": "No font uploaded (optional — Postaja picks one otherwise)."
+      "fontNone": "No font uploaded (optional — Postaja picks one otherwise).",
+      "logoDoneMore": "The logo is done — the required part of this step is complete. For even more recognisable images we recommend {k, plural, one {# more past post} other {# more past posts}}; or just continue with \"Next\"."
     },
     "materials": {
       "none": "No materials yet."
