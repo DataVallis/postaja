@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
 import { BulkError, cancelBulk, startBulk } from "@/server/bulk/service";
 import { getDb } from "@/server/db/client";
+import { fillSchedule } from "@/server/posts/calendar";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
 import { scopeFrom, stepsFrom } from "./scope";
 
@@ -32,4 +33,20 @@ export async function cancelBulkAction(f: FormData) {
   await cancelBulk(getDb(), ctx, String(f.get("runId") ?? "")).catch(() => undefined);
   revalidatePath("/app/plan");
   redirect("/app/plan?tab=runs");
+}
+
+/** "Razporedi v koledar": unscheduled posts (of the chosen brand, or all) get their channels' posting days from a day on. */
+export async function fillScheduleAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  const from = String(f.get("from") ?? "");
+  const brandId = String(f.get("brand") ?? "") || undefined;
+  let n = 0;
+  try {
+    n = await fillSchedule(getDb(), ctx, { from, brandId });
+  } catch {
+    redirect(`/app/plan?tab=unscheduled${brandId ? `&brand=${brandId}` : ""}&fillError=1`);
+  }
+  revalidatePath("/app/plan");
+  redirect(`/app/plan?view=month&d=${from}${brandId ? `&brand=${brandId}` : ""}&filled=${n}`);
 }

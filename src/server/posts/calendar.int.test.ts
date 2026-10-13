@@ -8,7 +8,7 @@ import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { createFakeLlm } from "../llm/fake";
 import { createOrganization } from "../orgs/service";
 import type { OrgContext } from "../tenancy/context";
-import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, reschedulePost, unscheduledPosts } from "./calendar";
+import { CALENDAR_DEFAULT_STATUSES, calendarPosts, fillSchedule, historyPosts, reschedulePost, unscheduledPosts } from "./calendar";
 import { generatePost, setPostStatus } from "./generate";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -110,5 +110,31 @@ describe("reschedulePost", () => {
     expect(await sql`select scheduled_on d from posts where id = ${id}`).toEqual([{ d: null }]);
     await setPostStatus(db, A, id, "approved"); await setPostStatus(db, A, id, "published");
     await expect(reschedulePost(db, A, id, { date: "2026-10-10", time: null })).rejects.toMatchObject({ code: "BAD_STATE" });
+  });
+});
+
+describe("fillSchedule (owner, 2026-10-13: imported plans without dates)", () => {
+  it("puts unscheduled posts, in their order, on their channel's posting days with room left; only the chosen brand and org", async () => {
+    const day = async (id: string) => (await sql`select scheduled_on::text as d from posts where id = ${id}`)[0].d as string | null;
+    // Channel goal: Mondays, one post a day. 2026-10-19 (Monday) already has a post.
+    await make(A, brandA, igA, "Že v planu", "2026-10-19");
+    const a1 = await make(A, brandA, igA, "Prva", null);
+    const a2 = await make(A, brandA, igA, "Druga", null);
+    const a3 = await make(A, brandA, igA, "Tretja", null);
+    const other = await make(A, brandA2, liA, "Drug brand", null);
+    const foreign = await make(B, brandB, igB, "Druga org", null);
+    expect(await fillSchedule(db, A, { from: "2026-10-13", brandId: brandA })).toBe(3);
+    expect([await day(a1), await day(a2), await day(a3)]).toEqual(["2026-10-26", "2026-11-02", "2026-11-09"]);
+    expect(await day(other)).toBeNull();
+    expect(await day(foreign)).toBeNull();
+    // Two a day on Tuesdays and Thursdays for the other channel; the whole org at once.
+    await sql`update channels set goal = ${sql.json({ postsPerDay: 2, weekdays: [2, 4] })} where id = ${liA}`;
+    const o2 = await make(A, brandA2, liA, "Še ena", null);
+    const o3 = await make(A, brandA2, liA, "In še ena", null);
+    expect(await fillSchedule(db, A, { from: "2026-10-13" })).toBe(3);
+    expect([await day(other), await day(o2), await day(o3)]).toEqual(["2026-10-13", "2026-10-13", "2026-10-15"]);
+    expect(await day(foreign)).toBeNull();
+    expect(await fillSchedule(db, A, { from: "2026-10-13" })).toBe(0);
+    await expect(fillSchedule(db, A, { from: "13. 10." })).rejects.toThrow();
   });
 });

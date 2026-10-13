@@ -13,12 +13,14 @@
 1. **Plan import** → drag in a plan (Excel, CSV, Word, PDF, MD or TXT, up to 20 MB). Several sheets and platforms in one file are fine.
 2. AI recognises the columns or posts; values and texts are read verbatim. Correct the column meanings and click **Read again** if needed.
 3. Pick the **Brand** (or create a new one) and a **Channel** for each platform. You can create missing channels from the profiles in the plan.
-4. If the plan has no dates, pick a start day and the spacing.
+4. If the plan has no dates, pick a start day. Postaja puts the posts on the days the channel posts (weekdays and posts per day in the channel settings), counting posts already there. For an even spacing (e.g. every other day) also enter the spacing.
 5. Click **Import … posts**. Duplicate posts are not created twice.
 
 Posts that are already published go to the history. Postaja writes the posts that have no text.
 
 If you add a channel later, click **Import the rest**.
+
+**Unscheduled posts** (a tab in Plan) go on the calendar with **Put on the calendar**: pick the first day and Postaja places them in order on the days the channel posts. With a brand selected, only its posts are placed.
 
 ## Bulk creation
 
