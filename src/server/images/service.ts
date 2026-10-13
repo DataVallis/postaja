@@ -227,23 +227,31 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   // ADR-076: the owner's own image prompt is the picture they decided — the brand's past posts as style references
   // (layout, logo, headings, motifs) override it, so it goes to the default image model without references.
   const refs = opts.verbatim ? [] : references;
-  const first = await drawIllustration(db, deps, ctx, who, prompt, shape, refs, opts, "illustration");
-  // Style references are past posts full of words and logos, and the style model copies them as made-up letters.
-  // Claude looks at every picture drawn with references; one with text is drawn once more without them, at no credit.
-  if (!refs.length || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
+  // ADR-009: Postaja sets every letter itself. The owner's prompt stays word for word, plus this one technical line —
+  // prompts about contracts, notes or screens otherwise come back with made-up lettering (owner, 2026-10-13).
+  const asked = opts.verbatim ? `${prompt}\n${NO_WRITING}` : prompt;
+  const first = await drawIllustration(db, deps, ctx, who, asked, shape, refs, opts, "illustration");
+  // Style references (past posts full of words) and the owner's own prompts are where made-up letters come from.
+  // Claude looks at every such picture; one with writing is drawn once more without references, at no credit.
+  if ((!refs.length && !opts.verbatim) || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
   return drawIllustration(db, deps, ctx, who, `${prompt}\n${NO_TEXT_AGAIN}`, shape, [], opts, "assist");
 }
 
-const NO_TEXT_AGAIN = "Absolutely no text of any kind: no letters, words, numbers, logos, signs, labels, captions or watermarks anywhere in the picture.";
+/** Added to the owner's own image prompt (TASK-052 keeps the prompt itself unchanged). */
+export const NO_WRITING = "No readable writing anywhere: papers, screens, signs and labels show only blank areas, scribbles or simple shapes — never letters, words or numbers.";
+const NO_TEXT_AGAIN = "Absolutely no text of any kind: no letters, words, numbers, logos, signs, labels, captions or watermarks anywhere in the picture. Papers and screens are blank or show only simple shapes.";
 
 /** Claude's look at a drawn illustration: does it contain letters, numbers or logos? Errors count as "no" (best effort). */
-export async function hasDrawnText(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, jpeg: Uint8Array): Promise<boolean> {
+export async function hasDrawnText(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, jpeg: Uint8Array, allowed: ImageBlock[] = []): Promise<boolean> {
   try {
     const small = new Uint8Array(await sharp(jpeg).resize(768, 768, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer());
     const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, now: deps.now, action: "assist" }, {
       system: [{ text: "You check background illustrations for social media posts. The post's words are added later by software, so the illustration itself must not contain any writing.", cache: true }],
-      user: "Does this illustration contain any letters, words, numbers, logos, wordmarks, signs or label-like text (also blurry, garbled or made-up lettering)? Ignore abstract shapes that do not look like writing.",
-      images: [toBlock(small)],
+      user: allowed.length
+        // TASK-057: the owner's reference pictures (shown after the illustration) are meant to appear, words included.
+        ? "The first image is the illustration; the others are the owner's reference pictures, which are meant to appear in it — their own content and writing are fine. Apart from what comes from those reference pictures, does the illustration contain any letters, words, numbers, logos, captions or label-like text (also blurry, garbled or made-up lettering)?"
+        : "Does this illustration contain any letters, words, numbers, logos, wordmarks, signs or label-like text (also blurry, garbled or made-up lettering)? Ignore abstract shapes that do not look like writing.",
+      images: [toBlock(small), ...allowed],
       tool: { name: "check_illustration", description: "Report whether the illustration contains any writing or logos.", inputSchema: { type: "object", properties: { hasText: { type: "boolean" }, what: { type: "string", description: "What writing or logo is visible, briefly; empty when none." } }, required: ["hasText"], additionalProperties: false } },
       maxTokens: 200,
     });
@@ -286,7 +294,7 @@ export function referenceEditPrompt(description: string, spec: DesignSpec, hasCu
   const refs = names.map((n, k) => `image ${k + (hasCurrent ? 2 : 1)} ("${n}")`).join(", ");
   return [
     hasCurrent
-      ? `Edit image 1, the current picture: keep its composition, style, colours, light and everything not mentioned here. Change only this: ${description}`
+      ? `Edit image 1, the current picture: keep its composition, style, colours and light. Change this: ${description}. Remove every letter, caption, label, sign or text-like mark of image 1.`
       : illustrationPrompt(description, spec),
     `The owner's reference picture${names.length > 1 ? "s are" : " is"} ${refs}: show ${names.length > 1 ? "them" : "it"} exactly as given — the same layout, words, numbers, seals and details, sharp and undistorted, in correct perspective where it sits (e.g. on a screen or a sheet of paper).`,
     "Add no other text, letters or logos.",
@@ -294,13 +302,13 @@ export function referenceEditPrompt(description: string, spec: DesignSpec, hasCu
 }
 
 /** TASK-057: one picture from the reference model (the current picture + the owner's references), booked as an illustration. */
-async function editWithReferences(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[]) {
+async function editWithReferences(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], action: "illustration" | "assist") {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
   const [model] = await db.select().from(modelRegistry).where(and(eq(modelRegistry.kind, "image_ref"), eq(modelRegistry.isDefault, true), eq(modelRegistry.enabled, true)));
   if (!model) throw new ImageJobError("NO_REF_MODEL");
   const gen = generationSize(shape.width, shape.height);
   const price = (mp: number) => model.perImage + BigInt(mp) * model.perMegapixel;
-  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action: "illustration" });
+  const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, provider: model.provider, model: model.modelKey, estimate: price(billedMegapixels(gen.width, gen.height)), now: deps.now, action });
   let out;
   try {
     out = await deps.images.generate({ model: model.modelKey, prompt, ...gen, references });
@@ -399,7 +407,15 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
           // TASK-057: the current picture (when there is one) edited so the owner's pictures appear as they are.
           const current = prev ? `data:image/jpeg;base64,${(await sharp(await deps.storage.get(prev.storageKey)).jpeg({ quality: 90 }).toBuffer()).toString("base64")}` : null;
           prompt = referenceEditPrompt(slide.illustration ?? p.brief, spec, !!current, refsHere.map((r) => ownerRefs[r].name));
-          out = await editWithReferences(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), [...(current ? [current] : []), ...refsHere.map((r) => ownerRefs[r].dataUri)]);
+          const who = { brandId: p.brandId, postId: p.id };
+          const refUris = refsHere.map((r) => ownerRefs[r].dataUri);
+          out = await editWithReferences(db, deps, ctx, who, prompt, illustrationShape(t, size), [...(current ? [current] : []), ...refUris], "illustration");
+          // Writing other than the references' own (often carried over from the current picture): drawn once more from
+          // the description and the references only, at no credit.
+          if (await hasDrawnText(db, deps, ctx, who, out.bytes, refsHere.map((r) => ownerRefs[r].block))) {
+            prompt = `${referenceEditPrompt(slide.illustration ?? p.brief, spec, false, refsHere.map((r) => ownerRefs[r].name))}\n${NO_TEXT_AGAIN.replace("anywhere in the picture.", "anywhere except inside the reference pictures.")}`;
+            out = await editWithReferences(db, deps, ctx, who, prompt, illustrationShape(t, size), refUris, "assist");
+          }
           if (prev?.aiPerson) aiSlides.add(i);
         } else if (persona) {
           references ??= await passportReferences(db, deps.storage, ctx, persona.id, 4);

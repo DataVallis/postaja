@@ -15,7 +15,7 @@ import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
-import { deleteImageVersion, listImageVersions, listPostMedia, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
+import { deleteImageVersion, listImageVersions, listPostMedia, NO_WRITING, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
 import { aiPersonPosts, postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
@@ -499,11 +499,11 @@ describe("post images from the design", () => {
     ] });
     const fal = fakeImages();
     await runImages(jobs, claude, fal.client);
-    expect(claude.calls).toHaveLength(2);
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "plan_post_images", "check_illustration"]);
     expect(claude.calls[0].system[0].text).toContain("never\n  repeat the caption");
     expect(claude.calls[1].user).toContain("image 1 repeats the caption");
     expect(claude.calls[1].user).toContain("the plan has an imagePrompt: the first image must use a template with illustration=true");
-    expect(fal.calls.map((c) => c.prompt)).toEqual([imagePrompt]); // no brand style added, nothing changed
+    expect(fal.calls.map((c) => c.prompt)).toEqual([`${imagePrompt}\n${NO_WRITING}`]); // no brand style added; only the no-writing line
     const [{ visual }] = await sql`select visual from posts where id = ${id}`;
     expect(visual.slides).toEqual([{ templateId: "cover", slots: { headline: "Slower *on purpose*." }, illustration: imagePrompt, verbatim: true }]);
     // Without an image prompt the brand's style is still added to Claude's description.
@@ -518,7 +518,7 @@ describe("post images from the design", () => {
   it("ADR-076: the owner's image prompt is drawn without style references; letters in a referenced picture → drawn again without them, no credits", async () => {
     await withAssets();
     await design();
-    // 1) The plan's own image prompt: no past posts as references (they bring their logo, headings and motifs), no check.
+    // 1) The plan's own image prompt: no past posts as references (they bring their logo, headings and motifs); checked.
     const imagePrompt = "Plain dark charcoal background with subtle film grain, bottom third empty. Square 1:1. No text, no logos.";
     const id = await post({ plan: { topic: "Build update", imagePrompt } });
     let j = memoryQueue();
@@ -529,8 +529,8 @@ describe("post images from the design", () => {
     expect(fal.calls).toHaveLength(1);
     expect(fal.calls[0].references).toBeUndefined();
     expect(fal.calls[0].model).not.toBe("fal-ai/ideogram/v3");
-    expect(fal.calls[0].prompt).toBe(imagePrompt);
-    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images"]);
+    expect(fal.calls[0].prompt).toBe(`${imagePrompt}\n${NO_WRITING}`);
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration"]);
 
     // 2) Claude's description with style references: the picture has made-up letters → once more without references.
     const id2 = await post({ plan: { topic: "Vault" } });
@@ -569,12 +569,27 @@ describe("post images from the design", () => {
     await runImages(jobs, claude, fal.client);
     expect(claude.calls[0].user).toContain("set redraw=true");
     expect(fal.calls).toHaveLength(1);
-    expect(fal.calls[0].prompt).toBe(imagePrompt);
+    expect(fal.calls[0].prompt).toBe(`${imagePrompt}\n${NO_WRITING}`);
     const after = (await media(id)).find((m) => m.kind === "background")!;
     expect(after.storage_key).not.toBe(before.storage_key);
     const [{ visual }] = await sql`select visual from posts where id = ${id}`;
     expect(visual.slides[0]).not.toHaveProperty("redraw");
     expect(visual.slides[0]).toMatchObject({ illustration: imagePrompt, verbatim: true });
+  });
+
+  it("owner, 2026-10-13: the owner's own prompt that brings made-up letters (a contract, a screen) is drawn once more without them, no credits", async () => {
+    await design();
+    const imagePrompt = "Parent at the dinner table, child sliding a hand-drawn 'contract' across; phone with the app screen.";
+    const id = await post({ plan: { topic: "POV", imagePrompt } });
+    const { q, jobs } = memoryQueue();
+    await requestImages(db, q, A, id, "new");
+    const claude = fakeClaude({ plans: [{ slides: [{ templateId: "cover", slots: { headline: "Signed." }, illustration: imagePrompt }] }], textInPicture: [true] });
+    const fal = fakeImages();
+    await runImages(jobs, claude, fal.client);
+    expect(fal.calls.map((c) => c.prompt.split("\n").at(-1))).toEqual([NO_WRITING, expect.stringContaining("Absolutely no text of any kind")]);
+    expect(fal.calls[1].prompt.startsWith(imagePrompt)).toBe(true);
+    const rows = await sql`select action from usage_ledger where post_id = ${id} and model like 'fal-ai/%' order by created_at`;
+    expect(rows.map((r) => r.action)).toEqual(["illustration", "assist"]);
   });
 
   it("a correction in words: Claude sees the images and the request; only changed illustrations are drawn again (owner, 2026-10-07)", async () => {
@@ -910,18 +925,31 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(fal.calls[0].prompt).toContain("Edit image 1, the current picture");
     expect(fal.calls[0].prompt).toContain('image 2 ("Certificate (EN)@2x.png")');
     expect(fal.calls[0].negativePrompt).toBeUndefined();
+    expect(fal.calls[0].prompt).toContain("Remove every letter, caption, label, sign or text-like mark of image 1");
+    // The checker sees the illustration and the reference (whose own writing is allowed).
+    const checks = claude.calls.filter((c) => c.tool.name === "check_illustration");
+    expect(checks).toHaveLength(2);
+    expect(checks[0].images).toHaveLength(2);
+    expect(checks[0].user).toContain("reference pictures");
     expect(await ledgerRows()).toBe(paid0 + 2);
     const bgAfter = await keys(id, "background");
     expect(bgAfter[0]).not.toBe(bgBefore[0]);
     const [{ visual }] = await sql`select visual from posts where id = ${id}`;
     expect(visual.slides.some((x: object) => "references" in x)).toBe(false);
-    // Picked images only: the reference is drawn only into image 1.
+    // Picked images only: the reference is drawn only into image 1. Stray writing carried over from the current
+    // picture → drawn once more from the description and the reference only, at no credit.
     jobs.length = 0;
     await requestImages(db, q, A, id, "revise", "Certifikat @certificate (en)@2x.png večji.", { only: [0] });
     expect(jobs[0].data).toMatchObject({ only: [0], refs: [`asset:${cert.id}`] });
     const fal2 = fakeImages();
-    await runImages(jobs, fakeClaude({ plans: [{ slides: answer }] }), fal2.client);
-    expect(fal2.calls).toHaveLength(1);
+    const paid1 = await ledgerRows();
+    await runImages(jobs, fakeClaude({ plans: [{ slides: answer }], textInPicture: [true] }), fal2.client);
+    expect(fal2.calls.map((c) => c.references?.length)).toEqual([2, 1]);
+    expect(fal2.calls[1].prompt).toContain("anywhere except inside the reference pictures");
+    expect(fal2.calls[1].prompt).not.toContain("Edit image 1");
+    const actions = await sql`select action from usage_ledger where post_id = ${id} and model like 'fal-ai/%' order by created_at desc limit 2`;
+    expect(actions.map((r) => r.action).sort()).toEqual(["assist", "illustration"]);
+    expect(await ledgerRows()).toBe(paid1 + 2);
     expect((await keys(id, "background"))[2]).toBe(bgAfter[2]);
   });
 
