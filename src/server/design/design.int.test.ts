@@ -26,6 +26,9 @@ import type { OrgContext } from "../tenancy/context";
 import { forOrg } from "../tenancy/scoped";
 import { createPersonaManual, setPersonaInPosts, uploadPassportImage } from "../personas/service";
 import { estimateBulk } from "../bulk/estimate";
+import { requestReel } from "../video/reel";
+import { testClip } from "../../../tests/fixtures/video";
+import type { VideoRequest } from "../images/fal";
 import { activateDesign, brandAssetBytes, currentDesign, listDesigns, listPartnerLogos, requestDesign, restoreDesignTemplate, runDesignJob, type DesignJob } from "./service";
 
 const url = process.env.TEST_DATABASE_URL!;
@@ -36,14 +39,16 @@ const profile = { cgp: "Ton: jasen, brez pretiravanja.", rules: { bannedWords: [
 const usage = { inputTokens: 5000, outputTokens: 3000, cacheWriteTokens: 0, cacheReadTokens: 0 };
 
 /** A fake Claude: answers by tool; `designs` are returned in order for submit_brand_design. */
-function fakeClaude(o: { designs?: unknown[]; plans?: unknown[]; textInPicture?: boolean[] } = {}) {
+function fakeClaude(o: { designs?: unknown[]; plans?: unknown[]; textInPicture?: boolean[]; reels?: unknown[] } = {}) {
   const calls: StructuredRequest[] = [];
   const designs = [...(o.designs ?? [cardDesign])];
   const plans = [...(o.plans ?? [])];
   const textInPicture = [...(o.textInPicture ?? [])];
+  const reels = [...(o.reels ?? [])];
   const client: LlmClient = {
     async structured(req) {
       calls.push(req);
+      if (req.tool.name === "submit_reel") return { input: reels.length > 1 ? reels.shift() : reels[0], usage };
       if (req.tool.name === "submit_brand_design") return { input: designs.length > 1 ? designs.shift() : designs[0], usage };
       if (req.tool.name === "plan_post_images") {
         if (plans.length) return { input: plans.length > 1 ? plans.shift() : plans[0], usage };
@@ -676,6 +681,83 @@ describe("post images from the design", () => {
     await runImages(imageJobs, fakeClaude(), fakeImages().client);
     expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
   });
+});
+
+describe("TASK-058: reel from several shots", () => {
+  function fakeVideo() {
+    const images: ImageRequest[] = [];
+    const videos: VideoRequest[] = [];
+    const client: ImageClient = {
+      async generate(req) {
+        images.push(req);
+        const bytes = new Uint8Array(await sharp({ create: { width: req.width, height: req.height, channels: 3, background: "#335577" } }).jpeg().toBuffer());
+        return { bytes, contentType: "image/jpeg", width: req.width, height: req.height };
+      },
+      async video(req) {
+        videos.push(req);
+        return { bytes: testClip({ width: 720, height: 1280, seconds: req.durationS }) };
+      },
+    };
+    return { client, images, videos };
+  }
+  const plan = { shots: [
+    { kind: "scene", firstFrame: "A family dinner table, a child slides a drawing across to a parent; the paper is blank.", motion: "The child pushes the paper, the parent raises an eyebrow.", durationS: 3, caption: "Spet to vprašanje." },
+    { kind: "scene", firstFrame: "Close-up of the parent's face.", motion: "The parent smiles and nods.", durationS: 2, caption: "" },
+    { kind: "screen", reference: 1, durationS: 3, caption: "Pogodba v aplikaciji." },
+  ] };
+
+  it("Claude's shots: consecutive scenes are one Kling 3.0 call from one checked first frame; a screen is the owner's picture; captions, closing card, per-second credits", async () => {
+    await sql`insert into credit_prices (action, credits) values ('reel_second', 4) on conflict do nothing`; // emptied with "user" (cascade)
+    await design();
+    await uploadBrandFile(db, storage, editorA, brandA, "reference", { filename: "Pogodba app.png", bytes: await png(600, 1200, "#ffffff") });
+    const id = await post({ format: "video", plan: { topic: "POV", imagePrompt: "Parent at dinner, child slides a hand-drawn contract" } });
+    // The post's own image first (it becomes the closing card).
+    const j = memoryQueue();
+    await requestImages(db, j.q, A, id, "new");
+    await runImages(j.jobs, fakeClaude(), fakeImages().client);
+
+    const q: { name: string; data: unknown }[] = [];
+    const queue = { async send(name: string, data: object) { q.push({ name, data }); } };
+    await expect(requestReel(db, queue, A, id, { durationS: 7 as 8 })).rejects.toMatchObject({ code: "INVALID" });
+    await expect(requestReel(db, queue, B, id, { durationS: 8 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await requestReel(db, queue, editorA, id, { durationS: 8, wish: "Zaslon naj bo @Pogodba app.png" });
+    await expect(requestReel(db, queue, A, id, { durationS: 8 })).rejects.toMatchObject({ code: "BAD_STATE" });
+    expect(q).toEqual([{ name: "post-video", data: { postId: id } }]);
+
+    // First answer shows a reference that does not exist → asked again with the problem.
+    const claude = fakeClaude({ reels: [{ shots: [plan.shots[0], { ...plan.shots[2], reference: 3 }] }, plan] });
+    const fal = fakeVideo();
+    expect(await runVideoJob(db, { llm: claude.client, images: fal.client, storage }, { postId: id })).toBe("done");
+    const [row] = await sql`select video_status, video_error from posts where id = ${id}`;
+    expect(row).toEqual({ video_status: "ready", video_error: null });
+    const reelCalls = claude.calls.filter((c) => c.tool.name === "submit_reel");
+    expect(reelCalls).toHaveLength(2);
+    expect(reelCalls[0].user).toContain('R1: "Pogodba app.png"');
+    expect(reelCalls[0].images?.[0].caption).toContain("Pogodba app.png");
+    expect(reelCalls[1].user).toContain("reference R3 does not exist");
+    // One first frame (9:16, brand style, no text) checked by Claude; one Kling call with one prompt per scene.
+    expect(fal.images).toHaveLength(1);
+    expect(fal.images[0].prompt).toContain("A family dinner table");
+    expect(claude.calls.filter((c) => c.tool.name === "check_illustration")).toHaveLength(1);
+    expect(fal.videos).toHaveLength(1);
+    expect(fal.videos[0]).toMatchObject({ durationS: 5 });
+    expect(fal.videos[0].shots?.map((x) => x.durationS)).toEqual([3, 2]);
+    expect(fal.videos[0].shots?.[1].prompt).toContain("Close-up of the parent's face.");
+    expect(fal.videos[0].prompt).toContain("No text, letters, captions");
+    const ledger = await sql`select action, credits from usage_ledger where post_id = ${id} and action = 'reel_second'`;
+    expect(ledger).toEqual([{ action: "reel_second", credits: 4 * 5 }]);
+    // One MP4: 3 + 2 s of scenes, 3 s of the screen, 2.5 s closing card; 1080×1920.
+    const videos = await listPostVideos(db, A, id, "reel");
+    expect(videos).toHaveLength(1);
+    expect(videos[0]).toMatchObject({ width: 1080, height: 1920 });
+    const probe = await probeVideo(await storage.get(videos[0].storageKey));
+    expect(probe.durationS).toBeGreaterThan(10);
+    expect(probe.durationS).toBeLessThan(11.2);
+    const meta = await sql`select spec from post_videos where id = ${videos[0].id}`;
+    expect(meta[0].spec.shots).toHaveLength(3);
+    const zip = await postArchive(db, storage, A, id);
+    expect(zip.entries.map((e) => e.name)).toContain("reel-1.mp4");
+  }, 180_000);
 });
 
 describe("HTTP", () => {

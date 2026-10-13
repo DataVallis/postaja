@@ -70,7 +70,7 @@ export async function monthToDate(db: Db, orgId: string, now = new Date()): Prom
 /** Reserves `estimate` or throws SpendCapError when used + estimate would exceed the cap (equal is allowed). */
 export async function reserve(
   db: Db,
-  a: { orgId: string; brandId: string | null; postId: string | null; provider: string; model: string; estimate: bigint; now?: Date; action?: CreditAction },
+  a: { orgId: string; brandId: string | null; postId: string | null; provider: string; model: string; estimate: bigint; now?: Date; action?: CreditAction; /** Credits × units (TASK-058: a reel's seconds of video). */ units?: number },
 ): Promise<string> {
   const action = a.action ?? "assist";
   const id = crypto.randomUUID();
@@ -89,7 +89,7 @@ export async function reserve(
     if (used + a.estimate > s.cap) throw new SpendCapError(used, s.cap);
     // Credits (TASK-038): the month's allowance first, then packs that expire soonest. No allowance = not limited.
     const [price] = await tx.select({ credits: creditPrices.credits }).from(creditPrices).where(eq(creditPrices.action, action));
-    const credits = price?.credits ?? 0;
+    const credits = (price?.credits ?? 0) * Math.max(1, Math.round(a.units ?? 1));
     const draws: { packId: string; credits: number }[] = [];
     const allowance = s.limits?.creditsPerMonth;
     if (allowance !== undefined && credits > 0) {

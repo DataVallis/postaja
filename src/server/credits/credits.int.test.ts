@@ -25,7 +25,7 @@ beforeAll(async () => { await resetAndMigrate(url); });
 beforeEach(async () => {
   await sql`truncate "user", session, account, verification, organization, member, invitation, org_settings, audit_log, usage_ledger, credit_packs, credit_requests cascade`;
   // "truncate user cascade" empties credit_prices too (updated_by → user): seed the defaults again, as migration 0043 does.
-  await sql`insert into credit_prices (action, credits) values ('text',1),('illustration',2),('animation',1),('persona_image',5),('persona_video_5s',25),('persona_video_10s',40),('research',5),('assist',0)`;
+  await sql`insert into credit_prices (action, credits) values ('text',1),('illustration',2),('animation',1),('persona_image',5),('persona_video_5s',25),('persona_video_10s',40),('research',5),('assist',0),('reel_second',4)`;
   const s = (await session((await signIn("boss@datavallis.com"))!))!;
   boss = { userId: s.user.id, role: "superadmin" };
   const d = { mailer, baseURL: "http://localhost:3000" };
@@ -101,7 +101,7 @@ describe("spending credits", () => {
 describe("prices and packs", () => {
   it("super admins edit prices (audited, only changes); owners ask for packs, super admins grant or decline once", async () => {
     expect((await listCreditPrices(db)).map((p) => [p.action, p.credits])).toEqual([
-      ["text", 1], ["illustration", 2], ["animation", 1], ["persona_image", 5], ["persona_video_5s", 25], ["persona_video_10s", 40], ["research", 5], ["assist", 0],
+      ["text", 1], ["illustration", 2], ["animation", 1], ["persona_image", 5], ["persona_video_5s", 25], ["persona_video_10s", 40], ["research", 5], ["assist", 0], ["reel_second", 4],
     ]);
     await expect(setCreditPrices(db, { userId: A.userId, role: "user" }, { text: 2 })).rejects.toBeInstanceOf(CreditError);
     await expect(setCreditPrices(db, boss, { text: -1 })).rejects.toMatchObject({ code: "INVALID" });

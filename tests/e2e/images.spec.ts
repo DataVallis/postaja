@@ -34,7 +34,7 @@ const serious = async (page: Page) =>
 
 test("images: brand design by Claude, revision, versions, a post's images, word edits, bulk carousel", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one full flow is enough");
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const stamp = Date.now();
   const owner = `slike-${stamp}@example.test`;
   const today = todayIn();
@@ -239,6 +239,19 @@ test("images: brand design by Claude, revision, versions, a post's images, word 
   await second.getByText("Izbriši", { exact: true }).click();
   await second.getByRole("button", { name: "Izbriši video" }).click();
   await expect(p.getByTestId("animation-videos-item")).toHaveCount(1);
+
+  // TASK-058: a reel from several shots — one Kling call for the two scenes (multi-shot), the uploaded certificate as
+  // a screen, captions and the closing card by Postaja; one MP4 next to the animations.
+  const reel = p.getByTestId("reel");
+  await reel.getByLabel("Dolžina").selectOption("8");
+  await reel.getByLabel("Navodila za reel (neobvezno)").fill("Na koncu zaslon @Certifikat (SL)@2x.png");
+  expect(await serious(p)).toEqual([]);
+  await reel.getByRole("button", { name: "Ustvari reel" }).click();
+  await expect(p.getByTestId("reel-status")).toHaveText("Pripravljen", { timeout: 90_000 });
+  const reelCall = ((await (await fetch("http://127.0.0.1:3199/fal-log")).json()) as { video?: boolean; shots?: number; duration?: string; model: string }[]).filter((x) => x.video).at(-1)!;
+  expect(reelCall).toMatchObject({ model: "fal-ai/kling-video/v3/standard/image-to-video", shots: 2, duration: "5" });
+  await expect(p.getByTestId("reel-videos-item")).toHaveCount(1);
+  await expect(p.getByTestId("reel-videos-item")).toContainText("Kader 3 (3 s)");
 
   // Bulk: the day's remaining post (the carousel) gets its images from the plan view.
   await p.goto(`/app/plan?view=day&d=${today}`);

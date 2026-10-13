@@ -45,7 +45,7 @@ async function withTemp<T>(fn: (dir: string) => Promise<T>): Promise<T> {
 
 export type ProbeResult = { width: number; height: number; durationS: number; codec: string };
 
-async function probeFile(file: string): Promise<ProbeResult> {
+async function probeFile(file: string, maxS = MAX_CLIP_SECONDS + 1): Promise<ProbeResult> {
   let out: string;
   try {
     out = (await exec(FFPROBE, ["-v", "error", "-protocol_whitelist", "file", "-show_entries", "stream=codec_type,codec_name,width,height:format=duration,format_name", "-of", "json", file], 30_000)).stdout;
@@ -58,7 +58,7 @@ async function probeFile(file: string): Promise<ProbeResult> {
   const durationS = Number(j.format?.duration ?? NaN);
   if (video.length !== 1 || !video[0].width || !video[0].height || !Number.isFinite(durationS)) throw new VideoError("VIDEO_INVALID");
   if (!/mp4|mov|webm|matroska/.test(j.format?.format_name ?? "")) throw new VideoError("VIDEO_INVALID");
-  if (durationS <= 0 || durationS > MAX_CLIP_SECONDS + 1 || video[0].width > 4096 || video[0].height > 4096) throw new VideoError("VIDEO_INVALID");
+  if (durationS <= 0 || durationS > maxS || video[0].width > 4096 || video[0].height > 4096) throw new VideoError("VIDEO_INVALID");
   return { width: video[0].width, height: video[0].height, durationS, codec: video[0].codec_name ?? "" };
 }
 
@@ -75,7 +75,7 @@ export function probeVideo(bytes: Uint8Array): Promise<ProbeResult> {
  * The finished video: `clip` scaled to cover `width`×`height` and cropped (never stretched), the transparent `overlay`
  * PNG (same size) on top, at most `maxS` seconds, 25 fps, H.264 yuv420p + silent stereo AAC, +faststart.
  */
-export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: number; height: number; maxS: number; metadata?: string[] }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
+export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: number; height: number; maxS: number; metadata?: string[]; /** TASK-058: start this far into the clip. */ startS?: number }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
   return withTemp(async (dir) => {
     const input = path.join(dir, "in.bin");
     const over = path.join(dir, "overlay.png");
@@ -83,11 +83,12 @@ export function composeVideo(clip: Uint8Array, overlay: Uint8Array, o: { width: 
     await writeFile(input, clip);
     await writeFile(over, overlay);
     const src = await probeFile(input);
-    const t = Math.min(o.maxS, src.durationS);
+    const from = Math.max(0, Math.min(o.startS ?? 0, src.durationS - 0.5));
+    const t = Math.min(o.maxS, src.durationS - from);
     const filter = `[0:v]scale=${o.width}:${o.height}:force_original_aspect_ratio=increase,crop=${o.width}:${o.height},setsar=1,fps=25[bg];[bg][1:v]overlay=0:0:format=auto,format=yuv420p[v]`;
     await exec(FFMPEG, [
       "-hide_banner", "-loglevel", "error", "-protocol_whitelist", "file,pipe,lavfi",
-      "-i", input, "-loop", "1", "-i", over, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+      ...(from > 0 ? ["-ss", from.toFixed(2)] : []), "-i", input, "-loop", "1", "-i", over, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
       "-filter_complex", filter, "-map", "[v]", "-map", "2:a",
       "-t", t.toFixed(2), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "64k", ...(o.metadata ?? []), "-movflags", "+faststart", "-y", out,
@@ -135,5 +136,33 @@ export function encodeFrames(count: number, frame: (i: number) => Promise<Uint8A
     await done;
     const bytes = new Uint8Array(await readFile(out));
     return { bytes, probe: await probeFile(out) };
+  });
+}
+
+/**
+ * A reel (TASK-058): parts made by Postaja (each already width×height, 25 fps, with an audio track) joined in order,
+ * re-encoded once as H.264 yuv420p + AAC, +faststart.
+ */
+export function concatVideos(parts: Uint8Array[], o: { width: number; height: number; metadata?: string[] }): Promise<{ bytes: Uint8Array; probe: ProbeResult }> {
+  if (!parts.length) throw new VideoError("VIDEO_INVALID");
+  return withTemp(async (dir) => {
+    const inputs: string[] = [];
+    for (const [i, b] of parts.entries()) {
+      const f = path.join(dir, `p${i}.mp4`);
+      await writeFile(f, b);
+      inputs.push("-i", f);
+    }
+    const out = path.join(dir, "out.mp4");
+    const norm = parts.map((_, i) => `[${i}:v]scale=${o.width}:${o.height},setsar=1,fps=25,format=yuv420p[v${i}];[${i}:a]aresample=48000,aformat=channel_layouts=stereo[a${i}]`).join(";");
+    const filter = `${norm};${parts.map((_, i) => `[v${i}][a${i}]`).join("")}concat=n=${parts.length}:v=1:a=1[v][a]`;
+    await exec(FFMPEG, [
+      "-hide_banner", "-loglevel", "error", "-protocol_whitelist", "file", ...inputs,
+      "-filter_complex", filter, "-map", "[v]", "-map", "[a]",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "25",
+      "-c:a", "aac", "-b:a", "64k", ...(o.metadata ?? []), "-movflags", "+faststart", "-y", out,
+    ], 240_000);
+    const bytes = new Uint8Array(await readFile(out));
+    // A reel may be a little longer than one provider clip: checked against its own limit.
+    return { bytes, probe: await probeFile(out, 40) };
   });
 }

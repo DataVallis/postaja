@@ -11,7 +11,7 @@ export type ImageRequest = {
 };
 export type ImageResult = { bytes: Uint8Array; contentType: string; width: number; height: number };
 /** Image-to-video (TASK-022): the clean illustration (data: URI) moves as `prompt` says; no text is ever asked for. */
-export type VideoRequest = { model: string; prompt: string; image: string; durationS: number };
+export type VideoRequest = { model: string; prompt: string; image: string; durationS: number; /** Kling 3.0 multi-shot (TASK-058): one prompt per shot, durations add up to durationS. */ shots?: { prompt: string; durationS: number }[] };
 export type VideoResult = { bytes: Uint8Array };
 export interface ImageClient {
   generate(req: ImageRequest): Promise<ImageResult>;
@@ -146,6 +146,13 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
  */
 export function videoBody(app: string, req: VideoRequest): Record<string, unknown> {
   if (app.startsWith("fal-ai/kling-video/v3/")) {
+    const negative = "text, letters, words, captions, subtitles, watermark, logo, readable screen, blur, distort, low quality";
+    if (req.shots && req.shots.length > 1) {
+      return {
+        multi_prompt: req.shots.map((s) => ({ prompt: s.prompt, duration: String(Math.min(15, Math.max(1, Math.round(s.durationS)))) })), shot_type: "customize",
+        start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false, negative_prompt: negative,
+      };
+    }
     return {
       prompt: req.prompt, start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false,
       negative_prompt: "text, letters, words, watermark, logo, blur, distort, low quality",

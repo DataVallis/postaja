@@ -45,6 +45,7 @@ If your plan has monthly credits, every paid AI action uses credits:
 | Image animation | 1 |
 | Persona image or passport picture | 5 |
 | Persona video 5 s / 10 s | 25 / 40 |
+| Reel from several shots (per second of model video) | 4 |
 | Competitor research (find or analyse) | 5 |
 
 The automatic text fix and helper calls (image plan, design, ideas, plan import) use no credits. The administrator can change the price list; the current one always applies.

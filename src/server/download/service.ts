@@ -15,6 +15,8 @@ import type { ZipSource } from "../files/zip-writer";
 import type { OrgContext } from "../tenancy/context";
 
 export const DAY_MAX_POSTS = 200;
+/** File names of a post's videos in its folder (TASK-032, TASK-058). */
+export const VIDEO_FILE = { animation: "animacija", persona: "persona-video", reel: "reel" } as const;
 
 export class DownloadError extends Error {
   constructor(public readonly code: "NOT_FOUND" | "INVALID" | "TOO_MANY" | "EMPTY") {
@@ -112,10 +114,10 @@ async function entriesFor(db: Db, storage: Storage, ctx: OrgContext, rows: Row[]
     for (const m of own) {
       out.push({ name: `${dir}/${m.position + 1}.${m.type === "image/png" ? "png" : "jpg"}`, bytes: () => storage.get(m.key) });
     }
-    const count = { animation: 0, persona: 0 };
+    const count = { animation: 0, persona: 0, reel: 0 };
     for (const v of videos.filter((x) => x.postId === p.id)) {
       const n = ++count[v.kind];
-      out.push({ name: `${dir}/${v.kind === "persona" ? "persona-video" : "animacija"}-${n}.mp4`, bytes: () => storage.get(v.key) });
+      out.push({ name: `${dir}/${VIDEO_FILE[v.kind]}-${n}.mp4`, bytes: () => storage.get(v.key) });
     }
     if (wantsPdf(p.platform, own.length)) out.push({ name: `${dir}/karusel.pdf`, bytes: () => carouselPdf(storage, own.map((m) => m.key), p.plan?.topic || p.brandName) });
   });

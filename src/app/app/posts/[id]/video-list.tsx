@@ -9,7 +9,7 @@ export type VideoItem = { id: string; width: number; height: number; createdAt: 
  * A post's videos of one kind, newest first (TASK-032): every video stays until it is deleted here. Deleting asks once
  * more (a <details> step) because a video cannot be made again for free.
  */
-export async function VideoList({ postId, anchor, videos, testId }: { postId: string; anchor: "animation" | "persona-video"; videos: VideoItem[]; testId: string }) {
+export async function VideoList({ postId, anchor, videos, testId }: { postId: string; anchor: "animation" | "persona-video" | "reel"; videos: VideoItem[]; testId: string }) {
   const t = await getTranslations("Videos");
   const f = await getFormatter();
   if (!videos.length) return null;

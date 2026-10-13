@@ -50,7 +50,7 @@ export const postMedia = pgTable(
  * Every video made for a post (TASK-032, ADR-061; owner: "kar je enkrat kreirano naj bo vedno dostopno, razen če se
  * zbriše"): animations of an image and persona videos accumulate; nothing replaces them, a member deletes them.
  */
-export type PostVideoKind = "animation" | "persona";
+export type PostVideoKind = "animation" | "persona" | "reel";
 export const postVideos = pgTable(
   "post_videos",
   {
@@ -75,7 +75,7 @@ export const postVideos = pgTable(
   (t) => [
     index("post_videos_post_idx").on(t.orgId, t.postId, t.createdAt),
     uniqueIndex("post_videos_key_uq").on(t.storageKey),
-    check("post_videos_kind_ck", sql`${t.kind} in ('animation','persona')`),
+    check("post_videos_kind_ck", sql`${t.kind} in ('animation','persona','reel')`),
     check("post_videos_size_ck", sql`${t.width} > 0 and ${t.height} > 0 and ${t.sizeBytes} > 0`),
   ],
 );

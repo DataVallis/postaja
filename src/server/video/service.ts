@@ -23,6 +23,7 @@ import { encodeFrames, VideoError } from "./ffmpeg";
 import { FPS, MAX_S, motionSpecSchema, specIssues, type MotionSpec } from "./motion";
 import { addPostVideo } from "./media";
 import { AI_VIDEO_METADATA } from "../images/ai-label";
+import { makeReel } from "./reel";
 import { makePersonaVideo } from "./persona";
 
 export const POST_VIDEO_QUEUE = "post-video";
@@ -142,6 +143,7 @@ export async function runVideoJob(db: Db, deps: Omit<ImageDeps, "images"> & { im
   try {
     // TASK-025: the same queue and status make either an animation or a persona video.
     if (p.mode === "persona") await makePersonaVideo(db, { ...deps, images: deps.images ?? null }, ctx, p.id);
+    else if (p.mode === "reel") await makeReel(db, { ...deps, images: deps.images ?? null }, ctx, p.id); // TASK-058
     else await animatePost(db, deps, ctx, p.id);
     return "done";
   } catch (e) {
