@@ -1010,7 +1010,7 @@
     "toBrands": "Add a channel to a brand",
     "scheduleTitle": "Plan start",
     "scheduleHint": "The plan has relative days (+N). Pick day 0.",
-    "scheduleHintUndated": "Some posts have no date. Pick a start and a gap in days, or leave empty (no slot).",
+    "scheduleHintUndated": "Some posts have no date. Pick a start day and Postaja puts them on the days the channel posts (weekdays and posts per day in the channel settings). With a spacing (e.g. 2) it puts them every that many days. Without a start day they stay unscheduled, to be scheduled later.",
     "startDate": "Start day",
     "intervalDays": "Gap (days)",
     "confirm": "Import {n} posts",
@@ -1162,7 +1162,12 @@
       "makeImage": "Make the image",
       "noText": "No text written yet.",
       "openPost": "Open the post"
-    }
+    },
+    "fillFrom": "Schedule from",
+    "fill": "Put on the calendar ({n})",
+    "fillHint": "Postaja places the posts in order on the days the channel posts (weekdays and posts per day in the channel settings), counting posts already there. You can change each post's day and time afterwards.",
+    "fillError": "Scheduling failed. Pick a valid day.",
+    "filled": "Posts put on the calendar: {n}."
   },
   "Bulk": {
     "scope": "Scope",

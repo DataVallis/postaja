@@ -1010,7 +1010,7 @@
     "toBrands": "Dodaj kanal pri brandu",
     "scheduleTitle": "Začetek plana",
     "scheduleHint": "Plan ima relativne dneve (+N). Izberi dan 0.",
-    "scheduleHintUndated": "Nekatere objave nimajo datuma. Izberi začetek in razmik v dneh, ali pusti prazno (brez termina).",
+    "scheduleHintUndated": "Nekatere objave nimajo datuma. Izberi začetni dan in Postaja jih postavi na dneve, ko kanal objavlja (dnevi v tednu in objav na dan v nastavitvah kanala). Z razmikom (npr. 2) jih postavi vsakih toliko dni. Brez začetnega dne ostanejo med nerazporejenimi, kjer jih razporediš pozneje.",
     "startDate": "Začetni dan",
     "intervalDays": "Razmik (dni)",
     "confirm": "Uvozi {n} objav",
@@ -1162,7 +1162,12 @@
       "makeImage": "Ustvari sliko",
       "noText": "Besedilo še ni napisano.",
       "openPost": "Odpri objavo"
-    }
+    },
+    "fillFrom": "Razporedi od dne",
+    "fill": "Razporedi v koledar ({n})",
+    "fillHint": "Postaja objave postavi po vrsti na dneve, ko kanal objavlja (dnevi v tednu in število objav na dan v nastavitvah kanala), in upošteva objave, ki so tam že. Uro in dan lahko nato spremeniš pri vsaki objavi.",
+    "fillError": "Razporeditev ni uspela. Izberi veljaven dan.",
+    "filled": "V koledar razporejenih objav: {n}."
   },
   "Bulk": {
     "scope": "Obseg",

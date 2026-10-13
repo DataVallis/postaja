@@ -1,8 +1,8 @@
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Badge, buttonClass, Card, DataTable, EmptyState, PageHeader, selectClass, STATUS_TONE, td, Tabs } from "@/components/ui";
-import { isIsoDate, startOfMonth, stepAnchor, todayIn, viewRange } from "@/lib/dates";
+import { Badge, buttonClass, Card, DataTable, EmptyState, inputClass, PageHeader, selectClass, STATUS_TONE, td, Tabs } from "@/components/ui";
+import { addDays, isIsoDate, startOfMonth, stepAnchor, todayIn, viewRange } from "@/lib/dates";
 import { requireOrgPage } from "@/server/auth/require";
 import { listBrands } from "@/server/brands/service";
 import { getDb } from "@/server/db/client";
@@ -11,6 +11,7 @@ import { CALENDAR_DEFAULT_STATUSES, calendarPosts, historyPosts, unscheduledPost
 import { bulkCandidates, listBulkRuns } from "@/server/bulk/service";
 import { BulkRuns } from "./bulk-runs";
 import { FeedView } from "./feed-view";
+import { fillScheduleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
           { key: "runs", label: t("tabs.runs"), href: qs({ tab: "runs" }), count: activeRuns || undefined },
         ]}
       />
+      {one("filled") !== undefined ? <p role="status" className="mb-4 rounded-lg border border-ok/40 px-3 py-2 text-sm" data-testid="filled">{t("filled", { n: Number(one("filled")) || 0 })}</p> : null}
       {bulkError ? <p role="alert" className="mb-4 rounded-lg border border-danger/50 px-3 py-2 text-sm text-danger">{tb.has(`errors.${bulkError}`) ? tb(`errors.${bulkError}`) : tb("errors.FAILED")}</p> : null}
 
       {tab === "calendar" && view === "feed" ? (
@@ -234,9 +236,22 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
 
       {tab === "unscheduled" ? (
         unscheduled.total ? (
+          <>
+          {/* Owner, 2026-10-13: imported plans without dates go on the channels' posting days in one click. */}
+          <form action={fillScheduleAction} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-line p-4" data-testid="fill-schedule">
+            {f.brandId ? <input type="hidden" name="brand" value={f.brandId} /> : null}
+            <div className="grid gap-1">
+              <label htmlFor="fill-from" className="text-sm font-medium">{t("fillFrom")}</label>
+              <input id="fill-from" name="from" type="date" required defaultValue={addDays(today, 1)} className={inputClass} />
+            </div>
+            <button type="submit" className={buttonClass("primary")}>{t("fill", { n: unscheduled.total })}</button>
+            <p className="basis-full text-xs text-muted">{t("fillHint")}</p>
+            {one("fillError") ? <p role="alert" className="basis-full text-sm text-danger">{t("fillError")}</p> : null}
+          </form>
           <DataTable testId="plan-unscheduled" head={[t("time"), tp("post"), tp("brand"), tp("channel"), t("format"), t("status")]}>
             {postRows(unscheduled.rows, false)}
           </DataTable>
+          </>
         ) : <EmptyState title={t("noUnscheduled")} />
       ) : null}
 

@@ -1,6 +1,7 @@
 // Plan import (TASK-012, ADR-041): upload → read (AI names the columns or lists the posts) → owner reviews the start
 // date and which channel each platform/account goes to → posts are created (texts verbatim, rule-checked; published
 // rows become history). Every query is scoped to the caller's org; channels are re-checked against the org on save.
+import { fillSchedule } from "../posts/calendar";
 import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -479,7 +480,8 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
   const byGroup = new Map(view.groups.map((g) => [g.key, g.channelId]));
   const chans = new Map(view.channels.map((c) => [c.id, c]));
   const rules = new Map<string, Awaited<ReturnType<typeof rulesFor>> | null>();
-  const counts = { created: 0, duplicates: 0, skipped: 0, noChannel: 0, published: 0, planned: 0, needsReview: 0, moved: 0 };
+  const counts = { created: 0, duplicates: 0, skipped: 0, noChannel: 0, published: 0, planned: 0, needsReview: 0, moved: 0, scheduled: 0 };
+  const undated: string[] = [];
 
   await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
@@ -538,8 +540,10 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
       thisRun.add(textKey ? `t|${textKey}` : `p|${planKey}`);
       const violations = content ? checkPost(content, rc.rules, rc.cta) : [];
       const status = !content ? "planned" : item.status === "published" ? "published" : violations.length ? "needs_review" : "ready";
+      const postId = crypto.randomUUID();
+      if (!day && status !== "published") undated.push(postId);
       await forOrg(t, ctx).insert(posts, {
-        id: crypto.randomUUID(), brandId: ch.brandId, channelId: ch.id, profileVersionId: rc.profile.id,
+        id: postId, brandId: ch.brandId, channelId: ch.id, profileVersionId: rc.profile.id,
         brief: (item.topic ?? item.text?.split("\n")[0] ?? item.ref).slice(0, 2000) || item.ref,
         status, format: item.format, content, plan: planOf(item),
         ruleFailures: status === "published" ? [] : violations,
@@ -554,6 +558,8 @@ export async function confirmImport(db: Db, ctx: OrgContext, id: string) {
     }
     await forOrg(t, ctx).update(planImports, { status: "imported", createdCount: sql`${planImports.createdCount} + ${counts.created}`, importedAt: new Date() }, eq(planImports.id, id));
   });
+  // A start day without a spacing (owner, 2026-10-13): undated posts go on their channels' posting days from that day.
+  if (r.settings.startDate && !r.settings.intervalDays && undated.length) counts.scheduled = await fillSchedule(db, ctx, { from: r.settings.startDate, postIds: undated });
   return counts;
 }
 

@@ -13,12 +13,14 @@
 1. **Uvoz planov** → povleci plan (Excel, CSV, Word, PDF, MD ali TXT, do 20 MB). Več listov in platform v eni datoteki je v redu.
 2. AI prepozna stolpce ali objave; vrednosti in besedila so prebrana dobesedno. Popravi pomen stolpcev in klikni **Preberi znova**, če je treba.
 3. Izberi **brand** (ali ustvari novega) in za vsako platformo **kanal**. Manjkajoče kanale lahko ustvariš iz profilov v planu.
-4. Če plan nima datumov, izberi začetni dan in razmik.
+4. Če plan nima datumov, izberi začetni dan. Postaja objave postavi na dneve, ko kanal objavlja (dnevi v tednu in število objav na dan v nastavitvah kanala) in upošteva objave, ki so tam že. Če želiš enakomeren razmik (npr. vsak drugi dan), vpiši še razmik.
 5. Klikni **Uvozi … objav**. Podvojenih objav ne ustvari dvakrat.
 
 Objave, ki so že objavljene, gredo v zgodovino. Objave brez besedila napiše Postaja.
 
 Če kasneje dodaš kanal, klikni **Uvozi manjkajoče**.
+
+**Nerazporejene objave** (zavihek v Planu) postaviš v koledar z gumbom **Razporedi v koledar**: izberi, od katerega dne naprej, in Postaja jih po vrsti postavi na dneve, ko kanal objavlja. Če je izbran brand, razporedi samo njegove.
 
 ## Množično ustvarjanje
 

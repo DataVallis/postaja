@@ -131,6 +131,12 @@ describe("reading a document plan", () => {
     // undated: spread from the start date every 3 days once the owner sets them
     await updateImport(db, A, importId, { startDate: "2026-10-12", intervalDays: 3 });
     expect((await importView(db, A, importId)).schedule).toEqual(["2026-10-12", "2026-10-15"]);
+    // A start day without a spacing (owner, 2026-10-13): on the channel's posting days (Mondays here) from that day.
+    await updateImport(db, A, importId, { startDate: "2026-10-13", intervalDays: null, channelMap: { "linkedin|": liA } });
+    expect((await importView(db, A, importId)).schedule).toEqual([null, null]);
+    expect(await confirmImport(db, A, importId)).toMatchObject({ created: 2, scheduled: 2 });
+    const days = await sql`select scheduled_on::text as d from posts where import_id = ${importId} order by scheduled_on`;
+    expect(days.map((r) => r.d)).toEqual(["2026-10-19", "2026-10-26"]);
   });
 
   it("documents need the AI: a provider error is reported, nothing stored", async () => {
@@ -202,7 +208,7 @@ describe("confirming", () => {
   it("creates posts verbatim per channel: history, ready, needs review, planned; skipped rows left out; text + missing hashtags", async () => {
     const importId = await start(A, plan()).id;
     const counts = await confirmImport(db, A, importId);
-    expect(counts).toEqual({ created: 5, duplicates: 0, skipped: 1, noChannel: 0, published: 1, planned: 1, needsReview: 1, moved: 0 });
+    expect(counts).toEqual({ created: 5, duplicates: 0, skipped: 1, noChannel: 0, published: 1, planned: 1, needsReview: 1, moved: 0, scheduled: 0 });
     const rows = await sql`select channel_id, status, format, content, plan, scheduled_on::text as day, scheduled_time, published_at is not null as pub, rule_failures from posts order by scheduled_on, scheduled_time`;
     expect(rows.map((r) => [r.channel_id, r.status, r.format, r.day, r.scheduled_time])).toEqual([
       [liA, "ready", "image", "2026-09-29", "08:30"],
