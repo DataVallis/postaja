@@ -154,6 +154,22 @@ async function endCard(db: Db, deps: Pick<ImageDeps, "storage">, ctx: OrgContext
   return renderTemplate(spec, t, REEL_SIZE, { slots: slide.slots, illustration, logo: assets.logo, brandFont: assets.font, safe: REEL_SAFE });
 }
 
+/**
+ * A refusal by the provider's content checker, said with the shots it concerns ("1–2") and the provider's reason, so the
+ * member knows what to change in the directions (owner, 2026-10-13: "Ponudnik je opis slike zavrnil … hmm").
+ */
+async function blocked<T>(code: "REEL_FRAME_BLOCKED" | "REEL_VIDEO_BLOCKED", start: number, count: number, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof ImageError && e.code === "IMAGE_BLOCKED") {
+      const shots = count > 1 ? `${start + 1}–${start + count}` : `${start + 1}`;
+      throw new ImageError(code, `${shots}${e.detail ? ` · ${e.detail}` : ""}`);
+    }
+    throw e;
+  }
+}
+
 /** Makes the post's reel as `ctx`. Throws ImageError / SpendCapError / LlmError / ImageJobError / VideoError. */
 export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId: string): Promise<ReelPlan> {
   const [p] = (await forOrg(db, ctx).select(posts, eq(posts.id, postId))) as PostRow[];
@@ -183,18 +199,19 @@ export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId:
   // 2. Scenes: one first frame and one Kling call per run of consecutive scenes, then cut into its shots.
   for (const g of sceneGroups(plan.shots)) {
     const first = g.scenes[0];
-    const frame = await generateIllustration(db, deps, ctx, who, `${illustrationPrompt(first.firstFrame, spec)}\nVertical 9:16, a real-looking photo or the brand's picture style.`, REEL_SIZE, examples, { check: true });
+    const frame = await blocked("REEL_FRAME_BLOCKED", g.start, g.scenes.length, () => generateIllustration(db, deps, ctx, who, `${illustrationPrompt(first.firstFrame, spec)}\nVertical 9:16, a real-looking photo or the brand's picture style.`, REEL_SIZE, examples, { check: true }));
     const start = new Uint8Array(await sharp(frame.bytes).resize({ ...REEL_SIZE, fit: "cover" }).jpeg({ quality: 90 }).toBuffer());
     poster ??= start;
     const seconds = clipSeconds(g.scenes);
     const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: videoModel.provider, model: videoModel.modelKey, estimate: videoModel.perSecond * BigInt(seconds), now: deps.now, action: "reel_second", units: seconds });
     let clip: Uint8Array;
     try {
-      clip = (await deps.images.video({
+      const video = deps.images.video;
+      clip = (await blocked("REEL_VIDEO_BLOCKED", g.start, g.scenes.length, () => video({
         model: videoModel.modelKey, image: `data:image/jpeg;base64,${Buffer.from(start).toString("base64")}`, durationS: seconds,
         prompt: `${g.scenes.map((s) => s.motion).join(" Then: ")}\n${NO_WRITING_MOTION}`,
         ...(g.scenes.length > 1 ? { shots: g.scenes.map((s, k) => ({ prompt: `${k === 0 ? "" : `${s.firstFrame} `}${s.motion}\n${NO_WRITING_MOTION}`, durationS: s.durationS })) } : {}),
-      })).bytes;
+      }))).bytes;
     } catch (e) {
       await release(db, ledgerId);
       throw e;

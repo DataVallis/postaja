@@ -22,6 +22,9 @@ export async function ReelSection(props: {
   const ti = await getTranslations("Images");
   const working = props.status === "queued" || props.status === "rendering";
   const [code, ...rest] = (props.error ?? "FAILED").split(":");
+  // REEL_*_BLOCKED:<shots> · <provider's reason>
+  const [shots, ...why] = rest.join(":").split(" · ");
+  const reason = code.startsWith("REEL_") ? why.join(" · ") : rest.join(":");
   const errText = (c: string) => (t.has(`errors.${c}`) ? t(`errors.${c}`) : ti.has(`errors.${c}`) ? ti(`errors.${c}`) : t("errors.FAILED"));
   const euro = (v: bigint | null) => (v === null ? "" : ` · ${t("atMost", { cost: `${microToUsd(v)} €` })}`);
   return (
@@ -33,7 +36,12 @@ export async function ReelSection(props: {
       </h2>
       <p className="max-w-2xl text-sm text-muted">{t("hint")}</p>
       <p className="max-w-2xl text-xs text-muted">{props.referenceCount ? t("references", { n: props.referenceCount }) : t("noReferences")}</p>
-      {props.status === "failed" ? <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm">{errText(code)}{rest.length ? <span className="mt-1 block text-xs text-muted">{rest.join(":")}</span> : null}</p> : null}
+      {props.status === "failed" ? (
+        <p role="alert" className="rounded-lg border border-danger/50 p-3 text-sm" data-testid="reel-error">
+          {code === "REEL_FRAME_BLOCKED" || code === "REEL_VIDEO_BLOCKED" ? t(`errors.${code}`, { shots: shots ?? "?" }) : errText(code)}
+          {reason ? <span className="mt-1 block text-xs text-muted">{code.startsWith("REEL_") ? t("reason", { reason }) : reason}</span> : null}
+        </p>
+      ) : null}
       {props.requestError ? <p role="alert" className="text-sm text-danger">{errText(props.requestError)}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
 

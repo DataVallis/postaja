@@ -21,7 +21,7 @@ export interface ImageClient {
 
 export class ImageError extends Error {
   /** `detail`: the provider's own reason (e.g. fal's 422 message), short and plain, for the owner to see. */
-  constructor(public readonly code: "NO_IMAGE_KEY" | "IMAGE_PROVIDER" | "IMAGE_TIMEOUT" | "IMAGE_BLOCKED" | "IMAGE_INVALID", public readonly detail?: string) {
+  constructor(public readonly code: "NO_IMAGE_KEY" | "IMAGE_PROVIDER" | "IMAGE_TIMEOUT" | "IMAGE_BLOCKED" | "IMAGE_INVALID" | "REEL_FRAME_BLOCKED" | "REEL_VIDEO_BLOCKED", public readonly detail?: string) {
     super(code);
   }
 }

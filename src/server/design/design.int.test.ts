@@ -13,7 +13,7 @@ import { addChannel, createBrand, getBrandDetail, saveProfile, setBrandTextModel
 import { runBulkItem, startBulk, type JobQueue, type QueueJob } from "../bulk/service";
 import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
-import { type ImageClient, type ImageRequest } from "../images/fal";
+import { ImageError, type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
 import { deleteImageVersion, listImageVersions, listPostMedia, NO_WRITING, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
 import { aiPersonPosts, postArchive } from "../download/service";
@@ -758,6 +758,21 @@ describe("TASK-058: reel from several shots", () => {
     const zip = await postArchive(db, storage, A, id);
     expect(zip.entries.map((e) => e.name)).toContain("reel-1.mp4");
   }, 180_000);
+
+  it("a refusal by the provider names the shots and its reason; the reserved video seconds are released", async () => {
+    await sql`insert into credit_prices (action, credits) values ('reel_second', 4) on conflict do nothing`;
+    await design();
+    const id = await post({ format: "video" });
+    const queue = { async send() {} };
+    await requestReel(db, queue, A, id, { durationS: 8 });
+    const fal = fakeVideo();
+    fal.client.video = async () => { throw new ImageError("IMAGE_BLOCKED", "Content involving minors is not allowed"); };
+    const twoScenes = { shots: [plan.shots[0], plan.shots[1], { ...plan.shots[0], durationS: 3 }] };
+    expect(await runVideoJob(db, { llm: fakeClaude({ reels: [twoScenes] }).client, images: fal.client, storage }, { postId: id })).toBe("failed");
+    const [row] = await sql`select video_status, video_error from posts where id = ${id}`;
+    expect(row).toEqual({ video_status: "failed", video_error: "REEL_VIDEO_BLOCKED:1–3 · Content involving minors is not allowed" });
+    expect(await sql`select action from usage_ledger where post_id = ${id} and action = 'reel_second'`).toEqual([]);
+  }, 120_000);
 });
 
 describe("HTTP", () => {

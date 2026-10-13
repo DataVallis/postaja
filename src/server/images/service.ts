@@ -460,7 +460,8 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
 
 /** Outcome codes shown on the post page. */
 export function imageFailureCode(e: unknown): string | null {
-  if (e instanceof ImageError) return e.code;
+  // The provider's own reason (e.g. fal's content checker) goes with the code, for the member to see (owner, 2026-10-13).
+  if (e instanceof ImageError) return e.detail ? `${e.code}:${e.detail}`.slice(0, 300) : e.code;
   if (e instanceof SpendCapError) return "SPEND_CAP";
   if (e instanceof ImageJobError) return e.code;
   if (e instanceof LlmError) return e.code === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : `LLM_PROVIDER:${e.message}`.slice(0, 200);

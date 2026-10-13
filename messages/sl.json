@@ -2328,7 +2328,10 @@
       "BAD_STATE": "Za to objavo že nastaja video. Počakaj, da se konča.",
       "NO_DESIGN": "Brand še nima vizualne podobe.",
       "NO_VIDEO_MODEL": "Model za video ni nastavljen. Obvesti skrbnika.",
-      "INVALID_OUTPUT": "Claude ni vrnil uporabnega načrta kadrov. Poskusi znova ali dodaj navodila."
-    }
+      "INVALID_OUTPUT": "Claude ni vrnil uporabnega načrta kadrov. Poskusi znova ali dodaj navodila.",
+      "REEL_FRAME_BLOCKED": "Ponudnik slik je zavrnil prvo sličico kadra {shots}. Najpogosteje zaradi otrok, resničnih oseb ali česa, kar razume kot nevarno. Spremeni navodila za reel (npr. otrok ni v kadru, kamera je v njegovem pogledu) in poskusi znova.",
+      "REEL_VIDEO_BLOCKED": "Ponudnik videa (Kling) je zavrnil kader {shots}. Kling je še posebej strog pri otrocih v videu. Spremeni navodila za reel (npr. v kadru so samo odrasli, otrok le kot pogled kamere) in poskusi znova."
+    },
+    "reason": "Razlog ponudnika: {reason}"
   }
 }
