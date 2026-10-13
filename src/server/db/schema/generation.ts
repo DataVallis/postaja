@@ -117,7 +117,7 @@ export const posts = pgTable(
     videoMotion: text("video_motion"),
     videoPosition: integer("video_position"),
     /** TASK-025: "motion" = an animated image (TASK-023); "persona" = a video of the brand's persona (Kling 3.0). */
-    videoMode: text("video_mode").$type<"motion" | "persona">().notNull().default("motion"),
+    videoMode: text("video_mode").$type<"motion" | "persona" | "reel">().notNull().default("motion"),
     /** Persona video length in seconds (5 or 10). */
     videoDurationS: integer("video_duration_s"),
     createdBy: text("created_by").notNull().references(() => user.id, { onDelete: "restrict" }),
@@ -134,7 +134,7 @@ export const posts = pgTable(
     check("posts_type_ck", sql`${t.type} in ('text')`),
     check("posts_media_status_ck", sql`${t.mediaStatus} in ('none','queued','rendering','ready','failed')`),
     check("posts_video_status_ck", sql`${t.videoStatus} in ('none','queued','rendering','ready','failed')`),
-    check("posts_video_mode_ck", sql`${t.videoMode} in ('motion','persona')`),
+    check("posts_video_mode_ck", sql`${t.videoMode} in ('motion','persona','reel')`),
   ],
 );
 

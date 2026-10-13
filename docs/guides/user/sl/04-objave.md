@@ -63,6 +63,16 @@ Vsako sliko objave lahko animiraš: Claude zasnuje gibanje (kdaj se pojavi naslo
 
 Rezultat je video MP4 (3–10 s). Vsak ustvarjen video **ostane na objavi**: nova animacija se doda k prejšnjim (tudi k videom s persono), nove slike videov ne izbrišejo. Pri vsakem videu sta **Prenesi (MP4)** in **Izbriši**; brisanje je trajno.
 
+## Reel iz več prizorov
+
+Za objave, ki naj bodo video (reel, TikTok, Shorts), je razdelek **Reel iz več prizorov** (paket Studio in Agencija).
+
+1. Izberi **dolžino** (8, 12 ali 15 s); na izbiri je največja cena.
+2. Po želji napiši **navodila** (npr. »1) večerja, otrok porine risbo čez mizo, 2) zaslon aplikacije @IMG_9208.jpg, 3) pes ob vratih«). Brez navodil Claude zgodbo sestavi iz plana in besedila objave.
+3. Klikni **Ustvari reel**. Reel nastane v nekaj minutah.
+
+Kako nastane: Claude objavo razdeli na 2–4 kadre. **Prizore** iz prve sličice premakne Kling 3.0; sličico Postaja pred tem preveri, da nima izmišljenih napisov. **Zasloni in dokumenti** (aplikacija, certifikat, cenik) so vedno tvoje slike iz **Datoteke → Referenčne slike** ali slikovnih gradiv, prikazane točno take, kot so — model jih nikoli ne riše. **Napise** in **zaključno sliko** (prva slika objave, postavljena na 9:16) postavi Postaja s pisavami in barvami branda. Reel je brez zvoka; glasbo dodaš ob objavi v aplikaciji. Reel ostane na objavi in je v ZIP-u kot `reel-1.mp4`.
+
 ## Odobritev stranke
 
 Agencija lahko objave da v pregled svoji stranki, ne da bi ta potrebovala račun v Postaji.

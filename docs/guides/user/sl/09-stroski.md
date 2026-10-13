@@ -45,6 +45,7 @@ Dodatni brandi in člani se prištejejo omejitvam paketa. Stripe spremembo soraz
 | Animacija slike | 1 |
 | Slika s persono ali potna slika | 5 |
 | Video s persono 5 s / 10 s | 25 / 40 |
+| Reel iz več prizorov (na sekundo videa iz modela) | 4 |
 | Raziskava konkurence (iskanje ali analiza) | 5 |
 
 Samodejni popravek besedila in pomožni klici (načrt slik, dizajn, ideje, uvoz plana) kreditov ne porabijo. Cenik lahko skrbnik spremeni; velja vedno trenutni.

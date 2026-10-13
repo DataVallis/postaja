@@ -279,7 +279,8 @@
         "persona_video_5s": "Video s persono 5 s",
         "persona_video_10s": "Video s persono 10 s",
         "research": "Raziskava konkurence (iskanje, analiza)",
-        "assist": "Pomožni klici (popravek, načrt slik, dizajn, ideje, uvoz)"
+        "assist": "Pomožni klici (popravek, načrt slik, dizajn, ideje, uvoz)",
+        "reel_second": "Reel (na sekundo videa)"
       },
       "grant": "Dodeli kredite",
       "org": "Organizacija",
@@ -2295,6 +2296,39 @@
       "NO_REQUEST": "Povezava za preizkus je potekla. Začni znova na strani za preizkus.",
       "HAS_ORG": "Že imaš organizacijo.",
       "FAILED": "Ni uspelo. Poskusi znova."
+    }
+  },
+  "Reel": {
+    "title": "Reel iz več prizorov",
+    "hint": "Claude razdeli objavo na 2–4 kadre. Prizore iz prve sličice (preverjene, da nimajo izmišljenih napisov) premakne Kling 3.0; zasloni in dokumenti so tvoje referenčne slike, prikazane točno take, kot so. Napise in zaključno sliko objave postavi Postaja s pisavami branda. Brez zvoka — glasbo dodaš ob objavi v aplikaciji.",
+    "references": "Za zaslone in dokumente lahko uporabi {n, plural, one {# sliko} two {# sliki} few {# slike} other {# slik}} branda (referenčne slike in slikovna gradiva).",
+    "noReferences": "Brand nima referenčnih slik, zato v reelu ne bo zaslonov ali dokumentov. Dodaš jih v Datoteke → Referenčne slike.",
+    "status": {
+      "none": "Ni reela",
+      "queued": "V vrsti",
+      "rendering": "Nastaja",
+      "ready": "Pripravljen",
+      "failed": "Ni uspelo"
+    },
+    "working": "Reel nastaja (nekaj minut). Stran se osvežuje sama.",
+    "duration": "Dolžina",
+    "seconds": "{n} s",
+    "atMost": "največ {cost}",
+    "wish": "Navodila za reel (neobvezno)",
+    "wishPlaceholder": "npr. 1) večerja, otrok porine risbo »pogodbe« čez mizo, 2) zaslon aplikacije @IMG_9208.jpg, 3) pes ob vratih",
+    "wishHint": "Brez navodil Claude zgodbo sestavi iz plana in besedila objave.",
+    "create": "Ustvari reel",
+    "again": "Nov reel",
+    "videoLabel": "Reel",
+    "shot": "Kader {n} ({s} s)",
+    "screenShot": "zaslon / dokument (tvoja slika)",
+    "errors": {
+      "FAILED": "Reela ni bilo mogoče narediti. Poskusi znova.",
+      "INVALID": "Izberi dolžino in skrajšaj navodila.",
+      "BAD_STATE": "Za to objavo že nastaja video. Počakaj, da se konča.",
+      "NO_DESIGN": "Brand še nima vizualne podobe.",
+      "NO_VIDEO_MODEL": "Model za video ni nastavljen. Obvesti skrbnika.",
+      "INVALID_OUTPUT": "Claude ni vrnil uporabnega načrta kadrov. Poskusi znova ali dodaj navodila."
     }
   }
 }

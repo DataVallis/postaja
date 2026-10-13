@@ -1,4 +1,5 @@
 "use server";
+import { requestReel } from "@/server/video/reel";
 import { PlanFeatureError } from "@/server/billing/features";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -221,6 +222,21 @@ export async function requestPersonaVideoAction(f: FormData): Promise<void> {
   redirect(`/app/posts/${id}${error ? `?personaVideoError=${error}` : ""}#persona-video`);
 }
 
+/** "Ustvari reel" (TASK-058): any member (Studio and Agencija); the reel is made in the background. */
+export async function requestReelAction(f: FormData): Promise<void> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return;
+  const id = String(f.get("postId") ?? "");
+  let error: string | null = null;
+  try {
+    await requestReel(getDb(), bossQueue(await getBoss()), ctx, id, { durationS: Number(f.get("durationS") ?? 12) as 12, wish: String(f.get("wish") ?? "") });
+  } catch (e) {
+    error = e instanceof ImageJobError || e instanceof PlanFeatureError ? e.code : "FAILED";
+  }
+  revalidatePath(`/app/posts/${id}`);
+  redirect(`/app/posts/${id}${error ? `?reelError=${error}` : ""}#reel`);
+}
+
 /** "Izbriši video" (TASK-032): any member removes one video of the post. */
 export async function deletePostVideoAction(f: FormData): Promise<void> {
   const ctx = await orgContextForAction();
@@ -228,7 +244,8 @@ export async function deletePostVideoAction(f: FormData): Promise<void> {
   const postId = String(f.get("postId") ?? "");
   await deletePostVideo(getDb(), getStorage(), ctx, String(f.get("videoId") ?? "")).catch(() => undefined);
   revalidatePath(`/app/posts/${postId}`);
-  redirect(`/app/posts/${postId}#${String(f.get("anchor") ?? "animation") === "persona-video" ? "persona-video" : "animation"}`);
+  const anchor = String(f.get("anchor") ?? "animation");
+  redirect(`/app/posts/${postId}#${anchor === "persona-video" || anchor === "reel" ? anchor : "animation"}`);
 }
 
 /** "Vrni to verzijo" (TASK-033): an earlier version of the images becomes current again; nothing is deleted. */

@@ -63,6 +63,16 @@ You can animate any image of a post: Claude designs the motion (when the headlin
 
 The result is an MP4 video (3–10 s). Every video you create **stays on the post**: a new animation is added to the earlier ones (including persona videos), and new images do not delete videos. Each video has **Download (MP4)** and **Delete**; deleting is permanent.
 
+## Reel from several shots
+
+Posts meant as video (Reels, TikTok, Shorts) have **Reel from several shots** (Studio and Agency plans).
+
+1. Pick the **length** (8, 12 or 15 s); the highest price is shown with it.
+2. Optionally write **directions** (e.g. "1) dinner, the child slides a drawing across, 2) the app screen @IMG_9208.jpg, 3) the dog at the door"). Without them Claude builds the story from the plan and the post text.
+3. Click **Create reel**. It is ready in a few minutes.
+
+How it is made: Claude splits the post into 2–4 shots. **Scenes** move with Kling 3.0 from a first frame that Postaja checks for made-up writing first. **Screens and documents** (the app, a certificate, a price list) are always your pictures from **Files → Reference pictures** or image materials, shown exactly as they are — the model never draws them. **Captions** and the **closing image** (the post's first image laid out for 9:16) are set by Postaja in the brand's fonts and colours. The reel has no sound; add music when you post it in the app. It stays on the post and is in the ZIP as `reel-1.mp4`.
+
 ## Client approval
 
 An agency can send posts to its client for review without the client needing a Postaja account.

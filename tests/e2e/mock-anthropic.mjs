@@ -94,7 +94,7 @@ function fal(req, res) {
       if ((r.image_url || r.start_image_url) && !r.image_size) {
         // Image-to-video: the app must send the clean picture and a prompt without text.
         falPrompts.set(id, { prompt: r.prompt, video: true });
-        falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, image: String(r.start_image_url ?? r.image_url).slice(0, 23) });
+        falLog.push({ model: req.url.slice(1), video: true, duration: r.duration, shots: r.multi_prompt?.length ?? 0, image: String(r.start_image_url ?? r.image_url).slice(0, 23) });
         return send(200, { request_id: id, status_url: `${base}/fal-ai/${submit[1]}/requests/${id}/status`, response_url: `${base}/fal-ai/${submit[1]}/requests/${id}` });
       }
       // Reference models (TASK-024) take an aspect ratio instead of a size.
@@ -279,6 +279,16 @@ http
       if (tool === "submit_persona_scene") {
         const wish = user.match(/<owner_wish>\n([\s\S]*?)\n<\/owner_wish>/)?.[1] ?? "";
         return reply(tool, { keyframe: `Standing in Ljubljana old town at dusk, yellow rain jacket. ${wish}`.trim(), motion: "Turns to the camera and smiles; slow push-in." });
+      }
+      // Reel (TASK-058): two scenes, then the first reference picture as a screen when there is one.
+      if (tool === "submit_reel") {
+        const hasRef = /R1: "/.test(user);
+        const shots = [
+          { kind: "scene", firstFrame: "A family dinner table, a child slides a blank paper across to a parent.", motion: "The child pushes the paper; the parent raises an eyebrow.", durationS: 3, caption: "Spet to vprašanje." },
+          { kind: "scene", firstFrame: "Close-up of the parent smiling.", motion: "The parent nods slowly.", durationS: 2, caption: "" },
+          hasRef ? { kind: "screen", reference: 1, durationS: 3, caption: "Pogodba v aplikaciji." } : { kind: "scene", firstFrame: "The dog by the door.", motion: "The dog wags its tail.", durationS: 3, caption: "Kdo bo šel ven?" },
+        ];
+        return reply(tool, { shots });
       }
       if (tool === "suggest_post_ideas") {
         const n = Number(user.match(/Propose exactly (\d+) idea/)[1]);

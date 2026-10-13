@@ -222,7 +222,7 @@ async function planVisual(db: Db, deps: ImageDeps, ctx: OrgContext, p: typeof po
  * One illustration: the brand's style-reference model when it has past posts, else the default image model. `who` is
  * what the cost is booked on (a post, or only the brand for an ad set).
  */
-export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], opts: { verbatim?: boolean } = {}) {
+export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, prompt: string, shape: { width: number; height: number }, references: string[], opts: { verbatim?: boolean; /** TASK-058: always look for made-up writing (a reel's first frames). */ check?: boolean } = {}) {
   if (!deps.images) throw new ImageError("NO_IMAGE_KEY");
   // ADR-076: the owner's own image prompt is the picture they decided — the brand's past posts as style references
   // (layout, logo, headings, motifs) override it, so it goes to the default image model without references.
@@ -233,7 +233,7 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   const first = await drawIllustration(db, deps, ctx, who, asked, shape, refs, opts, "illustration");
   // Style references (past posts full of words) and the owner's own prompts are where made-up letters come from.
   // Claude looks at every such picture; one with writing is drawn once more without references, at no credit.
-  if ((!refs.length && !opts.verbatim) || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
+  if ((!refs.length && !opts.verbatim && !opts.check) || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
   return drawIllustration(db, deps, ctx, who, `${prompt}\n${NO_TEXT_AGAIN}`, shape, [], opts, "assist");
 }
 

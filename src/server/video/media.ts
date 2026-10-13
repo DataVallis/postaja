@@ -42,7 +42,7 @@ export async function postVideoUrl(db: Db, storage: Storage, ctx: OrgContext, id
     .where(and(eq(postVideos.id, id), eq(postVideos.orgId, ctx.orgId)));
   if (!v || (o.poster && !v.poster)) throw new ImageJobError("NOT_FOUND");
   const stamp = v.at.toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "-");
-  const base = `${v.slug}-${v.on ?? v.postId.slice(0, 8)}-${v.kind === "persona" ? "persona-video" : "animacija"}-${stamp}`;
+  const base = `${v.slug}-${v.on ?? v.postId.slice(0, 8)}-${v.kind === "persona" ? "persona-video" : v.kind === "reel" ? "reel" : "animacija"}-${stamp}`;
   return o.poster
     ? storage.presignGet(v.poster!, { filename: `${base}.jpg`, contentType: "image/jpeg", inline: !o.download })
     : storage.presignGet(v.key, { filename: `${base}.mp4`, contentType: "video/mp4", inline: !o.download });

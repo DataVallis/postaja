@@ -6,7 +6,7 @@ import { check, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-
 import { user } from "./auth";
 import { organization } from "./org";
 
-export const CREDIT_ACTIONS = ["text", "illustration", "animation", "persona_image", "persona_video_5s", "persona_video_10s", "research", "assist"] as const;
+export const CREDIT_ACTIONS = ["text", "illustration", "animation", "persona_image", "persona_video_5s", "persona_video_10s", "research", "assist", "reel_second"] as const;
 export type CreditAction = (typeof CREDIT_ACTIONS)[number];
 
 export const creditPrices = pgTable(

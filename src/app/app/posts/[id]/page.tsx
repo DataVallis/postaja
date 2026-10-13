@@ -14,6 +14,9 @@ import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishe
 import { PostEditor } from "../editor";
 import { listImageVersions, listPostMedia } from "@/server/images/service";
 import { referenceChoices } from "@/server/images/references";
+import { REEL_DURATIONS } from "@/server/video/reel-ai";
+import { reelEstimate } from "@/server/video/reel";
+import { ReelSection } from "./reel-section";
 import { currentDesign, listPartnerLogos } from "@/server/design/service";
 import { aiPersonPosts } from "@/server/download/service";
 import { postReviewsFor } from "@/server/reviews/service";
@@ -39,10 +42,10 @@ const NEXT: Partial<Record<PostStatus, PostStatus[]>> = {
   planned: ["skipped"],
 };
 
-export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string; imageError?: string; videoError?: string; personaVideoError?: string; statusError?: string }> }) {
+export default async function PostPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ slotError?: string; imageError?: string; videoError?: string; personaVideoError?: string; reelError?: string; statusError?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
-  const { slotError, imageError, videoError, personaVideoError, statusError } = await searchParams;
+  const { slotError, imageError, videoError, personaVideoError, reelError, statusError } = await searchParams;
   const db = getDb();
   const features = await orgFeatures(db, org.orgId);
   const post = await getPost(db, org, id).catch((e) => {
@@ -81,6 +84,21 @@ export default async function PostPage({ params, searchParams }: { params: Promi
       }
     : null;
   const isPersonaVideo = post.videoMode === "persona";
+  // TASK-058: reels share the post's video status with animations and persona videos; each section shows its own.
+  const isReel = post.videoMode === "reel";
+  const otherVideo = isPersonaVideo || isReel;
+  const trl = await getTranslations("Reel");
+  const reel = features.has("animation") ? {
+    costs: await Promise.all(REEL_DURATIONS.map(async (d) => ({ durationS: d, maxCost: await reelEstimate(db, post.brandId, d) }))),
+    videos: allVideos.filter((v) => v.kind === "reel").map((v) => {
+      const plan = v.spec as { shots?: { kind: string; caption?: string; firstFrame?: string; durationS?: number }[] };
+      return {
+        id: v.id, width: v.width, height: v.height, createdAt: v.createdAt, poster: !!v.posterKey, label: trl("videoLabel"),
+        details: (plan.shots ?? []).map((sh, k) => ({ term: trl("shot", { n: k + 1, s: sh.durationS ?? 0 }), text: [sh.kind === "screen" ? trl("screenShot") : sh.firstFrame ?? "", sh.caption ? `„${sh.caption}“` : ""].filter(Boolean).join(" · ") })),
+      };
+    }),
+    referenceCount: refChoices.filter((c) => c.kind !== "logo").slice(0, 4).length,
+  } : null;
   const templates = design?.spec ? design.spec.templates.map((tp) => ({ id: tp.id, name: tp.name, slots: templateSlots(tp) })) : null;
   const editable = post.status === "planned" || post.status === "ready" || post.status === "needs_review" || post.status === "approved";
   const tf = await getTranslations("PostFormats");
@@ -200,11 +218,18 @@ export default async function PostPage({ params, searchParams }: { params: Promi
           videos={personaVideo.videos}
         />
       ) : null}
+      {reel && design ? (
+        <ReelSection
+          postId={post.id} status={isReel ? post.videoStatus : "none"} error={isReel ? post.videoError : null} requestError={reelError}
+          wish={isReel ? post.videoMotion : null} durationS={isReel ? post.videoDurationS : null} costs={reel.costs} videos={reel.videos}
+          referenceCount={reel.referenceCount} primary={post.format === "video"}
+        />
+      ) : null}
       {(animatable.length || animations.length) && !features.has("animation") ? <UpgradeCard feature="animation" isOwner={org.role === "owner"} compact /> : null}
       {(animatable.length || animations.length) && features.has("animation") ? (
         <AnimationSection
-          postId={post.id} status={isPersonaVideo ? "none" : post.videoStatus} error={isPersonaVideo ? null : post.videoError} requestError={videoError}
-          positions={animatable} position={post.videoPosition} motion={isPersonaVideo ? null : post.videoMotion} videos={animations}
+          postId={post.id} status={otherVideo ? "none" : post.videoStatus} error={otherVideo ? null : post.videoError} requestError={videoError}
+          positions={animatable} position={post.videoPosition} motion={otherVideo ? null : post.videoMotion} videos={animations}
           maxCost={animCost}
         />
       ) : null}

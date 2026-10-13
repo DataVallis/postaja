@@ -279,7 +279,8 @@
         "persona_video_5s": "Persona video 5 s",
         "persona_video_10s": "Persona video 10 s",
         "research": "Competitor research (find, analyse)",
-        "assist": "Helper calls (fix round, image plan, design, ideas, import)"
+        "assist": "Helper calls (fix round, image plan, design, ideas, import)",
+        "reel_second": "Reel (per second of video)"
       },
       "grant": "Grant credits",
       "org": "Organization",
@@ -2295,6 +2296,39 @@
       "NO_REQUEST": "The trial link has expired. Start again on the trial page.",
       "HAS_ORG": "You already have an organization.",
       "FAILED": "Something went wrong. Try again."
+    }
+  },
+  "Reel": {
+    "title": "Reel from several shots",
+    "hint": "Claude splits the post into 2–4 shots. Scenes move with Kling 3.0 from first frames checked for made-up writing; screens and documents are your reference pictures, shown exactly as they are. Postaja sets the captions and the post's closing image in the brand's fonts. No sound — add music when you post it in the app.",
+    "references": "Screens and documents can use {n, plural, one {# picture} other {# pictures}} of the brand (reference pictures and image materials).",
+    "noReferences": "The brand has no reference pictures, so the reel will have no screens or documents. Add them under Files → Reference pictures.",
+    "status": {
+      "none": "No reel",
+      "queued": "Queued",
+      "rendering": "In progress",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "working": "The reel is being made (a few minutes). The page refreshes itself.",
+    "duration": "Length",
+    "seconds": "{n} s",
+    "atMost": "at most {cost}",
+    "wish": "Directions for the reel (optional)",
+    "wishPlaceholder": "e.g. 1) dinner, the child slides a drawn \"contract\" across, 2) the app screen @IMG_9208.jpg, 3) the dog at the door",
+    "wishHint": "Without directions Claude builds the story from the plan and the post text.",
+    "create": "Create reel",
+    "again": "New reel",
+    "videoLabel": "Reel",
+    "shot": "Shot {n} ({s} s)",
+    "screenShot": "screen / document (your picture)",
+    "errors": {
+      "FAILED": "The reel could not be made. Try again.",
+      "INVALID": "Pick a length and shorten the directions.",
+      "BAD_STATE": "A video for this post is already in progress. Wait for it to finish.",
+      "NO_DESIGN": "The brand has no visual identity yet.",
+      "NO_VIDEO_MODEL": "No video model is set up. Tell the administrator.",
+      "INVALID_OUTPUT": "Claude did not return a usable shot plan. Try again or add directions."
     }
   }
 }
