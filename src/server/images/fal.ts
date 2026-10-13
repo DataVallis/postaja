@@ -31,14 +31,26 @@ export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 
 /** fal's error body → one short plain line ({detail: string} or {detail: [{msg, type}]}). Never the request. */
 export async function falReason(r: Response): Promise<string | undefined> {
+  return (await falError(r)).reason;
+}
+
+/**
+ * fal's 422: a content refusal (IMAGE_BLOCKED) or a request the model does not accept — too long a prompt, a wrong value
+ * (IMAGE_PROVIDER, a bug on our side, not something the owner should rewrite; owner, 2026-10-13). Unknown = refusal.
+ */
+export async function falError(r: Response): Promise<{ reason: string | undefined; code: "IMAGE_BLOCKED" | "IMAGE_PROVIDER" }> {
   try {
     const j = (await r.json()) as { detail?: unknown };
     const d = j.detail;
+    const items = Array.isArray(d) ? d.filter((x): x is { msg?: unknown; type?: unknown } => !!x && typeof x === "object") : [];
     const text = typeof d === "string" ? d : Array.isArray(d) ? d.map((x) => (x && typeof x === "object" ? String((x as { msg?: unknown; type?: unknown }).msg ?? (x as { type?: unknown }).type ?? "") : String(x))).join("; ") : "";
-    const clean = text.replace(/[^\p{L}\p{N}\p{P}\p{Zs}]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 200);
-    return clean || undefined;
+    const clean = text.replace(/[^\p{L}\p{N}\p{P}\p{Zs}]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 200) || undefined;
+    const types = items.map((x) => String(x.type ?? "")).join(" ");
+    const policy = /content_policy|nsfw|safety|moderat/i.test(types) || /flagged|content polic|nsfw|safety|not allowed|inappropriate|moderat/i.test(text);
+    const invalid = !policy && (/value_error|string_too_long|missing|type_error|literal_error|less_than|greater_than|enum/i.test(types) || /must not exceed|field required|value error|invalid/i.test(text));
+    return { reason: clean, code: invalid ? "IMAGE_PROVIDER" : "IMAGE_BLOCKED" };
   } catch {
-    return undefined;
+    return { reason: undefined, code: "IMAGE_BLOCKED" };
   }
 }
 
@@ -69,7 +81,10 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
   const getJson = async (url: string) => {
     if (!allowedResultUrl(url, base)) throw new ImageError("IMAGE_PROVIDER");
     const r = await f(url, { headers, signal: AbortSignal.timeout(30_000) });
-    if (!r.ok) throw new ImageError(r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER", await falReason(r));
+    if (!r.ok) {
+      const e = await falError(r);
+      throw new ImageError(r.status === 422 ? e.code : "IMAGE_PROVIDER", e.reason);
+    }
     return (await r.json()) as Record<string, unknown>;
   };
 
@@ -80,7 +95,10 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
     let submitted: Record<string, unknown>;
     try {
       const r = await f(new URL(`/${app}`, base), { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
-      if (!r.ok) throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : r.status === 422 ? "IMAGE_BLOCKED" : "IMAGE_PROVIDER", r.status === 422 ? await falReason(r) : undefined);
+      if (!r.ok) {
+        const e = r.status === 422 ? await falError(r) : null;
+        throw new ImageError(r.status === 401 || r.status === 403 ? "NO_IMAGE_KEY" : e ? e.code : "IMAGE_PROVIDER", e?.reason);
+      }
       submitted = (await r.json()) as Record<string, unknown>;
     } catch (e) {
       if (e instanceof ImageError) throw e;
@@ -140,21 +158,34 @@ export function createFalClient(opts: FalOptions = {}): ImageClient | null {
   };
 }
 
+/** Kling 3.0 refuses prompts over 512 characters (fal, 2026-10-13); kept a little under it. */
+export const KLING_PROMPT_MAX = 500;
+
+/** Cuts `text` to `max` characters at a word boundary (prompts are built so that the important part comes first). */
+export function fitPrompt(text: string, max: number): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const at = cut.lastIndexOf(" ");
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).replace(/[\s,;:.-]+$/, "")}…`;
+}
+
 /**
  * Video model bodies (TASK-022). Kling 3.0: start image, 3–15 s as a string, no native audio (Postaja adds a silent
  * track), text kept out by the negative prompt too. Hailuo takes 6 or 10 s and the prompt optimizer off.
  */
 export function videoBody(app: string, req: VideoRequest): Record<string, unknown> {
   if (app.startsWith("fal-ai/kling-video/v3/")) {
+    const fit = (t: string) => fitPrompt(t, KLING_PROMPT_MAX);
     const negative = "text, letters, words, captions, subtitles, watermark, logo, readable screen, blur, distort, low quality";
     if (req.shots && req.shots.length > 1) {
       return {
-        multi_prompt: req.shots.map((s) => ({ prompt: s.prompt, duration: String(Math.min(15, Math.max(1, Math.round(s.durationS)))) })), shot_type: "customize",
+        multi_prompt: req.shots.map((s) => ({ prompt: fit(s.prompt), duration: String(Math.min(15, Math.max(1, Math.round(s.durationS)))) })), shot_type: "customize",
         start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false, negative_prompt: negative,
       };
     }
     return {
-      prompt: req.prompt, start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false,
+      prompt: fit(req.prompt), start_image_url: req.image, duration: String(Math.min(15, Math.max(3, Math.round(req.durationS)))), generate_audio: false,
       negative_prompt: "text, letters, words, watermark, logo, blur, distort, low quality",
     };
   }

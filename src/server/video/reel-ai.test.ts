@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { videoBody } from "../images/fal";
-import { clipSeconds, reelIssues, reelSchema, sceneGroups, type ReelPlan } from "./reel-ai";
+import { falError, fitPrompt, KLING_PROMPT_MAX, videoBody } from "../images/fal";
+import { clipSeconds, klingShotPrompt, NO_WRITING_MOTION, reelIssues, reelSchema, sceneGroups, type ReelPlan } from "./reel-ai";
 
 const scene = (s: number, caption = "") => ({ kind: "scene" as const, firstFrame: "A family dinner table, blank paper on it.", motion: "The child slides the paper.", durationS: s, caption });
 const screen = (r: number, s = 3) => ({ kind: "screen" as const, reference: r, durationS: s, caption: "" });
@@ -27,5 +27,28 @@ describe("reel plan (TASK-058)", () => {
     expect(body).not.toHaveProperty("prompt");
     expect(String(body.negative_prompt)).toContain("text");
     expect(videoBody("fal-ai/kling-video/v3/standard/image-to-video", { model: "x", prompt: "p", image: "i", durationS: 4, shots: [{ prompt: "a", durationS: 4 }] })).toMatchObject({ prompt: "p", duration: "4" });
+  });
+});
+
+describe("Kling prompt length (owner, 2026-10-13: \"Prompt must not exceed 512 characters\")", () => {
+  it("every Kling prompt stays under 512 characters and keeps the no-writing line", () => {
+    const long = "The parent stops mid-bite, raises an eyebrow and slowly smiles. ".repeat(20);
+    const p = klingShotPrompt(long);
+    expect(p.length).toBeLessThanOrEqual(500);
+    expect(p.endsWith(NO_WRITING_MOTION)).toBe(true);
+    expect(klingShotPrompt("Short.")).toBe(`Short.\n${NO_WRITING_MOTION}`);
+    expect(fitPrompt(long, KLING_PROMPT_MAX).length).toBeLessThanOrEqual(KLING_PROMPT_MAX);
+    const body = videoBody("fal-ai/kling-video/v3/standard/image-to-video", { model: "x", prompt: long, image: "i", durationS: 5, shots: [{ prompt: long, durationS: 3 }, { prompt: "b", durationS: 2 }] });
+    expect((body.multi_prompt as { prompt: string }[])[0].prompt.length).toBeLessThanOrEqual(500);
+    expect(String(videoBody("fal-ai/kling-video/v3/standard/image-to-video", { model: "x", prompt: long, image: "i", durationS: 5 }).prompt).length).toBeLessThanOrEqual(500);
+  });
+
+  it("fal's 422: a too-long prompt is our bug (IMAGE_PROVIDER), a content refusal stays IMAGE_BLOCKED", async () => {
+    const r = (detail: unknown) => new Response(JSON.stringify({ detail }), { status: 422 });
+    expect(await falError(r([{ loc: ["body", "multi_prompt", 0, "prompt"], msg: "Value error, Prompt must not exceed 512 characters.", type: "value_error" }])))
+      .toEqual({ code: "IMAGE_PROVIDER", reason: "Value error, Prompt must not exceed 512 characters." });
+    expect((await falError(r([{ msg: "The prompt was flagged by the content checker.", type: "content_policy_violation" }]))).code).toBe("IMAGE_BLOCKED");
+    expect((await falError(r("Content involving minors is not allowed"))).code).toBe("IMAGE_BLOCKED");
+    expect((await falError(new Response("not json", { status: 422 }))).code).toBe("IMAGE_BLOCKED");
   });
 });
