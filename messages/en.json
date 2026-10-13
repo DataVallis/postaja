@@ -2328,7 +2328,10 @@
       "BAD_STATE": "A video for this post is already in progress. Wait for it to finish.",
       "NO_DESIGN": "The brand has no visual identity yet.",
       "NO_VIDEO_MODEL": "No video model is set up. Tell the administrator.",
-      "INVALID_OUTPUT": "Claude did not return a usable shot plan. Try again or add directions."
-    }
+      "INVALID_OUTPUT": "Claude did not return a usable shot plan. Try again or add directions.",
+      "REEL_FRAME_BLOCKED": "The image provider refused the first frame of shot {shots}. Usually because of children, real people or something it reads as unsafe. Change the reel directions (e.g. keep the child out of frame, the camera as their point of view) and try again.",
+      "REEL_VIDEO_BLOCKED": "The video provider (Kling) refused shot {shots}. Kling is especially strict about children in video. Change the reel directions (e.g. only adults in frame, the child only as the camera's point of view) and try again."
+    },
+    "reason": "Provider's reason: {reason}"
   }
 }
