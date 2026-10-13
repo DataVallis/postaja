@@ -743,7 +743,8 @@ describe("TASK-058: reel from several shots", () => {
     expect(fal.videos[0]).toMatchObject({ durationS: 5 });
     expect(fal.videos[0].shots?.map((x) => x.durationS)).toEqual([3, 2]);
     expect(fal.videos[0].shots?.[1].prompt).toContain("Close-up of the parent's face.");
-    expect(fal.videos[0].prompt).toContain("No text, letters, captions");
+    expect(fal.videos[0].prompt).toContain("No text, captions or logos");
+    expect(Math.max(fal.videos[0].prompt.length, ...fal.videos[0].shots!.map((x) => x.prompt.length))).toBeLessThanOrEqual(500);
     const ledger = await sql`select action, credits from usage_ledger where post_id = ${id} and action = 'reel_second'`;
     expect(ledger).toEqual([{ action: "reel_second", credits: 4 * 5 }]);
     // One MP4: 3 + 2 s of scenes, 3 s of the screen, 2.5 s closing card; 1080×1920.

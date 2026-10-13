@@ -18,7 +18,7 @@ export const reelSchema = z.object({
     z.object({
       kind: z.literal("scene"),
       firstFrame: z.string().trim().min(20).max(1200).describe("The first frame as a picture description: who and what, where, framing, light. Vertical 9:16. Papers and screens in it are blank or turned away."),
-      motion: z.string().trim().min(10).max(600).describe("What happens in this shot: one simple action and at most one camera move, present tense."),
+      motion: z.string().trim().min(10).max(350).describe("What happens in this shot: one simple action and at most one camera move, present tense, at most 300 characters (the video model reads short prompts)."),
       durationS: z.number().int().min(2).max(6),
       caption,
     }),
@@ -114,4 +114,13 @@ export function sceneGroups(shots: ReelShot[]): { start: number; scenes: Extract
 /** Kling 3.0 takes 3–15 s per call: a group shorter than 3 s is asked for 3 s and cut to length. */
 export const clipSeconds = (scenes: { durationS: number }[]) => Math.min(REEL_MAX_S, Math.max(3, scenes.reduce((n, s) => n + s.durationS, 0)));
 
-export const NO_WRITING_MOTION = "Realistic, natural motion and physics; the same people and place throughout. No text, letters, captions, logos or readable screens appear at any point; papers and screens stay blank. No speaking.";
+/** Said in every Kling prompt, after the shot itself (Kling takes at most 512 characters per prompt). */
+export const NO_WRITING_MOTION = "No text, captions or logos; papers and screens stay blank. Same people and place. No speaking.";
+
+/** One Kling prompt: the shot first (cut to fit), then the no-writing line — never over the model's limit. */
+export function klingShotPrompt(body: string, max = 500): string {
+  const room = max - NO_WRITING_MOTION.length - 1;
+  const t = body.trim();
+  const cut = t.length <= room ? t : `${t.slice(0, room - 1).replace(/\s+\S*$/, "")}…`;
+  return `${cut}\n${NO_WRITING_MOTION}`;
+}

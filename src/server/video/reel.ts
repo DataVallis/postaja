@@ -27,7 +27,7 @@ import { forOrg } from "../tenancy/scoped";
 import { composeVideo, concatVideos, encodeFrames, probeVideo } from "./ffmpeg";
 import { addPostVideo } from "./media";
 import { POST_VIDEO_QUEUE, type PostVideoJob } from "./service";
-import { clipSeconds, NO_WRITING_MOTION, REEL_DURATIONS, REEL_WISH_MAX, reelIssues, reelRequest, reelSchema, sceneGroups, type ReelPlan } from "./reel-ai";
+import { clipSeconds, klingShotPrompt, REEL_DURATIONS, REEL_WISH_MAX, reelIssues, reelRequest, reelSchema, sceneGroups, type ReelPlan } from "./reel-ai";
 
 export const REEL_SIZE = { width: 1080, height: 1920 } as const;
 /** Instagram / Facebook reel safe zone (format preset ig_reel): captions stay out of the UI. */
@@ -209,8 +209,8 @@ export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId:
       const video = deps.images.video;
       clip = (await blocked("REEL_VIDEO_BLOCKED", g.start, g.scenes.length, () => video({
         model: videoModel.modelKey, image: `data:image/jpeg;base64,${Buffer.from(start).toString("base64")}`, durationS: seconds,
-        prompt: `${g.scenes.map((s) => s.motion).join(" Then: ")}\n${NO_WRITING_MOTION}`,
-        ...(g.scenes.length > 1 ? { shots: g.scenes.map((s, k) => ({ prompt: `${k === 0 ? "" : `${s.firstFrame} `}${s.motion}\n${NO_WRITING_MOTION}`, durationS: s.durationS })) } : {}),
+        prompt: klingShotPrompt(g.scenes.map((s) => s.motion).join(" Then: ")),
+        ...(g.scenes.length > 1 ? { shots: g.scenes.map((s, k) => ({ prompt: klingShotPrompt(k === 0 ? s.motion : `${s.motion} (${s.firstFrame})`), durationS: s.durationS })) } : {}),
       }))).bytes;
     } catch (e) {
       await release(db, ledgerId);
