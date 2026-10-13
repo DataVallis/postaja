@@ -3,13 +3,13 @@
 // Kling 3.0 call with one prompt per shot; a "screen" shows one of the owner's reference pictures as it is; captions
 // and the closing card (the post's own image, laid out again for 9:16) are set by Postaja in the brand's fonts; ffmpeg
 // joins it all into one 1080×1920 MP4. Every paid step is reserved first and settled or released.
-import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 import sharp from "sharp";
 import { z } from "zod";
 import { requireFeature } from "../billing/features";
 import { getBrandDetail } from "../brands/service";
 import type { Db } from "../db/client";
-import { modelRegistry, postMedia, posts, usageLedger } from "../db/schema";
+import { modelRegistry, posts, usageLedger } from "../db/schema";
 import { issues as zodIssues } from "../design/ai";
 import { renderTemplate } from "../design/render";
 import { brandAssetBytes, brandExamples, currentDesign } from "../design/service";
@@ -144,13 +144,14 @@ async function screenFrame(spec: DesignSpec, ref: ReferenceImage, caption: strin
   ]).png().toBuffer());
 }
 
-/** The closing card: the post's first image laid out again at 9:16 from its own template, words and illustration. */
-async function endCard(db: Db, deps: Pick<ImageDeps, "storage">, ctx: OrgContext, p: PostRow, spec: DesignSpec, assets: Awaited<ReturnType<typeof brandAssetBytes>>): Promise<Uint8Array | null> {
+/**
+ * The closing card: the post's first image laid out again at 9:16 from its own template and words — over the reel's own
+ * checked frame, not the post's stored illustration, which may be older and carry made-up lettering (owner, 2026-10-13).
+ */
+async function endCard(p: PostRow, spec: DesignSpec, assets: Awaited<ReturnType<typeof brandAssetBytes>>, illustration: Uint8Array | null): Promise<Uint8Array | null> {
   const slide = p.visual?.slides[0];
   const t = slide && spec.templates.find((x) => x.id === slide.templateId);
   if (!slide || !t) return null;
-  const [bg] = (await forOrg(db, ctx).select(postMedia, and(eq(postMedia.postId, p.id), eq(postMedia.kind, "background"), eq(postMedia.position, 0), isNull(postMedia.archivedAt))!)) as (typeof postMedia.$inferSelect)[];
-  const illustration = bg ? await deps.storage.get(bg.storageKey) : null;
   return renderTemplate(spec, t, REEL_SIZE, { slots: slide.slots, illustration, logo: assets.logo, brandFont: assets.font, safe: REEL_SAFE });
 }
 
@@ -195,6 +196,7 @@ export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId:
   const examples = (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
   const parts: Uint8Array[] = new Array(plan.shots.length);
   let poster: Uint8Array | null = null;
+  let lastFrame: Uint8Array | null = null;
 
   // 2. Scenes: one first frame and one Kling call per run of consecutive scenes, then cut into its shots.
   for (const g of sceneGroups(plan.shots)) {
@@ -202,6 +204,7 @@ export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId:
     const frame = await blocked("REEL_FRAME_BLOCKED", g.start, g.scenes.length, () => generateIllustration(db, deps, ctx, who, `${illustrationPrompt(first.firstFrame, spec)}\nVertical 9:16, a real-looking photo or the brand's picture style.`, REEL_SIZE, examples, { check: true }));
     const start = new Uint8Array(await sharp(frame.bytes).resize({ ...REEL_SIZE, fit: "cover" }).jpeg({ quality: 90 }).toBuffer());
     poster ??= start;
+    lastFrame = start;
     const seconds = clipSeconds(g.scenes);
     const ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: p.brandId, postId: p.id, provider: videoModel.provider, model: videoModel.modelKey, estimate: videoModel.perSecond * BigInt(seconds), now: deps.now, action: "reel_second", units: seconds });
     let clip: Uint8Array;
@@ -233,7 +236,7 @@ export async function makeReel(db: Db, deps: ImageDeps, ctx: OrgContext, postId:
   }
 
   // 4. The closing card, then everything joined.
-  const card = await endCard(db, deps, ctx, p, spec, assets);
+  const card = await endCard(p, spec, assets, lastFrame);
   const all = [...parts, ...(card ? [await stillClip(card, END_CARD_S)] : [])];
   const { bytes, probe } = await concatVideos(all, REEL_SIZE);
 
