@@ -39,15 +39,18 @@ const profile = { cgp: "Ton: jasen, brez pretiravanja.", rules: { bannedWords: [
 const usage = { inputTokens: 5000, outputTokens: 3000, cacheWriteTokens: 0, cacheReadTokens: 0 };
 
 /** A fake Claude: answers by tool; `designs` are returned in order for submit_brand_design. */
-function fakeClaude(o: { designs?: unknown[]; plans?: unknown[]; textInPicture?: boolean[]; reels?: unknown[] } = {}) {
+function fakeClaude(o: { designs?: unknown[]; plans?: unknown[]; textInPicture?: boolean[]; reels?: unknown[]; screens?: unknown[] } = {}) {
   const calls: StructuredRequest[] = [];
   const designs = [...(o.designs ?? [cardDesign])];
   const plans = [...(o.plans ?? [])];
   const textInPicture = [...(o.textInPicture ?? [])];
   const reels = [...(o.reels ?? [])];
+  const screens = [...(o.screens ?? [])];
   const client: LlmClient = {
     async structured(req) {
       calls.push(req);
+      // Owner, 2026-10-15: where is the screen? By default there is none (the picture is edited with the model).
+      if (req.tool.name === "screen_corners") return { input: screens.length ? screens.shift() : { found: false }, usage };
       if (req.tool.name === "submit_reel") return { input: reels.length > 1 ? reels.shift() : reels[0], usage };
       if (req.tool.name === "submit_brand_design") return { input: designs.length > 1 ? designs.shift() : designs[0], usage };
       if (req.tool.name === "plan_post_images") {
@@ -1049,6 +1052,42 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(actions.map((r) => r.action).sort()).toEqual(["assist", "illustration"]);
     expect(await ledgerRows()).toBe(paid1 + 2);
     expect((await keys(id, "background"))[2]).toBe(bgAfter[2]);
+  });
+
+  it("owner, 2026-10-15: a screenshot onto the phone already in the picture is placed exactly — no image model, no credits; corners corrected once", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    const shot = await uploadBrandFile(db, storage, A, brandA, "reference", { filename: "IMG_9258.jpg", bytes: await png(300, 600, "#ff0000") });
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "Na prvi sliki zamenjaj zaslon telefona z @IMG_9258.jpg", { only: [0] });
+    expect(jobs[0].data).toMatchObject({ refs: [`asset:${shot.id}`] });
+    const answer = [{ ...three[0], references: [1] }, three[1], three[2]];
+    // The illustration is shown at most 1000 px; the stand-in pictures here are smaller, so pixels are as they are.
+    const claude = fakeClaude({ plans: [{ slides: answer }], screens: [
+      { found: true, corners: [{ x: 10, y: 10 }, { x: 60, y: 12 }, { x: 58, y: 110 }, { x: 8, y: 108 }] },
+      { found: true, ok: false, corners: [{ x: 12, y: 12 }, { x: 62, y: 12 }, { x: 62, y: 112 }, { x: 12, y: 112 }] },
+      { found: true, ok: true },
+    ] });
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(fal.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paid0);
+    const screenCalls = claude.calls.filter((c) => c.tool.name === "screen_corners");
+    expect(screenCalls).toHaveLength(3);
+    expect(screenCalls[0].user).toContain("Na prvi sliki zamenjaj zaslon telefona");
+    expect(screenCalls[0].images).toHaveLength(2);
+    const bgAfter = await keys(id, "background");
+    expect(bgAfter[0]).not.toBe(bgBefore[0]);
+    expect(bgAfter[2]).toBe(bgBefore[2]);
+    // The screenshot is in the picture pixel for pixel (red), at the corrected corners.
+    const { data, info } = await sharp(await storage.get(bgAfter[0])).raw().toBuffer({ resolveWithObject: true });
+    const k = Math.max(info.width, info.height) > 1000 ? Math.max(info.width, info.height) / 1000 : 1;
+    const at = (x: number, y: number) => data[(Math.round(y * k) * info.width + Math.round(x * k)) * info.channels];
+    expect(at(37, 60)).toBeGreaterThan(220);
+    const media = await sql`select model, prompt from post_media where post_id = ${id} and kind = 'background' and position = 0 and archived_at is null`;
+    expect(media[0]).toMatchObject({ model: "postaja/screen", prompt: "screen: IMG_9258.jpg" });
   });
 
   it("an image made with another design version cannot come back without being planned again", async () => {
