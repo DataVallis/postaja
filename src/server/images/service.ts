@@ -26,6 +26,7 @@ import { markAiPng } from "./ai-label";
 import { repeatsCaption } from "./repeat";
 import { personaIllustrationPrompt } from "../personas/scene";
 import { loadReferences, referenceChoices, resolveReferences, type ReferenceImage } from "./references";
+import { placeOnScreen } from "./screen";
 
 export const POST_IMAGE_QUEUE = "post-image";
 /** new: plan and draw again; text: redraw the stored plan; revise: Claude applies the owner's words to the current images. */
@@ -403,7 +404,17 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         let prompt: string;
         let out: Awaited<ReturnType<typeof generateIllustration>>;
         const refsHere = withRefs.get(i);
-        if (refsHere?.length) {
+        // Owner, 2026-10-15: an owner's screenshot onto a screen already in the current picture is placed by Postaja,
+        // exactly and without an image model (Claude finds the corners); only otherwise is the picture edited.
+        const onScreen = refsHere?.length === 1 && prev
+          ? await placeOnScreen(db, deps.llm, ctx, { brandId: p.brandId, postId: p.id, now: deps.now }, await deps.storage.get(prev.storageKey), Buffer.from(ownerRefs[refsHere[0]].dataUri.split(",")[1], "base64"), instruction ?? "")
+          : null;
+        if (onScreen && prev) {
+          const meta = await sharp(onScreen).metadata();
+          prompt = `screen: ${ownerRefs[refsHere![0]].name}`;
+          out = { bytes: onScreen, contentType: "image/jpeg", width: meta.width ?? prev.width ?? 0, height: meta.height ?? prev.height ?? 0, model: "postaja/screen" };
+          if (prev.aiPerson) aiSlides.add(i);
+        } else if (refsHere?.length) {
           // TASK-057: the current picture (when there is one) edited so the owner's pictures appear as they are.
           const current = prev ? `data:image/jpeg;base64,${(await sharp(await deps.storage.get(prev.storageKey)).jpeg({ quality: 90 }).toBuffer()).toString("base64")}` : null;
           prompt = referenceEditPrompt(slide.illustration ?? p.brief, spec, !!current, refsHere.map((r) => ownerRefs[r].name));

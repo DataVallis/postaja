@@ -280,6 +280,8 @@ http
         const wish = user.match(/<owner_wish>\n([\s\S]*?)\n<\/owner_wish>/)?.[1] ?? "";
         return reply(tool, { keyframe: `Standing in Ljubljana old town at dusk, yellow rain jacket. ${wish}`.trim(), motion: "Turns to the camera and smiles; slow push-in." });
       }
+      // Screen placement (ADR-088): the stand-in pictures have no phone, so the picture is edited with the model.
+      if (tool === "screen_corners") return reply(tool, { found: false });
       // Reel (TASK-058): two scenes, then the first reference picture as a screen when there is one.
       if (tool === "submit_reel") {
         const hasRef = /R1: "/.test(user);
