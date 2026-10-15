@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { homography, validQuad, warpInto, type Quad } from "./screen";
+import { homography, validQuad, warpInto, wholePicture, type Quad } from "./screen";
 
 const solid = (w: number, h: number, c: string) => sharp({ create: { width: w, height: h, channels: 3, background: c } }).png().toBuffer().then((b) => new Uint8Array(b));
 const pixel = async (img: Uint8Array, x: number, y: number) => {
@@ -38,5 +38,21 @@ describe("screen placement (owner, 2026-10-15)", () => {
     expect((await pixel(out, 30, 30))[0]).toBeLessThan(20); // outside
     expect((await pixel(out, 300, 200))[0]).toBeLessThan(20); // right of the screen
     expect((await pixel(out, 121, 62))[0]).toBeLessThan(120); // the rounded corner leaves the very corner
+  });
+
+  it("as the whole picture: close proportions fill it; a tall mockup is shown whole on its own edge colour", async () => {
+    const close = await wholePicture(await solid(410, 300, "#0000ff"), 400, 300);
+    expect(await sharp(close).metadata()).toMatchObject({ width: 400, height: 300 });
+    expect((await pixel(close, 2, 2))[2]).toBeGreaterThan(220);
+    // A phone mockup: mint background, a dark phone in the middle — taller than the slot.
+    const mockup = await sharp({ create: { width: 300, height: 600, channels: 3, background: "#66ddb0" } })
+      .composite([{ input: Buffer.from(await solid(120, 400, "#111111")), left: 90, top: 100 }]).png().toBuffer();
+    const out = await wholePicture(new Uint8Array(mockup), 600, 600);
+    expect(await sharp(out).metadata()).toMatchObject({ width: 600, height: 600 });
+    const [r, g] = await pixel(out, 20, 300); // beside the picture: its own mint, not white or black
+    expect(g).toBeGreaterThan(180);
+    expect(r).toBeLessThan(140);
+    expect((await pixel(out, 300, 300))[1]).toBeLessThan(40); // the phone, not cut away
+    expect((await pixel(out, 300, 120))[1]).toBeLessThan(40);
   });
 });

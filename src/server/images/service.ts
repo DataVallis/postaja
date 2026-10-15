@@ -405,15 +405,16 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         let out: Awaited<ReturnType<typeof generateIllustration>>;
         const refsHere = withRefs.get(i);
         // Owner, 2026-10-15: an owner's screenshot onto a screen already in the current picture is placed by Postaja,
-        // exactly and without an image model (Claude finds the corners); only otherwise is the picture edited.
+        // exactly and without an image model (Claude finds the corners), or becomes the whole picture when that is what is
+        // asked (his screenshot was already a phone mockup); only otherwise is the picture edited.
         const onScreen = refsHere?.length === 1 && prev
           ? await placeOnScreen(db, deps.llm, ctx, { brandId: p.brandId, postId: p.id, now: deps.now }, await deps.storage.get(prev.storageKey), Buffer.from(ownerRefs[refsHere[0]].dataUri.split(",")[1], "base64"), instruction ?? "")
           : null;
         if (onScreen && prev) {
-          const meta = await sharp(onScreen).metadata();
-          prompt = `screen: ${ownerRefs[refsHere![0]].name}`;
-          out = { bytes: onScreen, contentType: "image/jpeg", width: meta.width ?? prev.width ?? 0, height: meta.height ?? prev.height ?? 0, model: "postaja/screen" };
-          if (prev.aiPerson) aiSlides.add(i);
+          const meta = await sharp(onScreen.bytes).metadata();
+          prompt = `${onScreen.how}: ${ownerRefs[refsHere![0]].name}`;
+          out = { bytes: onScreen.bytes, contentType: "image/jpeg", width: meta.width ?? prev.width ?? 0, height: meta.height ?? prev.height ?? 0, model: `postaja/${onScreen.how}` };
+          if (prev.aiPerson && onScreen.how === "screen") aiSlides.add(i);
         } else if (refsHere?.length) {
           // TASK-057: the current picture (when there is one) edited so the owner's pictures appear as they are.
           const current = prev ? `data:image/jpeg;base64,${(await sharp(await deps.storage.get(prev.storageKey)).jpeg({ quality: 90 }).toBuffer()).toString("base64")}` : null;

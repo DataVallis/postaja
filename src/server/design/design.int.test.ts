@@ -1064,9 +1064,9 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     const answer = [{ ...three[0], references: [1] }, three[1], three[2]];
     // The illustration is shown at most 1000 px; the stand-in pictures here are smaller, so pixels are as they are.
     const claude = fakeClaude({ plans: [{ slides: answer }], screens: [
-      { found: true, corners: [{ x: 10, y: 10 }, { x: 60, y: 12 }, { x: 58, y: 110 }, { x: 8, y: 108 }] },
-      { found: true, ok: false, corners: [{ x: 12, y: 12 }, { x: 62, y: 12 }, { x: 62, y: 112 }, { x: 12, y: 112 }] },
-      { found: true, ok: true },
+      { use: "screen", corners: [{ x: 10, y: 10 }, { x: 60, y: 12 }, { x: 58, y: 110 }, { x: 8, y: 108 }] },
+      { use: "screen", ok: false, corners: [{ x: 12, y: 12 }, { x: 62, y: 12 }, { x: 62, y: 112 }, { x: 12, y: 112 }] },
+      { use: "screen", ok: true },
     ] });
     const fal = fakeImages();
     const paid0 = await ledgerRows();
@@ -1078,6 +1078,7 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(screenCalls).toHaveLength(3);
     expect(screenCalls[0].user).toContain("Na prvi sliki zamenjaj zaslon telefona");
     expect(screenCalls[0].images).toHaveLength(2);
+    expect(screenCalls[1].images).toHaveLength(2); // the result and a close-up of the screen
     const bgAfter = await keys(id, "background");
     expect(bgAfter[0]).not.toBe(bgBefore[0]);
     expect(bgAfter[2]).toBe(bgBefore[2]);
@@ -1088,6 +1089,33 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(at(37, 60)).toBeGreaterThan(220);
     const media = await sql`select model, prompt from post_media where post_id = ${id} and kind = 'background' and position = 0 and archived_at is null`;
     expect(media[0]).toMatchObject({ model: "postaja/screen", prompt: "screen: IMG_9258.jpg" });
+  });
+
+  it("owner, 2026-10-15 (2): his screenshot is already a phone mockup and should cover it all — it becomes the whole picture, no credits", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    const [before] = await sql`select width, height from post_media where storage_key = ${bgBefore[0]}`;
+    const shot = await uploadBrandFile(db, storage, A, brandA, "reference", { filename: "IMG_9258.jpg", bytes: await png(300, 600, "#00ff00") });
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "slika telefona mora biti čez celo, moja slika @IMG_9258.jpg", { only: [0] });
+    expect(jobs[0].data).toMatchObject({ refs: [`asset:${shot.id}`] });
+    const claude = fakeClaude({ plans: [{ slides: [{ ...three[0], references: [1] }, three[1], three[2]] }], screens: [{ use: "whole" }] });
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(fal.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paid0);
+    expect(claude.calls.filter((c) => c.tool.name === "screen_corners")).toHaveLength(1);
+    const bgAfter = await keys(id, "background");
+    const media = await sql`select model, prompt, width, height from post_media where post_id = ${id} and kind = 'background' and position = 0 and archived_at is null`;
+    expect(media[0]).toMatchObject({ model: "postaja/whole", prompt: "whole: IMG_9258.jpg", width: before.width, height: before.height });
+    // His picture, whole: the middle is his green.
+    const { data, info } = await sharp(await storage.get(bgAfter[0])).raw().toBuffer({ resolveWithObject: true });
+    const o = (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2)) * info.channels;
+    expect(data[o]).toBeLessThan(40);
+    expect(data[o + 1]).toBeGreaterThan(220);
+    expect(data[o + 2]).toBeLessThan(40);
   });
 
   it("an image made with another design version cannot come back without being planned again", async () => {

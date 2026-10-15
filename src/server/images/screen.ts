@@ -110,31 +110,92 @@ export async function warpInto(base: Uint8Array, picture: Uint8Array, quad: Quad
   return new Uint8Array(await bg.composite([{ input: layer, left: minX, top: minY }]).jpeg({ quality: 92 }).toBuffer());
 }
 
+// ---- the whole picture ---------------------------------------------------------------------------------------------
+
+/**
+ * The owner's picture as the whole illustration, at `width` × `height` (owner, 2026-10-15: "the phone picture must cover
+ * all of it" — his screenshot was already a phone mockup). Close proportions are filled (cover); otherwise the picture
+ * is shown whole on its own edge colour, so nothing of it is cut away.
+ */
+export async function wholePicture(picture: Uint8Array, width: number, height: number): Promise<Uint8Array> {
+  const img = sharp(picture, { limitInputPixels: MAX_INPUT_PIXELS }).flatten({ background: "#ffffff" });
+  const { width: pw = 1, height: ph = 1 } = await img.metadata();
+  const close = Math.abs(Math.log((pw / ph) / (width / height))) < 0.12;
+  if (close) return new Uint8Array(await img.resize(width, height, { fit: "cover", position: "centre" }).jpeg({ quality: 92 }).toBuffer());
+  // The edge colour: the average of the picture's outer ring (a mockup's background).
+  const n = 16;
+  const { data } = await sharp(picture, { limitInputPixels: MAX_INPUT_PIXELS }).flatten({ background: "#ffffff" }).resize(n, n, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+  const sum = [0, 0, 0];
+  let count = 0;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    if (x > 0 && y > 0 && x < n - 1 && y < n - 1) continue;
+    for (let c = 0; c < 3; c++) sum[c] += data[(y * n + x) * 3 + c];
+    count++;
+  }
+  const [r, g, b] = sum.map((v) => Math.round(v / count));
+  return new Uint8Array(await sharp(picture, { limitInputPixels: MAX_INPUT_PIXELS }).flatten({ background: "#ffffff" })
+    .resize(width, height, { fit: "contain", background: { r, g, b } }).jpeg({ quality: 92 }).toBuffer());
+}
+
 // ---- Claude finds and checks the screen ----------------------------------------------------------------------------
 
 const VIEW = 1000;
 const quadSchema = {
   type: "object",
   properties: {
-    found: { type: "boolean", description: "Is there a phone, tablet or computer screen (or a sheet meant to show it) where the picture belongs?" },
+    use: {
+      type: "string", enum: ["screen", "whole", "none"],
+      description: "screen = put the owner's picture onto a phone/tablet/computer screen inside the picture; whole = the owner's picture replaces the whole picture (the owner asks for it to fill or replace the picture, or it already shows a device or mockup itself — never a phone inside a phone); none = neither fits.",
+    },
     corners: {
-      type: "array", minItems: 4, maxItems: 4, description: "The screen's visible display area (inside the bezel), in pixels of the image shown: top-left, top-right, bottom-right, bottom-left.",
+      type: "array", minItems: 4, maxItems: 4, description: "Only for use=screen: the screen's visible display area (inside the bezel, all of the glass), in pixels of the image shown — read them off the grid: top-left, top-right, bottom-right, bottom-left.",
       items: { type: "object", properties: { x: { type: "number" }, y: { type: "number" } }, required: ["x", "y"], additionalProperties: false },
     },
-    ok: { type: "boolean", description: "Only when checking a result: the picture sits exactly on the display, nothing of the old screen visible, nothing over the bezel." },
+    ok: { type: "boolean", description: "Only when checking a result: the picture covers the whole display exactly — nothing of the old screen visible anywhere around it, nothing over the bezel." },
   },
-  required: ["found"],
+  required: ["use"],
   additionalProperties: false,
 } as const;
 
 type Who = { orgId: string; brandId: string | null; postId: string | null; now?: Date };
 
+/** A coordinate grid (every 50 px, numbered every 100) over a picture, so Claude reads corners off it instead of guessing. */
+async function withGrid(jpeg: Uint8Array, w: number, h: number, offset = { x: 0, y: 0 }, scale = 1): Promise<Uint8Array> {
+  const lines: string[] = [];
+  const step = 50;
+  const first = (o: number) => Math.ceil(o / step) * step;
+  for (let v = first(offset.x); v <= offset.x + w / scale; v += step) {
+    const x = (v - offset.x) * scale;
+    lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${v % 100 ? "#ff00ff" : "#ff0000"}" stroke-opacity="${v % 100 ? 0.35 : 0.6}" stroke-width="1"/>`);
+    if (v % 100 === 0) lines.push(`<text x="${x + 2}" y="12" font-size="11" font-family="sans-serif" fill="#ff0000" stroke="#ffffff" stroke-width="2" paint-order="stroke">${v}</text>`);
+  }
+  for (let v = first(offset.y); v <= offset.y + h / scale; v += step) {
+    const y = (v - offset.y) * scale;
+    lines.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${v % 100 ? "#ff00ff" : "#ff0000"}" stroke-opacity="${v % 100 ? 0.35 : 0.6}" stroke-width="1"/>`);
+    if (v % 100 === 0) lines.push(`<text x="2" y="${y - 2}" font-size="11" font-family="sans-serif" fill="#ff0000" stroke="#ffffff" stroke-width="2" paint-order="stroke">${v}</text>`);
+  }
+  const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${lines.join("")}</svg>`);
+  return new Uint8Array(await sharp(jpeg).composite([{ input: svg, left: 0, top: 0 }]).jpeg({ quality: 85 }).toBuffer());
+}
+
 async function view(jpeg: Uint8Array) {
   const img = sharp(jpeg, { limitInputPixels: MAX_INPUT_PIXELS });
   const { width = 1, height = 1 } = await img.metadata();
   const k = VIEW / Math.max(width, height);
-  const small = new Uint8Array(await img.resize(Math.round(width * k), Math.round(height * k)).jpeg({ quality: 85 }).toBuffer());
-  return { small, k, width, height };
+  const sw = Math.round(width * k), sh = Math.round(height * k);
+  const plain = new Uint8Array(await img.resize(sw, sh).jpeg({ quality: 85 }).toBuffer());
+  return { plain, small: await withGrid(plain, sw, sh), k, width, height, sw, sh };
+}
+
+/** The screen's area enlarged (with the same grid numbers), so Claude sees the edges. */
+async function closeUp(v: Awaited<ReturnType<typeof view>>, q: Quad): Promise<Uint8Array> {
+  const xs = q.map((p) => p.x * v.k), ys = q.map((p) => p.y * v.k);
+  const m = 0.12 * Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const left = Math.max(0, Math.floor(Math.min(...xs) - m)), top = Math.max(0, Math.floor(Math.min(...ys) - m));
+  const w = Math.min(v.sw - left, Math.ceil(Math.max(...xs) + m) - left), h = Math.min(v.sh - top, Math.ceil(Math.max(...ys) + m) - top);
+  const scale = Math.min(3, 900 / Math.max(w, h));
+  const big = new Uint8Array(await sharp(v.plain).extract({ left, top, width: Math.max(1, w), height: Math.max(1, h) }).resize(Math.round(w * scale), Math.round(h * scale)).jpeg({ quality: 88 }).toBuffer());
+  return withGrid(big, Math.round(w * scale), Math.round(h * scale), { x: left, y: top }, scale);
 }
 
 const toQuad = (c: unknown, k: number): Quad | null => {
@@ -143,34 +204,42 @@ const toQuad = (c: unknown, k: number): Quad | null => {
   return q.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)) ? (q as Quad) : null;
 };
 
+const choiceOf = (a: { use?: unknown; found?: unknown } | null) => (a?.use === "screen" || a?.use === "whole" ? a.use : a?.found === true ? "screen" : "none");
+
+export type Placed = { bytes: Uint8Array; how: "screen" | "whole" };
+
 /**
- * Puts `picture` on the screen in `illustration`: Claude finds the screen, Postaja warps the picture in, Claude checks and
- * corrects the corners (at most twice). Null when Claude sees no screen to use (the caller then edits with the model).
+ * Puts `picture` into `illustration`: on the screen in it (Claude finds the screen on a grid, Postaja warps the picture
+ * in, Claude checks a close-up and corrects the corners at most twice), or as the whole picture when that is what the
+ * owner asks for or the picture already shows a device. Null when neither fits (the caller then edits with the model).
  */
-export async function placeOnScreen(db: Db, llm: LlmClient, ctx: Pick<OrgContext, "orgId">, who: Omit<Who, "orgId">, illustration: Uint8Array, picture: Uint8Array, request: string): Promise<Uint8Array | null> {
+export async function placeOnScreen(db: Db, llm: LlmClient, ctx: Pick<OrgContext, "orgId">, who: Omit<Who, "orgId">, illustration: Uint8Array, picture: Uint8Array, request: string): Promise<Placed | null> {
   const base = await view(illustration);
   const call = (user: string, images: { small: Uint8Array; caption: string }[]) => cappedCall(db, llm, { ...who, orgId: ctx.orgId, action: "assist" }, {
-    system: [{ text: "You place an owner's screenshot onto a screen that is already in a picture. You answer with exact pixel coordinates of the screen's display area in the image you are shown (origin top-left).", cache: true }],
+    system: [{ text: "You place an owner's picture (usually an app screenshot) into a picture that is already made. A red grid with numbers is drawn over the images so you can read exact pixel coordinates (origin top-left); the grid is not part of the picture.", cache: true }],
     user,
     images: images.map((i) => ({ ...toBlock(i.small), caption: i.caption })),
-    tool: { name: "screen_corners", description: "The four corners of the screen's display area.", inputSchema: quadSchema as unknown as Record<string, unknown> },
-    maxTokens: 400,
+    tool: { name: "screen_corners", description: "Where the owner's picture goes.", inputSchema: quadSchema as unknown as Record<string, unknown> },
+    maxTokens: 500,
   });
   const pic = new Uint8Array(await sharp(picture).resize(400, 400, { fit: "inside" }).jpeg({ quality: 80 }).toBuffer());
   const first = await call(
-    `The owner asked: "${request.slice(0, 600)}"\nThe first image (${Math.round(base.width * base.k)}×${Math.round(base.height * base.k)} px) is the picture; the second is the owner's screenshot. Is there a phone, tablet or computer screen in the picture where the screenshot belongs? If yes, give the four corners of its display area (inside the bezel, the glass only), top-left, top-right, bottom-right, bottom-left, in pixels of the first image.`,
-    [{ small: base.small, caption: "The picture:" }, { small: pic, caption: "The owner's screenshot:" }],
+    `The owner asked: "${request.slice(0, 600)}"\nThe first image (${base.sw}×${base.sh} px) is the current picture; the second is the owner's picture.\n` +
+      `Decide: "whole" when the owner wants his picture to fill or replace the picture (e.g. "over all of it", "replace the picture", "the whole image"), or when his picture already shows a phone, device or mockup itself — putting it on a screen would give a device inside a device. "screen" when a phone, tablet or computer screen in the picture should show his picture: then give the four corners of the screen's whole display area (inside the bezel, all of the glass, nothing of the old screen left out), top-left, top-right, bottom-right, bottom-left, read off the grid in pixels of the first image. "none" when neither fits.`,
+    [{ small: base.small, caption: "The current picture (with grid):" }, { small: pic, caption: "The owner's picture:" }],
   );
-  const a = first.input as { found?: boolean; corners?: unknown } | null;
-  let quad = a?.found ? toQuad(a.corners, base.k) : null;
+  const a = first.input as { use?: unknown; found?: unknown; corners?: unknown } | null;
+  const use = choiceOf(a);
+  if (use === "whole") return { bytes: await wholePicture(picture, base.width, base.height), how: "whole" };
+  let quad = use === "screen" ? toQuad(a?.corners, base.k) : null;
   if (!quad || !validQuad(quad, base.width, base.height)) return null;
   let result = await warpInto(illustration, picture, quad);
-  // Look at the result and correct the corners (twice at most).
+  // Look at the result (whole and close up) and correct the corners (twice at most).
   for (let round = 0; round < 2; round++) {
     const shown = await view(result);
     const check = await call(
-      `This is the picture after the screenshot was placed on the screen, at the corners you gave (${quad.map((p) => `${Math.round(p.x * base.k)},${Math.round(p.y * base.k)}`).join(" · ")}). Does it sit exactly on the display — nothing of the old screen visible around it, nothing over the phone's frame? If yes, ok=true. If not, ok=false and give corrected corners of the display area (same order, pixels of this image).`,
-      [{ small: shown.small, caption: "After placing:" }],
+      `This is the picture after the owner's picture was placed at the corners you gave (${quad.map((p) => `${Math.round(p.x * base.k)},${Math.round(p.y * base.k)}`).join(" · ")}); the second image is a close-up with the same grid numbers. Does it cover the screen's whole display exactly — no strip of the old screen visible above, below or beside it, nothing over the device's frame? If yes, use="screen" and ok=true. If not, use="screen", ok=false and corrected corners of the whole display area (same order, pixels of the first image, read off the grid).`,
+      [{ small: shown.small, caption: "After placing (with grid):" }, { small: await closeUp(shown, quad), caption: "Close-up of the screen (same grid numbers):" }],
     );
     const c = check.input as { ok?: boolean; corners?: unknown } | null;
     if (c?.ok !== false) break;
@@ -179,5 +248,5 @@ export async function placeOnScreen(db: Db, llm: LlmClient, ctx: Pick<OrgContext
     quad = next;
     result = await warpInto(illustration, picture, quad);
   }
-  return result;
+  return { bytes: result, how: "screen" };
 }
