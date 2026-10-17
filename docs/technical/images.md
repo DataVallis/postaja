@@ -36,7 +36,12 @@ clients; Postaja only renders what the design says.
    `image_style` model (Ideogram V3, $0.06/image); without examples the `image` model (FLUX1.1 pro, $0.04/MP). Prompt =
    subject + design illustration style + "no text". Reserved against the spend cap, settled per image.
 4. Postaja renders each slide (`design/render.ts`: Satori → sharp PNG) at the channel's preset size; rows in
-   `post_media` (`slide` PNGs, `background` = illustrations per slide position).
+   `post_media` (`slide` PNGs, `background` = illustrations per slide position). Size (`slideSize`): the channel's
+   own preset (Kanali → "Privzeti format") if it is an enabled image preset, else the platform default — Instagram
+   `ig_feed_portrait` 1080×1350, **Facebook `fb_feed_square` 1080×1080** (ADR-090), LinkedIn `li_feed_portrait`,
+   X `x_landscape`, TikTok `tiktok_photo`. Every PNG is measured before it is stored (`assertSize`); a size that is
+   not exactly the preset fails the run with `INVALID_OUTPUT` (ADR-020). Images made before a size change keep
+   their size until the owner asks for images again.
 5. *Shrani in osveži*: edited words (`setSlideTexts`) re-render on the stored illustrations — no Claude, no fal.
 6. *Popravi slike* (owner, 2026-10-07): a correction in words (≤ 1,000 chars, any member) → job mode `revise` with the
    instruction. Claude gets the current plan (`<current_images>`), the current images (JPEG 540 px) and the request,
