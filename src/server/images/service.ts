@@ -44,9 +44,12 @@ export class ImageJobError extends Error {
 
 export type ImageDeps = { llm: LlmClient; images: ImageClient | null; storage: Storage; now?: Date };
 
-/** Feed sizes when a channel has no image preset of its own (ADR-022 presets). */
-const PLATFORM_DEFAULT: Partial<Record<Platform, string>> = {
-  instagram: "ig_feed_portrait", facebook: "fb_feed_portrait", linkedin: "li_feed_portrait", x: "x_landscape", tiktok: "tiktok_photo", google_display: "gdn_responsive_square",
+/**
+ * Feed sizes when a channel has no image preset of its own (ADR-022 presets). Facebook organic posts are square
+ * (ADR-090): 4:5 is an ad-feed size and is cropped in page grids and some views; the plan's feed preview is square too.
+ */
+export const PLATFORM_DEFAULT: Partial<Record<Platform, string>> = {
+  instagram: "ig_feed_portrait", facebook: "fb_feed_square", linkedin: "li_feed_portrait", x: "x_landscape", tiktok: "tiktok_photo", google_display: "gdn_responsive_square",
 };
 
 export async function slideSize(db: Db, platform: Platform | null, presetKey: string | null): Promise<{ width: number; height: number; preset: string | null }> {
@@ -56,6 +59,12 @@ export async function slideSize(db: Db, platform: Platform | null, presetKey: st
     if (p) return { width: p.width, height: p.height, preset: p.key };
   }
   return { width: 1080, height: 1080, preset: null };
+}
+
+/** ADR-020: an image whose real pixel size is not exactly its preset's never reaches the post. */
+export async function assertSize(png: Uint8Array, size: { width: number; height: number }): Promise<void> {
+  const meta = await sharp(png).metadata();
+  if (meta.width !== size.width || meta.height !== size.height) throw new ImageJobError("INVALID_OUTPUT");
 }
 
 /** What the image model gets: Claude's subject, the design's illustration style, never letters (ADR-009). */
@@ -450,6 +459,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
     // TASK-045: a slide showing the persona says so in its metadata (IPTC digital source type).
     pngs.push(aiSlides.has(i) ? await markAiPng(png) : png);
   }
+  for (const png of pngs) await assertSize(png, size);
   for (const [i, png] of pngs.entries()) {
     const k = key(ctx.orgId, postId, "png");
     await deps.storage.put(k, png, "image/png");
