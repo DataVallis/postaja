@@ -1118,6 +1118,30 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(data[o + 2]).toBeLessThan(40);
   });
 
+  it("owner, 2026-10-20: Claude forgets to assign the picked reference — the picked image gets it anyway (onto the screen, no credits)", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    const shot = await uploadBrandFile(db, storage, A, brandA, "reference", { filename: "IMG_9349.PNG", bytes: await png(300, 600, "#ff0000") });
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "revise", "vstavi mi to izbrano referenčno sliko @IMG_9349.PNG v sliko telefona", { only: [0], refs: [`asset:${shot.id}`] });
+    // The plan comes back without references and with the same illustration (that used to keep the old picture).
+    const claude = fakeClaude({ plans: [{ slides: three }], screens: [
+      { use: "screen", corners: [{ x: 12, y: 12 }, { x: 62, y: 12 }, { x: 62, y: 112 }, { x: 12, y: 112 }] },
+      { use: "screen", ok: true },
+    ] });
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(fal.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paid0);
+    const bgAfter = await keys(id, "background");
+    expect(bgAfter[0]).not.toBe(bgBefore[0]);
+    expect(bgAfter[1]).toBe(bgBefore[1]);
+    const media = await sql`select model from post_media where post_id = ${id} and kind = 'background' and position = 0 and archived_at is null`;
+    expect(media[0].model).toBe("postaja/screen");
+  });
+
   it("an image made with another design version cannot come back without being planned again", async () => {
     const { id, q, jobs } = await carousel();
     jobs.length = 0;
