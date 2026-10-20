@@ -358,6 +358,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   const replan = mode === "new" || revising || !p.visual || p.visual.designId !== design.id || p.visual.slides.some((s) => !spec.templates.some((t) => t.id === s.templateId));
   let visual: PostVisual;
   let ownerRefs: ReferenceImage[] = [];
+  let scope: number[] | undefined;
   if (revising) {
     const previews: ImageBlock[] = [];
     for (const m of old.filter((x) => x.kind === "slide").sort((a, b) => a.position - b.position).slice(0, 10)) {
@@ -370,7 +371,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
     previews.push(...ownerRefs.map((r) => r.block));
     // TASK-054: only the picked images may change (positions outside the post are ignored — the plan may have changed).
     const only = pick.only?.filter((i) => i >= 0 && i < p.visual!.slides.length);
-    const scope = only?.length ? only : undefined;
+    scope = only?.length ? only : undefined;
     const planned = await planVisual(db, deps, ctx, p, spec, design.id, where, { current: p.visual!.slides, instruction: instruction!, previews, ...(scope ? { only: scope } : {}), ...(ownerRefs.length ? { references: ownerRefs.map((r) => ({ name: r.name })) } : {}) });
     visual = { ...planned, slides: mergePicked(p.visual!.slides, planned.slides, scope, !!pick.redraw), revision: instruction!.trim(), ...(scope ? { revisedSlides: scope } : {}) };
   } else {
@@ -389,7 +390,17 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
   // ADR-076: a correction may ask for a picture to be drawn again with the same description (made-up letters, a logo).
   const redraw = new Set(visual.slides.flatMap((s, i) => (s.redraw ? [i] : [])));
   // TASK-057: which images show which of the owner's reference pictures (0-based into ownerRefs); never stored.
-  const withRefs = new Map(visual.slides.flatMap((s, i) => (s.references?.length && ownerRefs.length ? [[i, s.references.map((r) => r - 1).filter((r) => r >= 0 && r < ownerRefs.length)] as const] : [])));
+  const withRefs = new Map(visual.slides.flatMap((s, i) => {
+    const refs = (s.references ?? []).map((r) => r - 1).filter((r) => r >= 0 && r < ownerRefs.length);
+    return refs.length ? [[i, refs] as const] : [];
+  }));
+  // Owner, 2026-10-20: he picked one image and a reference, Claude assigned it to none and the picture came back
+  // unchanged. References the owner gave always go somewhere: to the picked images (or the first with an illustration).
+  if (ownerRefs.length && !withRefs.size) {
+    const hasPicture = (i: number) => { const t = spec.templates.find((x) => x.id === visual.slides[i]?.templateId); return !!t && needsIllustration(t); };
+    const targets = (scope ?? visual.slides.map((_, i) => i)).filter(hasPicture);
+    for (const i of scope ? targets : targets.slice(0, 1)) withRefs.set(i, ownerRefs.map((_, r) => r));
+  }
   visual = { ...visual, slides: visual.slides.map((s) => { const c = { ...s }; delete c.redraw; delete c.references; return c; }) };
   const reuse = (i: number, slide: PostVisual["slides"][number]) =>
     !replan || (revising && !redraw.has(i) && !withRefs.has(i) && !!before[i] && before[i].illustration === slide.illustration && sameBox(before[i].templateId, slide.templateId));
