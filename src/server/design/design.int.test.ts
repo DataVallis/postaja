@@ -1142,6 +1142,26 @@ describe("TASK-054: correcting picked images and templates, bringing one back", 
     expect(media[0].model).toBe("postaja/screen");
   });
 
+  it("owner, 2026-10-25: images of the wrong size are rendered again at the channel's size — same pictures, no image model, no credits", async () => {
+    const { id, q, jobs } = await carousel();
+    const bgBefore = await keys(id, "background");
+    const before = await sql`select width, height from post_media where post_id = ${id} and kind = 'slide' and archived_at is null`;
+    expect(before[0]).toMatchObject({ width: 1080, height: 1350 });
+    await sql`update channels set default_preset_key = 'ig_feed_square' where id = ${igA}`;
+    jobs.length = 0;
+    await requestImages(db, q, A, id, "text");
+    const fal = fakeImages();
+    const paid0 = await ledgerRows();
+    await runImages(jobs, fakeClaude(), fal.client);
+    await sql`update channels set default_preset_key = null where id = ${igA}`;
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(fal.calls).toHaveLength(0);
+    expect(await ledgerRows()).toBe(paid0);
+    const after = await sql`select width, height from post_media where post_id = ${id} and kind = 'slide' and archived_at is null`;
+    expect(after.map((r) => `${r.width}x${r.height}`)).toEqual(["1080x1080", "1080x1080", "1080x1080"]);
+    expect(await keys(id, "background")).toEqual(bgBefore);
+  });
+
   it("an image made with another design version cannot come back without being planned again", async () => {
     const { id, q, jobs } = await carousel();
     jobs.length = 0;

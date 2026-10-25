@@ -1257,6 +1257,8 @@
     "empty": "This post has no images yet. Claude picks a brand template, writes the words and describes the illustration; Postaja draws the image.",
     "noKey": "The AI illustration key (fal.ai) is not set; templates with an illustration will not work.",
     "generate": "Make images",
+    "wrongSize": "The images are {have}; {where} needs {want}. They are fixed without redrawing and without credits.",
+    "fixSize": "Fix the size to {want}",
     "regenerate": "New images",
     "imageAlt": "Image {n}",
     "download": "Download {n}",
