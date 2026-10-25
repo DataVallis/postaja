@@ -372,6 +372,13 @@
       "when": 1791880264019,
       "tag": "0052_reel_video",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792921563893,
+      "tag": "0053_facebook_square_channels",
+      "breakpoints": true
     }
   ]
 }

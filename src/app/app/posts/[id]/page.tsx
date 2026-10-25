@@ -12,7 +12,7 @@ import type { PostStatus } from "@/server/db/schema";
 import { getPost, postCost, PostError, rulesFor } from "@/server/posts/generate";
 import { reschedulePostAction, retryPostAction, setPostStatusAction, setPublishedUrlAction, writePlannedPostAction } from "../actions";
 import { PostEditor } from "../editor";
-import { listImageVersions, listPostMedia } from "@/server/images/service";
+import { listImageVersions, listPostMedia, slideSize } from "@/server/images/service";
 import { referenceChoices } from "@/server/images/references";
 import { REEL_DURATIONS } from "@/server/video/reel-ai";
 import { reelEstimate } from "@/server/video/reel";
@@ -57,6 +57,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
   const ctx = post.channelId ? await rulesFor(db, org, post.brandId, post.channelId).catch(() => null) : null;
   const cost = await postCost(db, org, post.id);
   const media = await listPostMedia(db, org, post.id);
+  const wantSize = ctx ? await slideSize(db, ctx.channel.platform, ctx.channel.defaultPresetKey ?? null) : null;
   const [imageVersions, refChoices] = await Promise.all([listImageVersions(db, org, post.id), referenceChoices(db, org, post.brandId)]);
   const partnerLogos = await listPartnerLogos(db, org, post.brandId);
   const aiPerson = (await aiPersonPosts(db, org, [post.id])).has(post.id);
@@ -199,6 +200,7 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         status={post.mediaStatus}
         error={post.mediaError}
         media={media}
+        expectedSize={wantSize && ctx ? { width: wantSize.width, height: wantSize.height, label: ctx.channel.platform } : undefined}
         visual={post.visual}
         templates={templates}
         aiConfigured={!!process.env.FAL_KEY}

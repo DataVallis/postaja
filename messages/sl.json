@@ -1257,6 +1257,8 @@
     "empty": "Objava še nima slik. Claude izbere predlogo branda, napiše tekst in opis ilustracije, Postaja pa nariše sliko.",
     "noKey": "Ključ za AI ilustracije (fal.ai) ni nastavljen; predloge z ilustracijo ne bodo delovale.",
     "generate": "Ustvari slike",
+    "wrongSize": "Slike so {have}, za {where} morajo biti {want}. Postaja jih popravi brez novega risanja in brez kreditov.",
+    "fixSize": "Popravi velikost na {want}",
     "regenerate": "Nove slike",
     "imageAlt": "Slika {n}",
     "download": "Prenesi {n}",

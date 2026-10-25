@@ -23,6 +23,8 @@ export async function ImagesSection(props: {
   status: MediaStatus;
   error: string | null;
   media: Media[];
+  /** The size the post's channel needs (ADR-092); images of another size get a free re-render. */
+  expectedSize?: { width: number; height: number; label: string };
   visual: PostVisual | null;
   templates: TemplateInfo[] | null;
   aiConfigured: boolean;
@@ -79,6 +81,20 @@ export async function ImagesSection(props: {
       {props.requestError ? <p role="alert" className="text-sm text-danger">{t(`errors.${props.requestError}`)}</p> : null}
       {props.templates && !props.aiConfigured ? <p className="text-sm text-muted">{t("noKey")}</p> : null}
       {working ? <p className="text-sm text-muted" aria-live="polite">{t("working")}</p> : null}
+
+      {(() => {
+        const want = props.expectedSize;
+        const off = want ? props.media.filter((m) => m.width !== want.width || m.height !== want.height) : [];
+        if (!want || !off.length || working) return null;
+        return (
+          <form action={requestImagesAction} className="grid gap-2 rounded-lg border border-danger/50 p-3 text-sm" data-testid="images-wrong-size">
+            <input type="hidden" name="postId" value={props.postId} />
+            <input type="hidden" name="mode" value="text" />
+            <p role="alert">{t("wrongSize", { have: `${off[0].width}×${off[0].height}`, want: `${want.width}×${want.height}`, where: want.label })}</p>
+            <div><button type="submit" className={buttonClass("primary", "sm")} data-testid="images-fix-size">{t("fixSize", { want: `${want.width}×${want.height}` })}</button></div>
+          </form>
+        );
+      })()}
 
       {props.media.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="image-list">
