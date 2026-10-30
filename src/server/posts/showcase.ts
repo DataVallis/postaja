@@ -16,22 +16,32 @@ export const HOURLY_EUR = 40;
 
 export type MonthValue = { posts: number; images: number; brands: number; minutes: number; valueEur: number };
 
-/** This month's work by Postaja: posts written (first attempts), illustrations drawn, and the time and value saved. */
+/**
+ * This month's work by Postaja (owner, 2026-10-30: "6 posts, 117 graphics?" — AI calls were counted, not work): the posts
+ * Postaja prepared this month (text written or images made this month) and the graphics those posts have now (current
+ * images made this month — redrawn tries and replaced versions are not work kept), with the time and value saved.
+ */
 export async function monthValue(db: Db, ctx: OrgContext, now = new Date()): Promise<MonthValue> {
-  const rows = await db
-    .select({ action: usageLedger.action, n: sql<number>`count(*)::int` })
+  const from = monthStart(now);
+  const written = db
+    .selectDistinct({ postId: sql<string>`${usageLedger.postId}`.as("post_id") })
     .from(usageLedger)
-    .where(and(eq(usageLedger.orgId, ctx.orgId), eq(usageLedger.state, "settled"), gte(usageLedger.createdAt, monthStart(now)), inArray(usageLedger.action, ["text", "illustration"])))
-    .groupBy(usageLedger.action);
-  const [{ brandCount }] = await db
-    .select({ brandCount: sql<number>`count(distinct ${usageLedger.brandId})::int` })
-    .from(usageLedger)
-    .where(and(eq(usageLedger.orgId, ctx.orgId), eq(usageLedger.state, "settled"), gte(usageLedger.createdAt, monthStart(now)), inArray(usageLedger.action, ["text", "illustration"])));
-  const n = (a: string) => rows.find((r) => r.action === a)?.n ?? 0;
-  const postsN = n("text");
-  const images = n("illustration");
+    .where(and(eq(usageLedger.orgId, ctx.orgId), eq(usageLedger.state, "settled"), eq(usageLedger.action, "text"), gte(usageLedger.createdAt, from), sql`${usageLedger.postId} is not null`));
+  const [textRows, imageRows] = await Promise.all([
+    written,
+    db.select({ postId: postMedia.postId, n: sql<number>`count(*)::int` }).from(postMedia)
+      .where(and(eq(postMedia.orgId, ctx.orgId), eq(postMedia.kind, "slide"), isNull(postMedia.archivedAt), gte(postMedia.createdAt, from)))
+      .groupBy(postMedia.postId),
+  ]);
+  const ids = [...new Set([...textRows.map((r) => r.postId), ...imageRows.map((r) => r.postId)])];
+  const live = ids.length
+    ? await db.select({ id: posts.id, brandId: posts.brandId }).from(posts).where(and(eq(posts.orgId, ctx.orgId), inArray(posts.id, ids), sql`${posts.status} <> 'skipped'`))
+    : [];
+  const keep = new Set(live.map((p) => p.id));
+  const postsN = keep.size;
+  const images = imageRows.filter((r) => keep.has(r.postId)).reduce((n, r) => n + r.n, 0);
   const minutes = postsN * MINUTES_SAVED.text + images * MINUTES_SAVED.image;
-  return { posts: postsN, images, brands: brandCount, minutes, valueEur: Math.round((minutes / 60) * HOURLY_EUR) };
+  return { posts: postsN, images, brands: new Set(live.map((p) => p.brandId)).size, minutes, valueEur: Math.round((minutes / 60) * HOURLY_EUR) };
 }
 
 /** The first image of each post (slide 1 of its current version), by post id. Posts without images are left out. */

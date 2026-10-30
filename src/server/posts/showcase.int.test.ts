@@ -47,25 +47,32 @@ async function post(ctx: OrgContext, brandId: string, channelId: string, day: st
   await forOrg(db, ctx).insert(posts, { id, brandId, channelId, profileVersionId: brand.currentProfileVersionId!, brief: "x", status, format: "image", scheduledOn: day, createdBy: ctx.userId });
   return id;
 }
-const ledger = (orgId: string, brandId: string | null, action: string, at = NOW, state: "settled" | "reserved" = "settled") =>
-  db.insert(usageLedger).values({ id: crypto.randomUUID(), orgId, brandId, provider: "anthropic", model: "m", state, costMicroUsd: 1n, action, createdAt: at });
 const media = (orgId: string, postId: string, position: number, archived = false) =>
   db.insert(postMedia).values({ id: crypto.randomUUID(), orgId, postId, kind: "slide", position, storageKey: `k/${crypto.randomUUID()}`, contentType: "image/png", width: 10, height: 10, sizeBytes: 1, archivedAt: archived ? NOW : null }).returning({ id: postMedia.id });
 
 describe("the month's value", () => {
-  it("counts settled first-attempt texts and illustrations of this month, this org only; time and value are estimates", async () => {
-    await ledger(A.orgId, aib, "text");
-    await ledger(A.orgId, aib, "text");
-    await ledger(A.orgId, dt, "text");
-    await ledger(A.orgId, aib, "illustration");
-    await ledger(A.orgId, aib, "assist"); // retries and checks are not work done
-    await ledger(A.orgId, aib, "text", NOW, "reserved"); // still running
-    await ledger(A.orgId, aib, "text", new Date("2026-09-30T10:00:00Z")); // last month
-    await ledger(B.orgId, brandB, "text");
+  it("owner, 2026-10-30: posts prepared this month and the graphics they have now — not AI calls; this org only", async () => {
+    const p1 = await post(A, aib, igA, TODAY);
+    const p2 = await post(A, dt, igA, TODAY);
+    const p3 = await post(A, aib, igA, TODAY); // images only (imported text)
+    const skipped = await post(A, aib, igA, TODAY, "skipped");
+    const at = (postId: string | null, action = "text", when = NOW, state: "settled" | "reserved" = "settled") =>
+      db.insert(usageLedger).values({ id: crypto.randomUUID(), orgId: A.orgId, brandId: aib, postId, provider: "anthropic", model: "m", state, costMicroUsd: 1n, action, createdAt: when });
+    await at(p1); await at(p1); // written twice: one post
+    await at(p2);
+    await at(p1, "illustration"); await at(p1, "illustration"); await at(p1, "illustration"); // three tries: only kept images count
+    await at(p1, "text", NOW, "reserved");
+    await at(null); // a call without a post
+    await at(skipped);
+    await media(A.orgId, p1, 0); await media(A.orgId, p1, 1);
+    await media(A.orgId, p1, 0, true); await media(A.orgId, p1, 1, true); // replaced versions
+    await media(A.orgId, p3, 0);
+    await media(A.orgId, skipped, 0);
+    await sql`update post_media set created_at = '2026-09-30T10:00:00Z' where post_id = ${p2}`;
     const v = await monthValue(db, A, NOW);
-    const minutes = 3 * MINUTES_SAVED.text + 1 * MINUTES_SAVED.image;
-    expect(v).toEqual({ posts: 3, images: 1, brands: 2, minutes, valueEur: Math.round((minutes / 60) * HOURLY_EUR) });
-    expect(await monthValue(db, B, NOW)).toMatchObject({ posts: 1, images: 0, brands: 1 });
+    const minutes = 3 * MINUTES_SAVED.text + 3 * MINUTES_SAVED.image;
+    expect(v).toEqual({ posts: 3, images: 3, brands: 2, minutes, valueEur: Math.round((minutes / 60) * HOURLY_EUR) });
+    expect(await monthValue(db, B, NOW)).toMatchObject({ posts: 0, images: 0, brands: 0 });
   });
 });
 

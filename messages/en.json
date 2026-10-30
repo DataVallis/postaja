@@ -858,10 +858,10 @@
     "openFeed": "Open the month's plan",
     "value": {
       "title": "This month with Postaja",
-      "posts": "Posts written this month",
+      "posts": "Posts prepared this month",
       "brands": "for {n, plural, one {# brand} other {# brands}}",
       "images": "Graphics this month",
-      "imagesHint": "each in its brand's look",
+      "imagesHint": "the posts' current images, no discarded tries",
       "saved": "Time saved",
       "savedHint": "estimate: {text} min per post, {image} min per graphic",
       "worth": "Value of the work",
