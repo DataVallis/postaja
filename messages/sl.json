@@ -858,10 +858,10 @@
     "openFeed": "Odpri plan meseca",
     "value": {
       "title": "Ta mesec s Postajo",
-      "posts": "Objav napisanih ta mesec",
+      "posts": "Objav pripravljenih ta mesec",
       "brands": "{n, plural, one {za # brand} two {za # branda} few {za # brande} other {za # brandov}}",
       "images": "Grafik ta mesec",
-      "imagesHint": "vsaka v podobi svojega branda",
+      "imagesHint": "trenutne slike objav, brez zavrženih poskusov",
       "saved": "Prihranjenega časa",
       "savedHint": "ocena: {text} min na objavo, {image} min na grafiko",
       "worth": "Vrednost dela",
