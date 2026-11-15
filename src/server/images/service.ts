@@ -68,14 +68,15 @@ export async function assertSize(png: Uint8Array, size: { width: number; height:
 }
 
 /**
- * Where the text of a full-bleed illustration template sits, as a composition instruction for the image model
- * (TASK-062: a cover's subtitle stood on top of the drawn objects). Only the main text (headline, subhead, body, number,
- * cta) counts; small labels and footers do not. Null when the template has no full-bleed picture or the text is spread
- * so that no side stays free.
+ * Where the text over a picture sits — a full-bleed background, or an illustration element that main text is drawn over —
+ * as a composition instruction for the image model (TASK-062: a cover's subtitle stood on top of the drawn objects).
+ * Only the main text (headline, subhead, body, number, cta) counts; small labels and footers do not. Null when no main
+ * text is over the picture or it is spread so that no side stays free.
  */
 export function compositionHint(t: Template): string | null {
-  if (t.background.type !== "illustration") return null;
-  const band = textBand(t);
+  const index = t.elements.findIndex((e) => e.type === "image" && e.source === "illustration");
+  if (t.background.type !== "illustration" && index < 0) return null;
+  const band = t.background.type === "illustration" ? textBand(t) : textBand(t, t.elements[index], index + 1);
   if (!band || band.side === "all") return null;
   const pct = (n: number) => `${Math.round(Math.min(100, Math.max(0, n)))}%`;
   const plain = "of the picture carries text later, so keep it plain, calm background with no objects;";

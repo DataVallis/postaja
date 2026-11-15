@@ -27,4 +27,11 @@ describe("composition hint for full-bleed pictures", () => {
     expect(compositionHint({ ...full([text("headline", 5, 5, 90, 20)]), background: { type: "color", color: "background", angle: 180 } })).toBeNull();
     expect(illustrationPrompt("A desk", spec)).not.toContain("Composition");
   });
+
+  it("an illustration element with the headline over it gets the hint in % of its own box", () => {
+    const pic = { type: "image" as const, source: "illustration" as const, x: 0, y: 20, w: 100, h: 70, fit: "cover" as const, radius: 0, opacity: 1 };
+    const t: Template = { ...spec.templates[0], background: { type: "color", color: "background", angle: 180 }, elements: [pic, text("headline", 5, 30, 90, 20)] };
+    expect(compositionHint(t)).toBe("Composition: the top 47% of the picture carries text later, so keep it plain, calm background with no objects; place the subject only in the bottom 53%.");
+    expect(compositionHint({ ...t, elements: [pic, text("headline", 5, 2, 90, 15)] })).toBeNull(); // text above the picture
+  });
 });

@@ -46,3 +46,9 @@ the normal gap; `compositionHint` uses `textBand`.
 ## Deliberate breaks
 - Scrim not drawn → `a bright picture under the headline is darkened …` failed (`expected false to be true`); restored → 6 passed.
 - Old no-break space rendering → `words kept together are spaced like any other words` failed (`expected 14 to be less than or equal to 4`); restored → passed.
+
+# TASK-062 feedback — part 3 (ADR-098)
+- `textBand(t, box, from)`, `textScrim(…, picture)`; the fade inside an illustration element that text is drawn over;
+  composition hint relative to that element.
+- `pnpm test` — 271 passed; `pnpm test:int src/server/design src/server/ads src/server/video src/server/images` — 61 passed.
+- Deliberate break: no fade on elements → `an illustration element that text is drawn over …` failed (`expected false to be true`); restored → 7 passed.

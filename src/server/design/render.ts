@@ -188,11 +188,24 @@ export function colourUnder(spec: DesignSpec, t: Template, box: { x: number; y: 
  * Where a template's main text sits (headline, subhead, body, number, cta; labels and footers do not count), as the side
  * of the canvas it occupies and how far it reaches in % — or "all" when no side stays free (TASK-062).
  */
-export function textBand(t: Template): { side: "top" | "bottom" | "left" | "right"; edge: number } | { side: "all" } | null {
-  const main = t.elements.filter((e) => e.type === "text" && ["headline", "subhead", "body", "number", "cta"].includes(e.slot));
-  if (!main.length) return null;
-  const top = Math.min(...main.map((e) => e.y)), bottom = Math.max(...main.map((e) => e.y + e.h));
-  const left = Math.min(...main.map((e) => e.x)), right = Math.max(...main.map((e) => e.x + e.w));
+export type Box = { x: number; y: number; w: number; h: number };
+const FULL: Box = { x: 0, y: 0, w: 100, h: 100 };
+
+/**
+ * `box` = where the picture is (the whole canvas for a full-bleed background, else the illustration element's box);
+ * only main text drawn after `from` that overlaps it counts, measured in % of the box.
+ */
+export function textBand(t: Template, box: Box = FULL, from = 0): { side: "top" | "bottom" | "left" | "right"; edge: number } | { side: "all" } | null {
+  const rel = t.elements.slice(from)
+    .filter((e) => e.type === "text" && ["headline", "subhead", "body", "number", "cta"].includes(e.slot))
+    .filter((e) => e.x < box.x + box.w && e.x + e.w > box.x && e.y < box.y + box.h && e.y + e.h > box.y)
+    .map((e) => ({
+      x: (Math.max(e.x, box.x) - box.x) / box.w * 100, y: (Math.max(e.y, box.y) - box.y) / box.h * 100,
+      r: (Math.min(e.x + e.w, box.x + box.w) - box.x) / box.w * 100, b: (Math.min(e.y + e.h, box.y + box.h) - box.y) / box.h * 100,
+    }));
+  if (!rel.length) return null;
+  const top = Math.min(...rel.map((e) => e.y)), bottom = Math.max(...rel.map((e) => e.b));
+  const left = Math.min(...rel.map((e) => e.x)), right = Math.max(...rel.map((e) => e.r));
   if (bottom <= 72) return { side: "top", edge: bottom };
   if (top >= 28) return { side: "bottom", edge: top };
   if (right <= 66) return { side: "left", edge: right };
@@ -201,18 +214,19 @@ export function textBand(t: Template): { side: "top" | "bottom" | "left" | "righ
 }
 
 /**
- * Readability over a full-bleed picture (TASK-062): image models draw the subject where they like, also under the text,
- * whatever the prompt says. A template without its own strong overlay gets a soft fade in the brand's background colour
- * over the side where its main text sits (a light even veil when the text is everywhere).
+ * Readability over a picture (TASK-062): image models draw the subject where they like, also under the text, whatever the
+ * prompt says. A full-bleed picture without its own strong overlay, or an illustration element that main text is drawn
+ * over (`picture`), gets a soft fade in the brand's background colour on the side where that text sits (a light even
+ * veil when the text is everywhere).
  */
-export function textScrim(t: Template, bgHex: string): string | null {
-  if (t.background.type !== "illustration" || (t.background.overlay && t.background.overlay.opacity >= 0.5)) return null;
-  const band = textBand(t);
+export function textScrim(t: Template, bgHex: string, picture?: { box: Box; index: number }): string | null {
+  if (!picture && (t.background.type !== "illustration" || (t.background.overlay && t.background.overlay.opacity >= 0.5))) return null;
+  const band = picture ? textBand(t, picture.box, picture.index + 1) : textBand(t);
   if (!band) return null;
   if (band.side === "all") return `linear-gradient(0deg, ${rgba(bgHex, 0.55)}, ${rgba(bgHex, 0.55)})`;
   const deg = { top: 180, bottom: 0, left: 90, right: 270 }[band.side];
   const reach = band.side === "top" || band.side === "left" ? band.edge : 100 - band.edge;
-  const solid = Math.max(0, reach - 6), clear = Math.min(100, reach + 16);
+  const solid = Math.round(Math.max(0, reach - 6)), clear = Math.round(Math.min(100, reach + 16));
   return `linear-gradient(${deg}deg, ${rgba(bgHex, 0.9)} 0%, ${rgba(bgHex, 0.9)} ${solid}%, ${rgba(bgHex, 0)} ${clear}%)`;
 }
 
@@ -429,8 +443,16 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
         ? (input.logos?.length ? (await pickLogo(input.logos, colourUnder(s, t, e, index), (e.w * BW) / Math.max(1, e.h * BH))) ?? input.logo : input.logo)
         : picture;
       if (!src) continue;
-      node = el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
+      const img = el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
         { src: await fitted(src, w, h, e.source === "logo" ? "contain" : e.fit, e.source === "logo", input.cache), width: w, height: h });
+      const scrim = e.source === "illustration" ? textScrim(t, s.palette.background, { box: e, index }) : null;
+      // The picture and its fade move together in an animation: one box holding both.
+      node = scrim
+        ? el("div", { position: "absolute", left: x, top: y, width: w, height: h, display: "flex", opacity: e.opacity }, [
+          el("img", { position: "absolute", left: 0, top: 0, width: w, height: h, borderRadius: (e.radius / 100) * BW }, undefined, { src: (img.props as { src: string }).src, width: w, height: h }),
+          el("div", { position: "absolute", left: 0, top: 0, width: w, height: h, borderRadius: (e.radius / 100) * BW, backgroundImage: scrim }),
+        ])
+        : img;
     } else {
       const value = e.slot === "static" ? e.text ?? "" : input.slots[e.slot] ?? "";
       node = textNode(s, e, value, BW, BH, ox, oy, st?.words ?? 1, measure);
