@@ -14,6 +14,21 @@ Status: **Built** (TASK-036). Decision: ADR-073. Owner: prices from business pla
   Stripe price that takes over the lookup key, the old one is archived and running subscriptions keep it — ADR-080;
   audited), subscriptions, the latest webhook events.
 
+## Launch scope (ADR-094, TASK-059) — Built
+- **Only Solo is sold.** `ON_SALE = ["solo"]`, `PILOT_ON_SALE = false` in `catalog.ts`. *Paket in plačilo* lists the
+  plans on sale only; `checkoutUrl` refuses any other plan and the pilot with `NOT_ON_SALE` before Stripe is called.
+  Studio, Agencija and the pilot stay in `PLAN_CATALOG` / `catalogPrices()` so webhooks of running subscriptions and
+  *Pripravi cenik v Stripe* keep working. To sell a plan again: add it to `ON_SALE`.
+- **Hidden features.** `HIDDEN_FEATURES = ["ads", "research"]` are removed from every listed plan in `planFeatures`.
+  `featureOffer(feature)` says how a feature can be bought (a plan on sale, the persona add-on, or `null`);
+  `featureVisible(feature, has)` = owned or offered. Pages use it: brand tabs (`TAB_FEATURE`), the setup wizard's
+  summary, the guide (`CHAPTER_FEATURE`, `visibleChapters`, also the PDF), `UpgradeCard` (renders nothing without an
+  offer). A hidden tab's address (`?tab=ads`) shows the posts.
+- **Switch per organization.** `org_settings.extra_features text[]` (migration 0054) is added to the plan's features in
+  `orgFeatures`. /admin → organization → *Skrite funkcije*; `updateOrgSettings` accepts only hidden features, stores
+  them sorted and unique, audits `extraFeatures`. Plans managed by hand (comped, partner, starter, pro) keep all four.
+- Solo and trial include `animation` (animations and the reel).
+
 ## How
 - `src/server/billing/catalog.ts`: plans, limits, pilot, packs, lookup keys (`postaja_<plan>_<month|year>`,
   `postaja_pilot`, `postaja_credits_<n>`), `planFromLookupKey`.

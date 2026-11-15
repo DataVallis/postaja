@@ -36,3 +36,6 @@ E2E `tests/e2e/brands.spec.ts`: owner creates brand, saves CGP (v2), invalid pil
 - Channel add, file delete and design request revalidate the brand layout; `requestDesignAction` honours `returnTo` only for the same brand's wizard.
 - Brand page: "Nastavitev" button and a readiness notice (`setup-notice`) while the score is below 100 %.
 - Tests: `readiness.int.test.ts`; E2E `brands.spec.ts` goes through the wizard; other specs skip it ("Preskoči na brand").
+
+## Tabs by feature (ADR-094) — Built
+`TAB_FEATURE` in `src/app/app/brands/[id]/page.tsx`: Oglasi, Persona and Konkurenca are shown only when `featureVisible` (owned or can be bought). A hidden tab's address falls back to Objave. The setup wizard's summary links follow the same rule.

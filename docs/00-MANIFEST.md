@@ -14,6 +14,10 @@ Posts never repeat (embedding similarity). Multi-tenant SaaS with a super-admin 
 Data Vallis is the first tenant on plan `comped`. Built first for the owner, later sold, and shown on
 aibuilders.si as a "what you can build with vibe coding" case.
 
+**Launch scope (ADR-094, 2026-11-15):** Postaja is sold first as a simple program for making posts. Ad sets and
+competitor research are hidden for customers (a super admin can switch them on per organization), only the Solo plan
+is on sale, and buyers are business users. See `LAUNCH-PLAN.md`.
+
 ## 2. Roles
 | Role | Who |
 |---|---|

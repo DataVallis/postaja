@@ -42,18 +42,22 @@ test("help: the user guide from the menu, a chapter, its sections and the next c
   await p.getByRole("navigation", { name: "Glavna navigacija" }).getByRole("link", { name: "Navodila za uporabo" }).click();
   await expect(p.getByRole("heading", { name: "Navodila za uporabo", level: 1 })).toBeVisible();
   const chapters = p.getByTestId("help-chapters").getByRole("listitem").filter({ has: p.getByRole("heading", { level: 2 }) });
-  await expect(chapters).toHaveCount(10);
+  // Launch scope (ADR-094): no chapters about hidden tools (ad sets, competitor research).
+  await expect(chapters).toHaveCount(8);
+  await expect(p.getByRole("link", { name: /Oglasi/ })).toHaveCount(0);
+  await expect(p.getByRole("link", { name: /Konkurenca/ })).toHaveCount(0);
+  expect((await p.request.get("/app/help/oglasi")).status()).toBe(404);
   expect(await serious(p)).toEqual([]);
 
-  await p.getByRole("link", { name: "7. Persona (AI influencer)" }).click();
-  await expect(p.getByRole("heading", { name: "7. Persona (AI influencer)", level: 1 })).toBeVisible();
+  await p.getByRole("link", { name: "6. Persona (AI influencer)" }).click();
+  await expect(p.getByRole("heading", { name: "6. Persona (AI influencer)", level: 1 })).toBeVisible();
   await expect(p.getByTestId("help-chapter").getByRole("heading", { name: "Video s persono", level: 2 })).toBeVisible();
   await p.getByRole("navigation", { name: "Na tej strani" }).getByRole("link", { name: "Potne slike" }).click();
   await expect(p).toHaveURL(/#potne-slike$/);
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("help-chapter.png"), fullPage: true });
   await p.getByRole("link", { name: /Naslednje: Povezava s Claude/ }).click();
-  await expect(p.getByRole("heading", { name: "8. Povezava s Claude", level: 1 })).toBeVisible();
+  await expect(p.getByRole("heading", { name: "7. Povezava s Claude", level: 1 })).toBeVisible();
 
   // The whole guide as a PDF (TASK-044).
   await p.goto("/app/help");
@@ -64,7 +68,8 @@ test("help: the user guide from the menu, a chapter, its sections and the next c
   await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", domain: new URL(p.url()).hostname, path: "/" }]);
   await p.goto("/app/help");
   await expect(p.getByRole("link", { name: "1. Getting started" })).toBeVisible();
-  await expect(p.getByRole("link", { name: "10. Competitors" })).toBeVisible();
+  await expect(p.getByRole("link", { name: /Competitors/ })).toHaveCount(0);
+  await expect(p.getByRole("link", { name: /^8\. / })).toBeVisible();
   const [pdfEn] = await Promise.all([p.waitForEvent("download"), p.getByTestId("help-pdf").click()]);
   expect(pdfEn.suggestedFilename()).toBe("postaja-user-guide.pdf");
   expect(await serious(p)).toEqual([]);

@@ -43,7 +43,7 @@ export function CreateOrgForm() {
   );
 }
 
-export function SettingsForm(props: { orgId: string; plan: string; status: string; capUsd: string; limits?: { brands?: number; members?: number; generationsPerMonth?: number; creditsPerMonth?: number } }) {
+export function SettingsForm(props: { orgId: string; plan: string; status: string; capUsd: string; extraFeatures?: string[]; hiddenFeatures: readonly string[]; limits?: { brands?: number; members?: number; generationsPerMonth?: number; creditsPerMonth?: number } }) {
   const t = useTranslations("Admin");
   const [state, action, pending] = useActionState(updateSettingsAction, undefined);
   return (
@@ -68,6 +68,16 @@ export function SettingsForm(props: { orgId: string; plan: string; status: strin
         <Field id="limitMembers" label={t("limitMembers")}><input id="limitMembers" name="limitMembers" inputMode="numeric" defaultValue={props.limits?.members ?? ""} className={input} /></Field>
         <Field id="limitGenerations" label={t("limitGenerations")}><input id="limitGenerations" name="limitGenerations" inputMode="numeric" defaultValue={props.limits?.generationsPerMonth ?? ""} className={input} /></Field>
         <Field id="limitCredits" label={t("limitCredits")}><input id="limitCredits" name="limitCredits" inputMode="numeric" defaultValue={props.limits?.creditsPerMonth ?? ""} className={input} /></Field>
+      </fieldset>
+      <fieldset className="grid gap-2">
+        <legend className="mb-1 text-sm font-medium">{t("extraFeatures")}</legend>
+        <p className="text-xs text-muted">{t("extraFeaturesHint")}</p>
+        {props.hiddenFeatures.map((f) => (
+          <label key={f} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="extraFeatures" value={f} defaultChecked={props.extraFeatures?.includes(f)} />
+            {t(`extraFeature.${f}`)}
+          </label>
+        ))}
       </fieldset>
       <button type="submit" disabled={pending} className={button}>{t("save")}</button>
       <Feedback state={state} />

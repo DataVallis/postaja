@@ -1,7 +1,7 @@
-// Features per plan (TASK-053, ADR-083): Solo makes posts, images and carousels; Studio adds ad sets, animations and
-// competitor research; Agencija (or the persona add-on) adds the persona. Checked on the server where the work starts;
-// the pages show an upgrade offer instead of the tool. Organizations managed by hand (comped, partner, older plans)
-// keep everything.
+// Features per plan (TASK-053, ADR-083; launch scope ADR-094): Solo makes posts, images, carousels and animations; the
+// persona is an add-on; ad sets and competitor research are hidden unless a super admin switched them on for the
+// organization. Checked on the server where the work starts; the pages show an upgrade offer only for what can be
+// bought. Organizations managed by hand (comped, partner, older plans) keep everything.
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { orgBilling, orgSettings } from "../db/schema";
@@ -16,9 +16,9 @@ export class PlanFeatureError extends Error {
 }
 
 export async function orgFeatures(db: Db, orgId: string): Promise<Set<Feature>> {
-  const [r] = await db.select({ plan: orgSettings.plan, addons: orgBilling.addons }).from(orgSettings)
+  const [r] = await db.select({ plan: orgSettings.plan, addons: orgBilling.addons, extra: orgSettings.extraFeatures }).from(orgSettings)
     .leftJoin(orgBilling, eq(orgBilling.orgId, orgSettings.orgId)).where(eq(orgSettings.orgId, orgId));
-  return planFeatures(r?.plan ?? "trial", r?.addons ?? {});
+  return planFeatures(r?.plan ?? "trial", r?.addons ?? {}, r?.extra ?? []);
 }
 
 export async function hasFeature(db: Db, orgId: string, feature: Feature): Promise<boolean> {

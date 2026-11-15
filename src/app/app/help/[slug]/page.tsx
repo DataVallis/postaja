@@ -4,17 +4,19 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { buttonClass, PageHeader } from "@/components/ui";
 import { GuideBlocks } from "@/components/guide/guide-blocks";
 import { requireOrgPage } from "@/server/auth/require";
-import { guideChapters } from "@/server/guide/guide";
+import { orgFeatures } from "@/server/billing/features";
+import { getDb } from "@/server/db/client";
+import { guideChapters, visibleChapters } from "@/server/guide/guide";
 import { plain } from "@/server/guide/markdown";
 
 export const dynamic = "force-dynamic";
 
 /** One chapter of the user guide (TASK-026), with its sections and the previous/next chapter. */
 export default async function HelpChapterPage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireOrgPage();
+  const { org } = await requireOrgPage();
   const { slug } = await params;
   const t = await getTranslations("Help");
-  const chapters = await guideChapters(await getLocale());
+  const chapters = visibleChapters(await guideChapters(await getLocale()), await orgFeatures(getDb(), org.orgId));
   const i = chapters.findIndex((c) => c.slug === slug);
   if (i < 0) notFound();
   const c = chapters[i];

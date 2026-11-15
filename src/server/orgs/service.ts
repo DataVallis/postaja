@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Db } from "../db/client";
 import { auditLog, invitation, member, organization, orgSettings, PLANS, user } from "../db/schema";
 import { normalizeEmail } from "../auth/emails";
+import { HIDDEN_FEATURES } from "../billing/catalog";
 import type { Mailer } from "../email/mailer";
 import { invitationMail } from "../email/templates/invitation";
 import { INVITATION_TTL_MS } from "./invitations";
@@ -95,12 +96,12 @@ const limitsInput = z.object({
   creditsPerMonth: z.number().int().min(0).max(10_000_000).optional(),
 }).strict();
 
-/** Super admin only: change plan, status, spend cap or limits. */
+/** Super admin only: change plan, status, spend cap, limits or the hidden features switched on (ADR-094). */
 export async function updateOrgSettings(
   db: Db,
   actor: Actor,
   orgId: string,
-  patch: { plan?: (typeof PLANS)[number]; status?: "active" | "suspended"; spendCapMicroUsd?: bigint; limits?: OrgLimits },
+  patch: { plan?: (typeof PLANS)[number]; status?: "active" | "suspended"; spendCapMicroUsd?: bigint; limits?: OrgLimits; extraFeatures?: string[] },
 ) {
   requireSuperadmin(actor);
   const parsed = z
@@ -109,6 +110,8 @@ export async function updateOrgSettings(
       status: z.enum(["active", "suspended"]).optional(),
       spendCapMicroUsd: z.bigint().nonnegative().optional(),
       limits: limitsInput.optional(),
+      // ADR-094: only hidden features can be switched on by hand; sorted and unique so an unchanged save audits nothing new.
+      extraFeatures: z.array(z.enum(HIDDEN_FEATURES as [string, ...string[]])).transform((v) => [...new Set(v)].sort()).optional(),
     })
     .strict()
     .parse(patch);

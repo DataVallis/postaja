@@ -65,7 +65,7 @@ Rezultat je video MP4 (3–10 s). Vsak ustvarjen video **ostane na objavi**: nov
 
 ## Reel iz več prizorov
 
-Za objave, ki naj bodo video (reel, TikTok, Shorts), je razdelek **Reel iz več prizorov** (paket Studio in Agencija).
+Za objave, ki naj bodo video (reel, TikTok, Shorts), je razdelek **Reel iz več prizorov**.
 
 1. Izberi **dolžino** (8, 12 ali 15 s); na izbiri je največja cena.
 2. Po želji napiši **navodila** (npr. »1) večerja, otrok porine risbo čez mizo, 2) zaslon aplikacije @IMG_9208.jpg, 3) pes ob vratih«). Brez navodil Claude zgodbo sestavi iz plana in besedila objave.

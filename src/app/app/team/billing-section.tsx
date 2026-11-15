@@ -1,7 +1,7 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import { buttonClass, Card, inputClass } from "@/components/ui";
 import { billingBlock } from "@/server/billing/block";
-import { ADDONS, PAID_PLANS, PILOT, PLAN_CATALOG, PLAN_FEATURES, YEAR_MONTHS } from "@/server/billing/catalog";
+import { ADDONS, ON_SALE, PILOT, PILOT_ON_SALE, PLAN_CATALOG, planFeatures, YEAR_MONTHS } from "@/server/billing/catalog";
 import type { BillingRow } from "@/server/billing/service";
 import { checkoutAction, portalAction, setAddonsAction } from "./actions";
 
@@ -21,7 +21,7 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
     : block ? t("ended") : null;
   const yearly = billing?.interval === "year";
   const addonPrice = (a: keyof typeof ADDONS) => yearly ? t("perYear", { price: ADDONS[a].priceEur * YEAR_MONTHS }) : t("perMonth", { price: ADDONS[a].priceEur });
-  const canPilot = !billing || (billing.status === "none" && !billing.pilotEndsAt);
+  const canPilot = PILOT_ON_SALE && (!billing || (billing.status === "none" && !billing.pilotEndsAt));
   return (
     <section aria-labelledby="billing-h" className="mb-8 grid gap-3" data-testid="team-billing">
       <h2 id="billing-h" className="text-base font-semibold">{t("title")}</h2>
@@ -57,8 +57,8 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
       ) : null}
       {configured && isOwner && !live ? (
         <>
-          <div className="grid gap-3 md:grid-cols-3">
-            {PAID_PLANS.map((p) => {
+          <div className={`grid gap-3 ${ON_SALE.length > 1 ? "md:grid-cols-3" : "max-w-md"}`}>
+            {ON_SALE.map((p) => {
               const c = PLAN_CATALOG[p];
               return (
                 <Card key={p} className="grid content-start gap-3 p-4 text-sm" data-testid={`plan-${p}`}>
@@ -68,7 +68,7 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
                   </div>
                   <ul className="grid gap-1 text-xs" aria-label={t("featuresLabel", { plan: c.name })}>
                     <li>{t("basics")}</li>
-                    {PLAN_FEATURES[p].map((feat) => <li key={feat}>{tu(`features.${feat}.title`)}</li>)}
+                    {[...planFeatures(p)].map((feat) => <li key={feat}>{tu(`features.${feat}.title`)}</li>)}
                   </ul>
                   <form action={checkoutAction} className="flex flex-wrap gap-2">
                     <input type="hidden" name="kind" value="plan" /><input type="hidden" name="plan" value={p} />

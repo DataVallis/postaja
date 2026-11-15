@@ -1,6 +1,6 @@
 # Začetek
 
-Postaja piše in pripravi objave za družbena omrežja za več brandov hkrati. Iz navodil branda (CGP), materialov in plana naredi besedila, slike, animacije, oglase in videe z AI influencerjem. Objave nato preneseš in objaviš sam.
+Postaja piše in pripravi objave za družbena omrežja za več brandov hkrati. Iz navodil branda (CGP), materialov in plana naredi besedila, slike, karusele, animacije in videe. Objave nato preneseš in objaviš sam.
 
 ## Prijava
 
@@ -16,14 +16,14 @@ Gesla ni. Prijaviš se, če te je skrbnik Postaje ali lastnik organizacije povab
 2. Vpiši ime podjetja ali agencije in e-pošto ter klikni **Pošlji povezavo za začetek**.
 3. Odpri povezavo iz e-pošte (velja 10 minut), preveri ime in klikni **Začni 7-dnevni preizkus**.
 
-Preizkus traja 7 dni in ne potrebuje kartice: 1 brand, 1 član, 50 kreditov ter oglasni seti, animacije in raziskava konkurence (kot paket Studio; persona ni vključena). Na vrhu strani vidiš, koliko dni preizkusa je še ostalo; dan ali dva pred koncem dobiš e-pošto. Ko se preizkus konča, se novo ustvarjanje ustavi, vse ustvarjeno pa ostane za ogled in prenos. Paket izbereš kadar koli v **Ekipa in paket**.
+Preizkus traja 7 dni in ne potrebuje kartice: 1 brand, 1 član in 50 kreditov, z vsem, kar ima paket Solo (persona ni vključena). Na vrhu strani vidiš, koliko dni preizkusa je še ostalo; dan ali dva pred koncem dobiš e-pošto. Ko se preizkus konča, se novo ustvarjanje ustavi, vse ustvarjeno pa ostane za ogled in prenos. Paket izbereš kadar koli v **Ekipa in paket**.
 
 ## Organizacija in vloge
 
 Vse delo poteka v **organizaciji**. Organizacijo in njen paket (omejitve in mesečni limit stroškov) nastavi skrbnik Postaje; člane povabi lastnik.
 
 - **Lastnik** ustvarja brande, ureja CGP, kanale, datoteke, vizualno podobo in persono ter vabi člane.
-- **Urednik** ustvarja in ureja objave, slike, animacije, oglase in videe. Nastavitve brandov lahko samo bere.
+- **Urednik** ustvarja in ureja objave, slike, animacije in videe. Nastavitve brandov lahko samo bere.
 
 ## Ekipa in paket
 
@@ -57,7 +57,7 @@ Po brezplačnem preizkusu je na vrhu **Prvi koraki**: dodaj brand, vpiši CGP, u
 
 ## Nič se ne izgubi
 
-Kar ustvariš (slike, videi, potne slike, besedila oglasov), ostane, dokler sam ne izbrišeš. Nova izdelava ali popravek doda novo verzijo, prejšnje pa so še vedno dostopne. Brisanje je vedno ločen korak s potrditvijo.
+Kar ustvariš (besedila, slike, videi, potne slike), ostane, dokler sam ne izbrišeš. Nova izdelava ali popravek doda novo verzijo, prejšnje pa so še vedno dostopne. Brisanje je vedno ločen korak s potrditvijo.
 
 ## Jezik in tema
 

@@ -23,6 +23,7 @@ import { latestReviews, listApprovalLinks } from "@/server/reviews/service";
 import { ApprovalSection } from "./approval-section";
 import { listDesigns } from "@/server/design/service";
 import { brandReadiness } from "@/server/brands/readiness";
+import { featureVisible, type Feature } from "@/server/billing/catalog";
 import { orgFeatures } from "@/server/billing/features";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { DesignSection } from "./design-section";
@@ -40,14 +41,18 @@ export const dynamic = "force-dynamic";
 
 const TABS = ["posts", "ads", "persona", "competitors", "files", "design", "profile", "channels", "versions"] as const;
 type Tab = (typeof TABS)[number];
+/** Tabs of tools behind a plan feature: shown only when the organization has the feature or can buy it (ADR-094). */
+const TAB_FEATURE: Partial<Record<Tab, Feature>> = { ads: "ads", persona: "persona", competitors: "research" };
 
 export default async function BrandPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; shape?: string; designError?: string; model?: string; ideaError?: string; adError?: string; personaError?: string; saved?: string; competitorError?: string; report?: string; ideaHint?: string }> }) {
   const { org } = await requireOrgPage();
   const { id } = await params;
   const sp = await searchParams;
   const raw = sp.tab;
-  const tab: Tab = (TABS as readonly string[]).includes(raw ?? "") ? (raw as Tab) : "posts";
   const db = getDb();
+  const features = await orgFeatures(db, org.orgId);
+  const shown = (k: Tab) => !TAB_FEATURE[k] || featureVisible(TAB_FEATURE[k], features);
+  const tab: Tab = (TABS as readonly string[]).includes(raw ?? "") && shown(raw as Tab) ? (raw as Tab) : "posts";
   const detail = await getBrandDetail(db, org, id).catch((e) => {
     if (e instanceof BrandError && e.code === "NOT_FOUND") notFound();
     throw e;
@@ -73,7 +78,6 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
   const f = await getFormatter();
   const isOwner = org.role === "owner";
   const ready = isOwner && !brand.archivedAt ? await brandReadiness(db, org, brand.id) : null;
-  const features = await orgFeatures(db, org.orgId);
   const rules = profile?.rules ?? { bannedWords: [], ctaPhrases: [], regexMust: [], regexMustNot: [] };
   const effective = await Promise.all(
     channels.map(async (c) => {
@@ -135,7 +139,7 @@ export default async function BrandPage({ params, searchParams }: { params: Prom
           { key: "profile", label: t("tabs.profile"), href: href("profile") },
           { key: "channels", label: t("tabs.channels"), href: href("channels"), count: channels.length },
           { key: "versions", label: t("tabs.versions"), href: href("versions"), count: versions.length },
-        ]}
+        ].filter((x) => shown(x.key as Tab))}
       />
 
       {tab === "posts" ? (

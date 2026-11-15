@@ -1,7 +1,8 @@
 // The user guide's chapters (TASK-026): every chapter has a title, and every in-guide link points to a chapter (and
 // section) that exists, so the guide never sends a customer to a dead page.
 import { describe, expect, it } from "vitest";
-import { guideChapter, guideChapters } from "./guide";
+import { planFeatures } from "../billing/catalog";
+import { guideChapter, guideChapters, visibleChapters } from "./guide";
 import type { Block, Inline } from "./markdown";
 
 const links = (blocks: Block[]): string[] => {
@@ -41,5 +42,20 @@ describe("user guide", () => {
     expect((await guideChapters("en")).length).toBeGreaterThan(0);
     expect(await guideChapter("sl", "../../package")).toBeNull();
     expect(await guideChapter("sl", "01-zacetek")).toBeNull();
+  });
+
+  it("launch scope (ADR-094): Solo sees no chapter about hidden tools and no link into one; hand-managed organizations see all", async () => {
+    for (const locale of ["sl", "en"]) {
+      const all = await guideChapters(locale);
+      const solo = visibleChapters(all, planFeatures("solo"));
+      expect(solo.map((c) => c.slug)).toEqual(["zacetek", "brand", "vizualna-podoba", "objave", "plan", "persona", "claude", "stroski"]);
+      const slugs = new Set(solo.map((c) => c.slug));
+      for (const c of solo) for (const href of links(c.blocks)) {
+        const m = /^\/app\/help\/([a-z0-9-]+)/.exec(href);
+        if (m) expect(slugs.has(m[1]), `${locale}/${c.slug} links to ${href}`).toBe(true);
+      }
+      expect(visibleChapters(all, planFeatures("comped"))).toHaveLength(all.length);
+      expect(visibleChapters(all, planFeatures("solo", {}, ["ads"])).map((c) => c.slug)).toContain("oglasi");
+    }
   });
 });

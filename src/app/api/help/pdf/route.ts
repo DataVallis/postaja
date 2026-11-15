@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { LOCALE_COOKIE, resolveLocale } from "@/i18n/config";
 import { orgContextForAction } from "@/server/auth/require";
+import { orgFeatures } from "@/server/billing/features";
+import { getDb } from "@/server/db/client";
 import { guidePdf } from "@/server/guide/pdf";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,7 @@ export async function GET() {
   const locale = resolveLocale((await cookies()).get(LOCALE_COOKIE)?.value);
   const t = await getTranslations({ locale, namespace: "Help" });
   const today = new Date().toISOString().slice(0, 10);
-  const pdf = await guidePdf(locale, { title: t("pdfTitle"), subtitle: t("pdfSubtitle", { date: today }), contents: t("pdfContents"), page: t("pdfPage") });
+  const pdf = await guidePdf(locale, { title: t("pdfTitle"), subtitle: t("pdfSubtitle", { date: today }), contents: t("pdfContents"), page: t("pdfPage") }, await orgFeatures(getDb(), ctx.orgId));
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

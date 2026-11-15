@@ -37,6 +37,10 @@ test("competitors: Claude suggests, the owner keeps, removes and adds their own"
   await page.getByLabel("E-pošta lastnika").fill(owner);
   await page.getByRole("button", { name: "Ustvari" }).click();
   await expect(page.getByRole("heading", { name: "Konkurenca E2E" })).toBeVisible();
+  // Hidden at launch (ADR-094): the super admin switches the tool on for this organization.
+  await page.getByLabel("Raziskava konkurence").check();
+  await page.getByRole("button", { name: "Shrani", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Shranjeno" })).toBeVisible();
 
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const p = await ctx.newPage();

@@ -1,6 +1,6 @@
 # Brand
 
-Brand je projekt v Postaji. Vsak brand ima svoj CGP, kanale, datoteke, vizualno podobo, objave, oglase in po želji persono. Brande vidiš v meniju **Brandi**.
+Brand je projekt v Postaji. Vsak brand ima svoj CGP, kanale, datoteke, vizualno podobo, objave in po želji persono. Brande vidiš v meniju **Brandi**.
 
 ## Nov brand
 

@@ -12,7 +12,7 @@ import { createOrganization } from "../orgs/service";
 import { createPersonaManual, postPersona } from "../personas/service";
 import type { OrgContext } from "../tenancy/context";
 import { createBrand } from "../brands/service";
-import { addonFromLookupKey, catalogPrices, lookupKey, planFeatures, planFor } from "./catalog";
+import { addonFromLookupKey, catalogPrices, featureOffer, featureVisible, lookupKey, planFeatures } from "./catalog";
 import { orgFeatures, PlanFeatureError, requireFeature } from "./features";
 import { handleStripeEvent, setAddons } from "./service";
 
@@ -54,14 +54,31 @@ function fakeStripe(items: Item[]) {
 }
 
 describe("plan features", () => {
-  it("Solo: none of the extras; Studio, trial and pilot: ads, animation, research; Agencija or the add-on: persona; hand-managed plans: all", () => {
-    expect([...planFeatures("solo")]).toEqual([]);
-    expect([...planFeatures("studio")].sort()).toEqual(["ads", "animation", "research"]);
-    expect([...planFeatures("trial")].sort()).toEqual(["ads", "animation", "research"]);
-    expect(planFeatures("agency").has("persona")).toBe(true);
-    expect([...planFeatures("solo", { persona: 1 })]).toEqual(["persona"]);
+  it("launch scope (ADR-094): Solo and trial have animations; ads and research are hidden in every sold plan; the add-on gives the persona; hand-managed plans: all", () => {
+    expect([...planFeatures("solo")]).toEqual(["animation"]);
+    expect([...planFeatures("trial")]).toEqual(["animation"]);
+    expect([...planFeatures("studio")]).toEqual(["animation"]);
+    expect([...planFeatures("pilot")]).toEqual(["animation"]);
+    expect([...planFeatures("agency")].sort()).toEqual(["animation", "persona"]);
+    expect([...planFeatures("solo", { persona: 1 })].sort()).toEqual(["animation", "persona"]);
     expect(planFeatures("comped").size).toBe(4);
-    expect([planFor("ads"), planFor("persona")]).toEqual(["studio", "agency"]);
+  });
+
+  it("a super admin's switch adds a hidden feature to one organization; unknown names are ignored", () => {
+    expect([...planFeatures("solo", {}, ["ads"])].sort()).toEqual(["ads", "animation"]);
+    expect([...planFeatures("solo", {}, ["research", "ads", "ads"])].sort()).toEqual(["ads", "animation", "research"]);
+    expect([...planFeatures("solo", {}, ["gold", ""])]).toEqual(["animation"]);
+  });
+
+  it("what is offered: nothing for hidden features, Solo for animations, the add-on for the persona; a tool shows only when owned or offered", () => {
+    expect(featureOffer("ads")).toBeNull();
+    expect(featureOffer("research")).toBeNull();
+    expect(featureOffer("animation")).toEqual({ plan: "solo", addon: false });
+    expect(featureOffer("persona")).toEqual({ plan: null, addon: true });
+    const solo = planFeatures("solo");
+    expect((["ads", "research", "animation", "persona"] as const).map((f) => featureVisible(f, solo))).toEqual([false, false, true, true]);
+    expect(featureVisible("ads", planFeatures("solo", {}, ["ads"]))).toBe(true);
+    expect(featureVisible("research", planFeatures("comped"))).toBe(true);
   });
 
   it("add-on prices by lookup key, yearly = 10 months", () => {
@@ -85,6 +102,16 @@ describe("plan features", () => {
     await expect(requireFeature(db, A, "persona")).resolves.toBeUndefined();
     await expect(requireFeature(db, A, "research")).rejects.toMatchObject({ feature: "research" });
   });
+
+  it("hidden features (ADR-094): refused on Solo and trial, allowed once a super admin switches them on for that organization only", async () => {
+    await db.update(orgSettings).set({ plan: "solo" }).where(eq(orgSettings.orgId, orgA));
+    await expect(requireFeature(db, A, "animation")).resolves.toBeUndefined();
+    await expect(requireFeature(db, A, "ads")).rejects.toMatchObject({ code: "PLAN_FEATURE", feature: "ads" });
+    await db.update(orgSettings).set({ extraFeatures: ["ads"] }).where(eq(orgSettings.orgId, orgA));
+    await expect(requireFeature(db, A, "ads")).resolves.toBeUndefined();
+    await expect(requireFeature(db, A, "research")).rejects.toMatchObject({ feature: "research" });
+    expect([...(await orgFeatures(db, orgA))].sort()).toEqual(["ads", "animation"]);
+  });
 });
 
 describe("add-ons", () => {
@@ -98,11 +125,11 @@ describe("add-ons", () => {
     const s = await settings();
     expect(s.plan).toBe("solo");
     expect(s.limits).toMatchObject({ brands: 2 + 3, members: 1 + 2 });
-    expect([...(await orgFeatures(db, orgA))]).toEqual(["persona"]);
+    expect([...(await orgFeatures(db, orgA))].sort()).toEqual(["animation", "persona"]);
     // Removing the add-ons lowers the limits again.
     await handleStripeEvent(db, event("customer.subscription.updated", subscription("active", [{ key: "postaja_solo_month" }])), NOW);
     expect((await settings()).limits).toMatchObject({ brands: 2, members: 1 });
-    expect((await orgFeatures(db, orgA)).size).toBe(0);
+    expect([...(await orgFeatures(db, orgA))]).toEqual(["animation"]);
   });
 
   it("owners change quantities on the live subscription: update, remove, add at the subscription's interval; prorated", async () => {

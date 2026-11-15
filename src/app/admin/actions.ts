@@ -52,6 +52,7 @@ export async function updateSettingsAction(_prev: ActionState, form: FormData): 
       plan: z.enum(PLANS).parse(form.get("plan")),
       status: z.enum(["active", "suspended"]).parse(form.get("status")),
       spendCapMicroUsd: usdToMicro(String(form.get("spendCapUsd") ?? "")),
+      extraFeatures: form.getAll("extraFeatures").map(String), // ADR-094: hidden features switched on for this organization
       // Empty = unlimited (TASK-028).
       limits: Object.fromEntries(([["brands", "limitBrands"], ["members", "limitMembers"], ["generationsPerMonth", "limitGenerations"], ["creditsPerMonth", "limitCredits"]] as const)
         .map(([k, f]) => [k, String(form.get(f) ?? "").trim()])

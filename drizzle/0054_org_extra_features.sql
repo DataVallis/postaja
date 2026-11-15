@@ -1,0 +1,1 @@
+ALTER TABLE "org_settings" ADD COLUMN "extra_features" text[] DEFAULT '{}'::text[] NOT NULL;
