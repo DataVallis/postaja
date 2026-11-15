@@ -33,3 +33,16 @@ None (`@pdf-lib/fontkit` was already used by the guide PDF).
 
 ## Open
 - Re-run the four failed pilot posts after deploy; then the full round.
+
+# TASK-062 feedback — part 2 (re-run fixes, ADR-097)
+
+## What I implemented
+`textBand` / `textScrim` (fade under the text on full-bleed pictures without an overlay); kept word groups drawn with
+the normal gap; `compositionHint` uses `textBand`.
+
+## Test results (this session)
+- `pnpm test` — 269 passed. `pnpm test:int src/server/design src/server/ads src/server/video src/server/images` — 61 passed.
+
+## Deliberate breaks
+- Scrim not drawn → `a bright picture under the headline is darkened …` failed (`expected false to be true`); restored → 6 passed.
+- Old no-break space rendering → `words kept together are spaced like any other words` failed (`expected 14 to be less than or equal to 4`); restored → passed.

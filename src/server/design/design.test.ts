@@ -69,6 +69,20 @@ describe("text", () => {
     expect(fitText([["x".repeat(200)]], 900, 100, o)).toBe(15);
   });
 
+  // TASK-062: a kept group ("A TOOL") is spaced like other words — a no-break space under wide letter spacing showed
+  // as a double gap in a tracked footer ("AI IS A  TOOL"). Letters with straight sides keep glyph shapes out of the measure.
+  it("words kept together are spaced like any other words", async () => {
+    const t = { ...card.templates[0], background: { type: "color" as const, color: "#000000", angle: 180 }, elements: [{ type: "text" as const, slot: "footer" as const, x: 5, y: 40, w: 90, h: 20, font: "body" as const, weight: 400 as const, maxSize: 6, minSize: 6, color: "#ffffff", align: "left" as const, valign: "top" as const, lineHeight: 1.1, letterSpacing: 0.2, uppercase: true, padding: 0, radius: 0, opacity: 1 }] };
+    const png = await renderTemplate(card, t, { width: 1000, height: 1000 }, { slots: { footer: "IA SI A IA" } });
+    const { data, info } = await sharp(png).extract({ left: 0, top: 400, width: 1000, height: 80 }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const ink = Array.from({ length: info.width }, (_, x) => { for (let y = 0; y < info.height; y++) if (data[y * info.width + x] > 100) return true; return false; });
+    const gaps: number[] = [];
+    let run = 0, started = false;
+    for (const v of ink) { if (v) { if (started && run) gaps.push(run); run = 0; started = true; } else if (started) run++; }
+    const words = gaps.sort((x, y) => y - x).slice(0, 3); // the three gaps between the four words
+    expect(words[0] - words[2]).toBeLessThanOrEqual(4); // before: 47 px next to "A" against 33–36 px
+  });
+
   // TASK-062 quality round: inzenirji.si's headline "Stranka ne čaka. Odide h konkurenci_" wrapped to five rows and ran
   // over the line below it: the design's minimum headline size (~10 % of the width) did not fit the box, and fitText
   // stopped at the minimum instead of going smaller.

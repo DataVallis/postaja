@@ -3,7 +3,7 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { cardDesign } from "../../../tests/fixtures/design";
-import { colourUnder, pickLogo, renderTemplate } from "./render";
+import { colourUnder, pickLogo, renderTemplate, textScrim } from "./render";
 import { designSpecSchema, type Template } from "./spec";
 
 /** A logo: a coloured wordmark-like bar on transparency, `w`×`h` visible inside `pad` px of empty border. */
@@ -58,5 +58,30 @@ describe("logo choice", () => {
     const old = await renderTemplate(spec, t, { width: 1000, height: 1000 }, { slots: {}, logo: navy });
     const [r2, g2, b2] = (await sharp(old).extract({ left: 400, top: 150, width: 1, height: 1 }).raw().toBuffer());
     expect(r2 + g2 + b2).toBeLessThan(200); // only `logo`: the first upload, as before
+  });
+});
+
+// TASK-062: the image model ignored "keep the top plain" and drew the subject under the headline (aibuilders.si X).
+// A full-bleed picture without a strong overlay gets a fade in the background colour under the side with the text.
+describe("readability over full-bleed pictures", () => {
+  const spec = designSpecSchema.parse(cardDesign);
+  const text = { type: "text" as const, slot: "headline" as const, x: 5, y: 10, w: 90, h: 40, font: "heading" as const, weight: 700 as const, maxSize: 8, minSize: 3, color: "text", align: "left" as const, valign: "top" as const, lineHeight: 1.1, letterSpacing: 0, uppercase: false, padding: 0, radius: 0, opacity: 1 };
+  const full: Template = { ...spec.templates[0], background: { type: "illustration", color: "background", angle: 180 }, elements: [text] };
+
+  it("the fade covers the text's side; none with a strong overlay, none on colour backgrounds", () => {
+    expect(textScrim(full, "#0a0f2a")).toBe("linear-gradient(180deg, rgba(10,15,42,0.9) 0%, rgba(10,15,42,0.9) 44%, rgba(10,15,42,0) 66%)");
+    expect(textScrim({ ...full, elements: [{ ...text, y: 60, h: 30 }] }, "#000000")).toMatch(/^linear-gradient\(0deg,/);
+    expect(textScrim({ ...full, elements: [{ ...text, y: 5, h: 90 }] }, "#000000")).toBe("linear-gradient(0deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55))");
+    expect(textScrim({ ...full, background: { ...full.background, overlay: { color: "#000000", opacity: 0.6, fade: "none" } } }, "#000000")).toBeNull();
+    expect(textScrim({ ...full, background: { type: "color", color: "#000000", angle: 180 } }, "#000000")).toBeNull();
+  });
+
+  it("a bright picture under the headline is darkened where the text is and left alone below", async () => {
+    const picture = new Uint8Array(await sharp({ create: { width: 800, height: 800, channels: 3, background: "#ffffff" } }).jpeg().toBuffer());
+    const t: Template = { ...full, elements: [{ ...text, maxSize: 1, minSize: 1 }] }; // tiny text: the pixels show the picture
+    const png = await renderTemplate({ ...spec, palette: { ...spec.palette, background: "#000000" } }, t, { width: 1000, height: 1000 }, { slots: { headline: "." }, illustration: picture });
+    const at = async (y: number) => [...(await sharp(png).extract({ left: 900, top: y, width: 1, height: 1 }).raw().toBuffer()).subarray(0, 3)];
+    expect((await at(300)).every((v) => v < 40)).toBe(true); // under the text: dark
+    expect((await at(900)).every((v) => v > 230)).toBe(true); // below the fade: the picture as drawn
   });
 });
