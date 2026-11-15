@@ -45,6 +45,10 @@ full-bleed pictures; D4 every illustration checked at a readable size, checked a
 → ADR-097: a fade under the text on full-bleed pictures (the model does not reliably follow the composition hint) and
 kept words drawn with the normal gap. Images after the re-run: 6/8 usable, the two remaining defects fixed in ADR-097.
 
+Second check after ADR-097 (aibuilders.si X, "Nove slike"): the subtitle still stood on the picture — this template
+places the picture as an element over most of the slide, not as the background. → ADR-098: the fade and the hint follow
+any illustration that main text is drawn over.
+
 Open design note (not a renderer bug): aibuilders.si's closing slide draws the button text with its own blue fill on an
 orange button shape — a design-version choice; a revision in words fixes it ("Vizualna podoba → Popravi").
 
