@@ -23,6 +23,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
       <div>
         <h1 className="text-2xl font-bold">{org.name}</h1>
         <p className="text-sm text-muted">/{org.slug} · {f.dateTime(org.createdAt, { dateStyle: "medium" })}</p>
+        <p className="text-sm text-muted" data-testid="org-terms">{org.termsVersion && org.termsAcceptedAt ? t("termsAccepted", { version: org.termsVersion, date: f.dateTime(org.termsAcceptedAt, { dateStyle: "medium" }) }) : t("termsNotAccepted")}</p>
       </div>
       <section aria-labelledby="settings-h">
         <h2 id="settings-h" className="mb-4 text-lg font-semibold">{t("settings")}</h2>

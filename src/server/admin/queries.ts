@@ -32,6 +32,8 @@ export async function getOrganizationDetail(db: Db, orgId: string) {
       status: orgSettings.status,
       limits: orgSettings.limits,
       extraFeatures: orgSettings.extraFeatures,
+      termsVersion: orgSettings.termsVersion,
+      termsAcceptedAt: orgSettings.termsAcceptedAt,
       spendCapMicroUsd: orgSettings.spendCapMicroUsd,
     })
     .from(organization)

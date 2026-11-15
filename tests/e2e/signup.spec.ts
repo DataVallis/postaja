@@ -27,6 +27,11 @@ test("signup: a 7-day trial from the login page; first steps on the dashboard", 
   expect(await serious(page)).toEqual([]);
   await page.getByLabel("Ime podjetja ali agencije").fill(`Pekarna ${stamp}`);
   await page.getByLabel("E-pošta").fill(email);
+  // TASK-060: business users only — the box is required, and the terms open from it.
+  await page.getByRole("button", { name: "Pošlji povezavo za začetek" }).click();
+  await expect(page.getByTestId("signup-sent")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "pogoje uporabe" })).toHaveAttribute("href", "/terms");
+  await page.getByLabel(/Postajo uporabljam za svojo dejavnost/).check();
   await page.getByRole("button", { name: "Pošlji povezavo za začetek" }).click();
   await expect(page.getByTestId("signup-sent")).toBeVisible();
   await expect.poll(() => latestLinkTo(email), { timeout: 10_000 }).toBeTruthy();

@@ -73,6 +73,10 @@ export const orgSettings = pgTable(
       .default({ reject: 0.9, warn: 0.82, windowDays: 180 }),
     /** ADR-094: hidden features a super admin switched on for this organization (e.g. `ads`, `research`). */
     extraFeatures: text("extra_features").array().notNull().default(sql`'{}'::text[]`),
+    /** TASK-060: the version of the terms of use the owner accepted (with "I buy for my business"), when and who. */
+    termsVersion: text("terms_version"),
+    termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+    termsAcceptedBy: text("terms_accepted_by"),
     /** TASK-037: the first ZIP / PDF / plan download (the last of the first steps). */
     firstDownloadAt: timestamp("first_download_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

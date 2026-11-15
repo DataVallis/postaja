@@ -16,7 +16,7 @@ export async function signupAction(_prev: SignupState, f: FormData): Promise<Sig
   const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || "";
   const auth = getAuth();
   try {
-    const { email } = await requestSignup(getDb(), { email: str(f, "email"), orgName: str(f, "orgName"), ipHash: hashIp(ip, (await auth.$context).secret) });
+    const { email } = await requestSignup(getDb(), { email: str(f, "email"), orgName: str(f, "orgName"), accept: f.get("business") === "1", ipHash: hashIp(ip, (await auth.$context).secret) });
     await auth.api.signInMagicLink({ body: { email, callbackURL: "/app/start" }, headers: h });
   } catch (e) {
     if (e instanceof SignupError) return { error: e.code };

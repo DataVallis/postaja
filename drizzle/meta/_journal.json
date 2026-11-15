@@ -386,6 +386,13 @@
       "when": 1794751927485,
       "tag": "0054_org_extra_features",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794754478838,
+      "tag": "0055_terms_acceptance",
+      "breakpoints": true
     }
   ]
 }

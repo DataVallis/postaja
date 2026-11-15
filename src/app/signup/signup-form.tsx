@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { signupAction } from "./actions";
@@ -15,6 +16,10 @@ export function SignupForm() {
       <input id="orgName" name="orgName" required minLength={2} maxLength={80} autoComplete="organization" className={input} />
       <label htmlFor="email" className="text-sm font-medium">{t("email")}</label>
       <input id="email" name="email" type="email" required autoComplete="email" className={input} />
+      <label className="mt-1 flex items-start gap-2 text-sm">
+        <input type="checkbox" name="business" value="1" required className="mt-1" />
+        <span>{t.rich("business", { terms: (c) => <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-4">{c}</Link> })}</span>
+      </label>
       {/* Hidden from people; bots fill it. */}
       <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="website">Website</label>

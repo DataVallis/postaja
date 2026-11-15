@@ -10,12 +10,13 @@ import { desc, eq, isNull } from "drizzle-orm";
 import { billingPayments, orgBilling, orgSettings, stripeEvents, user, type SubscriptionStatus } from "../db/schema";
 import type { Actor } from "../orgs/service";
 import { insertPack } from "../credits/service";
+import { termsAccepted } from "../legal/terms";
 import type { OrgContext } from "../tenancy/context";
 import { ADDON_KEYS, ADDONS, addonFromLookupKey, CREDIT_PACK_PRICES, lookupKey, type Addons, ON_SALE, PAID_PLANS, PILOT, PILOT_ON_SALE, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
 import { automaticTax, pricesByLookupKey } from "./stripe";
 
 export class BillingError extends Error {
-  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE" | "NO_SUBSCRIPTION" | "ADDON_INVALID" | "NOT_ON_SALE") {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE" | "NO_SUBSCRIPTION" | "ADDON_INVALID" | "NOT_ON_SALE" | "TERMS") {
     super(code);
   }
 }
@@ -55,6 +56,8 @@ export async function checkoutUrl(db: Db, stripe: Stripe | null, ctx: OrgContext
   if (item.kind === "pilot" && !PILOT_ON_SALE) throw new BillingError("NOT_ON_SALE");
   if (item.kind === "pilot" && (b?.pilotEndsAt || (b && b.status !== "none"))) throw new BillingError("PILOT_USED");
   if (item.kind === "pack" && !(item.pack in CREDIT_PACK_PRICES)) throw new BillingError("INVALID");
+  // TASK-060: nothing is bought before the owner accepted the current terms (business buyers only, no refunds).
+  if (!(await termsAccepted(db, ctx.orgId))) throw new BillingError("TERMS");
   const key = item.kind === "plan" ? lookupKey.plan(item.plan, item.interval) : item.kind === "pilot" ? lookupKey.pilot : lookupKey.pack(item.pack);
   const price = (await pricesByLookupKey(stripe, [key])).get(key);
   if (!price) throw new BillingError("NO_PRICE");

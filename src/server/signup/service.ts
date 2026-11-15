@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, gt, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { slugify } from "@/lib/slug";
+import { TERMS_VERSION } from "@/lib/legal/terms";
 import { normalizeEmail } from "../auth/emails";
 import { TRIAL } from "../billing/catalog";
 import type { Db } from "../db/client";
@@ -23,7 +24,7 @@ export const SIGNUP_MAX_PER_EMAIL_DAY = 3;
 export const SIGNUP_MAX_PER_IP_HOUR = 10;
 
 export class SignupError extends Error {
-  constructor(public readonly code: "DISABLED" | "INVALID" | "TOO_MANY" | "HAS_ORG" | "NO_REQUEST") {
+  constructor(public readonly code: "DISABLED" | "INVALID" | "TOO_MANY" | "HAS_ORG" | "NO_REQUEST" | "TERMS") {
     super(code);
   }
 }
@@ -39,8 +40,10 @@ const requestInput = z.object({
 });
 
 /** Step 1: a request for a trial. The caller then sends the magic link (same answer whatever the email). */
-export async function requestSignup(db: Db, input: { email: string; orgName: string; ipHash: string }, now = new Date()): Promise<{ email: string }> {
+export async function requestSignup(db: Db, input: { email: string; orgName: string; ipHash: string; accept: boolean }, now = new Date()): Promise<{ email: string }> {
   if (!publicSignupEnabled()) throw new SignupError("DISABLED");
+  // TASK-060: Postaja is for business users only; the box "I use it for my business and accept the terms" is required.
+  if (input.accept !== true) throw new SignupError("TERMS");
   const data = requestInput.safeParse({ email: input.email.trim(), orgName: input.orgName });
   if (!data.success) throw new SignupError("INVALID");
   const { email, orgName } = data.data;
@@ -52,7 +55,7 @@ export async function requestSignup(db: Db, input: { email: string; orgName: str
       .where(and(eq(signupRequests.ipHash, input.ipHash), gt(signupRequests.createdAt, new Date(now.getTime() - HOUR))));
     if (byIp.n >= SIGNUP_MAX_PER_IP_HOUR) throw new SignupError("TOO_MANY");
   }
-  await db.insert(signupRequests).values({ id: crypto.randomUUID(), email, orgName, ipHash: input.ipHash, createdAt: now });
+  await db.insert(signupRequests).values({ id: crypto.randomUUID(), email, orgName, ipHash: input.ipHash, termsVersion: TERMS_VERSION, createdAt: now });
   return { email };
 }
 
@@ -94,10 +97,14 @@ export async function startTrial(db: Db, who: { userId: string; email: string },
     const used = await tx.update(signupRequests).set({ usedAt: now }).where(and(eq(signupRequests.id, req.id), isNull(signupRequests.usedAt))).returning({ id: signupRequests.id });
     if (!used.length) throw new SignupError("NO_REQUEST");
     await tx.insert(organization).values({ id: orgId, name, slug });
-    await tx.insert(orgSettings).values({ orgId, plan: "trial", limits: { ...TRIAL.limits } });
+    await tx.insert(orgSettings).values({
+      orgId, plan: "trial", limits: { ...TRIAL.limits },
+      // The terms were accepted with the request (TASK-060); the person who confirms the trial is the one who accepted.
+      ...(req.termsVersion ? { termsVersion: req.termsVersion, termsAcceptedAt: req.createdAt, termsAcceptedBy: who.userId } : {}),
+    });
     await tx.insert(member).values({ id: crypto.randomUUID(), organizationId: orgId, userId: who.userId, role: "owner" });
     await tx.insert(orgBilling).values({ orgId, trialEndsAt });
-    await tx.insert(auditLog).values({ id: crypto.randomUUID(), actorUserId: who.userId, orgId, action: "org.signup", target: slug, meta: { name, trialEndsAt: trialEndsAt.toISOString() } });
+    await tx.insert(auditLog).values({ id: crypto.randomUUID(), actorUserId: who.userId, orgId, action: "org.signup", target: slug, meta: { name, trialEndsAt: trialEndsAt.toISOString(), terms: req.termsVersion ?? null } });
   });
   return orgId;
 }

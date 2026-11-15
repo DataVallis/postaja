@@ -260,6 +260,8 @@
       }
     },
     "limitCredits": "Credits per month",
+    "termsAccepted": "Terms of use {version} accepted on {date} (business buyer).",
+    "termsNotAccepted": "Terms of use not accepted yet; the owner confirms them before the first purchase.",
     "extraFeatures": "Hidden features",
     "extraFeaturesHint": "No plan on sale includes these and customers do not see them. Switch them on here for this organization only.",
     "extraFeature": {
@@ -1811,6 +1813,9 @@
       "PILOT_USED": "The pilot is available once, before the first subscription.",
       "NO_CUSTOMER": "There is no payment for this organization yet.",
       "NO_PRICE": "This price is not set up in Stripe yet. Please let us know.",
+      "TERMS": "Confirm the terms of use before buying (below, under Plan and payment).",
+      "TERMS_NOT_CONFIRMED": "Tick that you buy for your business and accept the terms of use.",
+      "TERMS_FORBIDDEN": "Only the organization's owner can accept the terms of use.",
       "NOT_ON_SALE": "This plan is not on sale right now.",
       "NO_SUBSCRIPTION": "Add-ons go on an active subscription. Choose a plan first.",
       "ADDON_INVALID": "Enter a valid number of add-ons."
@@ -1852,6 +1857,13 @@
       "buyMonthLabel": "{plan} monthly, €{price}",
       "buyYearLabel": "{plan} yearly, €{price}",
       "pilot": "Agency pilot €{price}",
+      "terms": {
+        "title": "Before you buy: terms of use",
+        "business": "I buy for my business (company, sole proprietor, association), not as a consumer, and accept the <terms>terms of use</terms>.",
+        "noRefunds": "Payments are not refunded; the trial is there to test Postaja before you pay. You can cancel any time; the plan runs to the end of the paid period.",
+        "accept": "I confirm",
+        "link": "Terms of use"
+      },
       "pilotHint": "{days} days of Studio for {brands} brands, paid once.",
       "vatHint": "Prices exclude VAT. Stripe handles payment and cancelling; companies enter their VAT id. We email you the invoice.",
       "intervals": {
@@ -2290,9 +2302,13 @@
     "cta": "Choose a plan",
     "askOwner": "Ask the organization's owner to upgrade."
   },
+  "Terms": {
+    "back": "Back to sign-in"
+  },
   "Signup": {
     "title": "Try Postaja free for {days} days",
     "intro": "No card needed. The trial includes {brands} brand, {credits} credits, posts, images, carousels and animations.",
+    "business": "I use Postaja for my business (company, sole proprietor, association) and accept the <terms>terms of use</terms>.",
     "orgName": "Company or agency name",
     "email": "Email",
     "submit": "Send the link to start",
@@ -2305,6 +2321,7 @@
     "noCard": "No card needed. An administrator can change the organization name later.",
     "start": "Start the {days}-day trial",
     "errors": {
+      "TERMS": "To start, confirm that you use Postaja for your business and accept the terms of use.",
       "DISABLED": "Trial signup is not open right now.",
       "INVALID": "Enter a name (at least 2 characters) and a valid email.",
       "TOO_MANY": "Too many attempts. Try again later.",

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { orgContextForAction } from "@/server/auth/require";
 import { getDb } from "@/server/db/client";
+import { acceptTerms, TermsError } from "@/server/legal/terms";
 import { createMailerFromEnv } from "@/server/email/mailer";
 import { CreditError, requestCredits } from "@/server/credits/service";
 import { BillingError, checkoutUrl, portalUrl, setAddons, type CheckoutItem } from "@/server/billing/service";
@@ -74,6 +75,19 @@ export async function checkoutAction(f: FormData) {
     redirect(back(`?error=${e instanceof BillingError ? e.code : "FAILED"}#billing-h`));
   }
   redirect(url);
+}
+
+/** "Potrjujem" above the plans (TASK-060): the owner accepts the terms for the organization, as a business buyer. */
+export async function acceptTermsAction(f: FormData) {
+  const ctx = await orgContextForAction();
+  if (!ctx) redirect("/login");
+  try {
+    await acceptTerms(getDb(), ctx, f.get("business") === "1");
+  } catch (e) {
+    redirect(back(`?error=${e instanceof TermsError ? `TERMS_${e.code}` : "FAILED"}#billing-h`));
+  }
+  revalidatePath("/app/team");
+  redirect(back("#billing-h"));
 }
 
 /** "Upravljaj naročnino": Stripe's customer portal (card, invoices, plan change, cancel). */

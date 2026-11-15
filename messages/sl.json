@@ -260,6 +260,8 @@
       }
     },
     "limitCredits": "Krediti na mesec",
+    "termsAccepted": "Pogoji uporabe {version} sprejeti {date} (poslovni kupec).",
+    "termsNotAccepted": "Pogoji uporabe še niso sprejeti; lastnik jih potrdi pred prvim nakupom.",
     "extraFeatures": "Skrite funkcije",
     "extraFeaturesHint": "Teh funkcij noben paket v prodaji nima in jih stranke ne vidijo. Tukaj jih vklopiš samo tej organizaciji.",
     "extraFeature": {
@@ -1811,6 +1813,9 @@
       "PILOT_USED": "Pilot je mogoč samo enkrat in pred prvo naročnino.",
       "NO_CUSTOMER": "Ni še nobenega plačila za to organizacijo.",
       "NO_PRICE": "Ta cena v Stripe še ni pripravljena. Obvesti nas.",
+      "TERMS": "Pred nakupom potrdi pogoje uporabe (spodaj v razdelku Paket in plačilo).",
+      "TERMS_NOT_CONFIRMED": "Označi, da kupuješ za svojo dejavnost in sprejemaš pogoje uporabe.",
+      "TERMS_FORBIDDEN": "Pogoje uporabe lahko sprejme samo lastnik organizacije.",
       "NOT_ON_SALE": "Ta paket trenutno ni v prodaji.",
       "NO_SUBSCRIPTION": "Dodatke dodaš k aktivni naročnini. Najprej izberi paket.",
       "ADDON_INVALID": "Vpiši veljavno število dodatkov."
@@ -1852,6 +1857,13 @@
       "buyMonthLabel": "{plan} mesečno, {price} €",
       "buyYearLabel": "{plan} letno, {price} €",
       "pilot": "Agencijski pilot {price} €",
+      "terms": {
+        "title": "Pred nakupom: pogoji uporabe",
+        "business": "Kupujem za svojo dejavnost (podjetje, s.p., društvo), ne kot potrošnik, in sprejemam <terms>pogoje uporabe</terms>.",
+        "noRefunds": "Plačila se ne vračajo; preizkus je namenjen temu, da Postajo preveriš, preden plačaš. Naročnino odpoveš kadar koli, velja do konca plačanega obdobja.",
+        "accept": "Potrjujem",
+        "link": "Pogoji uporabe"
+      },
       "pilotHint": "{days} dni paketa Studio za {brands} brande, enkratno plačilo.",
       "vatHint": "Cene so brez DDV. Plačilo in odpoved ureja Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti.",
       "intervals": {
@@ -2290,9 +2302,13 @@
     "cta": "Izberi paket",
     "askOwner": "Za nadgradnjo prosi lastnika organizacije."
   },
+  "Terms": {
+    "back": "Nazaj na prijavo"
+  },
   "Signup": {
     "title": "Preizkusi Postajo {days} dni brezplačno",
     "intro": "Brez kartice. V preizkusu: {brands} brand, {credits} kreditov, objave, slike, karuseli in animacije.",
+    "business": "Postajo uporabljam za svojo dejavnost (podjetje, s.p., društvo) in sprejemam <terms>pogoje uporabe</terms>.",
     "orgName": "Ime podjetja ali agencije",
     "email": "E-pošta",
     "submit": "Pošlji povezavo za začetek",
@@ -2305,6 +2321,7 @@
     "noCard": "Kartice ne potrebuješ. Ime organizacije lahko pozneje spremeni skrbnik.",
     "start": "Začni {days}-dnevni preizkus",
     "errors": {
+      "TERMS": "Za začetek potrdi, da Postajo uporabljaš za svojo dejavnost in sprejemaš pogoje uporabe.",
       "DISABLED": "Prijava v preizkus trenutno ni odprta.",
       "INVALID": "Vpiši ime (vsaj 2 znaka) in veljaven e-poštni naslov.",
       "TOO_MANY": "Preveč poskusov. Poskusi znova čez nekaj časa.",
