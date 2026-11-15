@@ -84,4 +84,24 @@ describe("readability over full-bleed pictures", () => {
     expect((await at(300)).every((v) => v < 40)).toBe(true); // under the text: dark
     expect((await at(900)).every((v) => v > 230)).toBe(true); // below the fade: the picture as drawn
   });
+
+  // aibuilders.si X after ADR-097: the picture was an element covering most of the slide, not the background, so the
+  // fade did not apply and the subtitle stood on the drawn objects again.
+  it("an illustration element that text is drawn over gets the fade inside its own box; one beside the text does not", async () => {
+    const pic = { type: "image" as const, source: "illustration" as const, x: 0, y: 20, w: 100, h: 70, fit: "cover" as const, radius: 0, opacity: 1 };
+    const over: Template = { ...full, background: { type: "color", color: "#000000", angle: 180 }, elements: [pic, { ...text, y: 30, h: 20 }] };
+    expect(textScrim(over, "#000000")).toBeNull(); // not a full-bleed background
+    expect(textScrim(over, "#000000", { box: pic, index: 0 })).toBe("linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.9) 37%, rgba(0,0,0,0) 59%)");
+    const beside: Template = { ...over, elements: [{ ...pic, y: 60, h: 40 }, { ...text, y: 10, h: 30 }] };
+    expect(textScrim(beside, "#000000", { box: beside.elements[0] as typeof pic, index: 0 })).toBeNull();
+    const under: Template = { ...over, elements: [{ ...text, y: 30, h: 20 }, pic] }; // text drawn first is covered anyway
+    expect(textScrim(under, "#000000", { box: pic, index: 1 })).toBeNull();
+
+    const picture = new Uint8Array(await sharp({ create: { width: 800, height: 800, channels: 3, background: "#ffffff" } }).jpeg().toBuffer());
+    const t: Template = { ...over, elements: [pic, { ...text, y: 30, h: 20, maxSize: 1, minSize: 1 }] };
+    const png = await renderTemplate({ ...spec, palette: { ...spec.palette, background: "#000000" } }, t, { width: 1000, height: 1000 }, { slots: { headline: "." }, illustration: picture });
+    const at = async (y: number) => [...(await sharp(png).extract({ left: 900, top: y, width: 1, height: 1 }).raw().toBuffer()).subarray(0, 3)];
+    expect((await at(320)).every((v) => v < 40)).toBe(true); // in the picture, under the text: dark
+    expect((await at(850)).every((v) => v > 230)).toBe(true); // in the picture, below the fade: as drawn
+  });
 });
