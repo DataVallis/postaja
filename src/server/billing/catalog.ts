@@ -7,6 +7,14 @@ import type { OrgLimits } from "../orgs/service";
 
 export const PAID_PLANS = ["solo", "studio", "agency"] as const;
 export type PaidPlan = (typeof PAID_PLANS)[number];
+
+/**
+ * Launch scope (ADR-094, owner 2026-11-15): Postaja starts as a simple program for making posts. Only Solo is sold;
+ * Studio, Agencija and the agency pilot stay in the catalogue (running subscriptions and webhooks keep working) but
+ * cannot be bought.
+ */
+export const ON_SALE: readonly PaidPlan[] = ["solo"];
+export const PILOT_ON_SALE = false;
 export type Interval = "month" | "year";
 
 export const PLAN_CATALOG: Record<PaidPlan, { name: string; priceEur: number; limits: Required<Pick<OrgLimits, "brands" | "members" | "creditsPerMonth">> }> = {
@@ -41,6 +49,13 @@ export type Addons = Partial<Record<Addon, number>>;
 /** What a plan includes beyond posts, images, carousels, plan import and ideas (business plan §4). */
 export const FEATURES = ["ads", "animation", "research", "persona"] as const;
 export type Feature = (typeof FEATURES)[number];
+
+/**
+ * Features hidden at launch (ADR-094): no plan that is bought includes them and their pages show nothing — no tab, no
+ * upgrade card. A super admin can switch one on for a single organization (`org_settings.extra_features`);
+ * organizations managed by hand (comped, partner, starter, pro) keep everything.
+ */
+export const HIDDEN_FEATURES: readonly Feature[] = ["ads", "research"];
 
 /** Unpaid renewals: new AI work stops this long after the first failed payment (the card can be fixed meanwhile). */
 export const GRACE_DAYS = 7;
@@ -81,24 +96,39 @@ export function addonFromLookupKey(key: string | null | undefined): { addon: Add
   return m ? { addon: m[1] as Addon, interval: m[2] as Interval } : null;
 }
 
-/** Features each plan includes (trial and pilot try Studio; plans managed by hand keep everything). */
+/** Features each plan includes (trial tries what Solo has; hidden features are taken out in `planFeatures`). */
 export const PLAN_FEATURES: Record<string, readonly Feature[]> = {
-  solo: [],
+  solo: ["animation"],
   studio: ["ads", "animation", "research"],
   agency: ["ads", "animation", "research", "persona"],
   pilot: ["ads", "animation", "research"],
-  trial: ["ads", "animation", "research"],
+  trial: ["animation"],
 };
 
-/** The plan's features plus the persona add-on. Unknown plans (comped, partner, starter, pro) include everything. */
-export function planFeatures(plan: string, addons: Addons = {}): Set<Feature> {
-  const base = PLAN_FEATURES[plan] ?? FEATURES;
-  const out = new Set<Feature>(base);
+/**
+ * The plan's features without the hidden ones, plus the persona add-on and what a super admin switched on for the
+ * organization. Unknown plans (comped, partner, starter, pro) include everything.
+ */
+export function planFeatures(plan: string, addons: Addons = {}, extra: readonly string[] = []): Set<Feature> {
+  const listed = PLAN_FEATURES[plan];
+  const out = new Set<Feature>(listed ? listed.filter((f) => !HIDDEN_FEATURES.includes(f)) : FEATURES);
   if ((addons.persona ?? 0) > 0) out.add("persona");
+  for (const f of extra) if ((FEATURES as readonly string[]).includes(f)) out.add(f as Feature);
   return out;
 }
 
-/** The lowest paid plan that includes a feature (for "Nadgradi na …"). */
-export function planFor(feature: Feature): PaidPlan {
-  return PAID_PLANS.find((p) => PLAN_FEATURES[p].includes(feature)) ?? "agency";
+/**
+ * How an organization without `feature` can get it: a plan on sale that includes it, the add-on, or nothing — then the
+ * feature is not offered and its pages show no trace of it.
+ */
+export function featureOffer(feature: Feature): { plan: PaidPlan | null; addon: boolean } | null {
+  if (HIDDEN_FEATURES.includes(feature)) return null;
+  const plan = ON_SALE.find((p) => PLAN_FEATURES[p].includes(feature)) ?? null;
+  const addon = feature === "persona";
+  return plan || addon ? { plan, addon } : null;
+}
+
+/** A tool's page or tab is shown when the organization has the feature or can buy it. */
+export function featureVisible(feature: Feature, has: ReadonlySet<Feature>): boolean {
+  return has.has(feature) || featureOffer(feature) !== null;
 }

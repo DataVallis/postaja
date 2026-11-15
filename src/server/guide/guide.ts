@@ -3,9 +3,18 @@
 // by its slug only from the directory listing, so a URL can never name a file.
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { featureVisible, type Feature } from "../billing/catalog";
 import { parseMarkdown, plain, type Block } from "./markdown";
 
 export type Chapter = { slug: string; title: string; blocks: Block[] };
+
+/** Chapters about a tool behind a plan feature; left out for organizations that neither have nor can buy it (ADR-094). */
+export const CHAPTER_FEATURE: Record<string, Feature> = { oglasi: "ads", konkurenca: "research", persona: "persona" };
+
+/** The chapters an organization with these features sees. */
+export function visibleChapters<T extends { slug: string }>(chapters: T[], has: ReadonlySet<Feature>): T[] {
+  return chapters.filter((c) => !CHAPTER_FEATURE[c.slug] || featureVisible(CHAPTER_FEATURE[c.slug], has));
+}
 
 // Not traced by the bundler (it would pull in the whole project); next.config ships docs/guides/user with the help pages.
 const dirFor = (locale: string) => path.join(/*turbopackIgnore: true*/ process.cwd(), "docs", "guides", "user", locale === "en" ? "en" : "sl");

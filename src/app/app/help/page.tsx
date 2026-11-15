@@ -3,17 +3,19 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Download } from "lucide-react";
 import { buttonClass, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireOrgPage } from "@/server/auth/require";
-import { guideChapters } from "@/server/guide/guide";
+import { orgFeatures } from "@/server/billing/features";
+import { getDb } from "@/server/db/client";
+import { guideChapters, visibleChapters } from "@/server/guide/guide";
 import { plain } from "@/server/guide/markdown";
 
 export const dynamic = "force-dynamic";
 
 /** The user guide's table of contents (TASK-026): every chapter with its sections. */
 export default async function HelpPage() {
-  await requireOrgPage();
+  const { org } = await requireOrgPage();
   const t = await getTranslations("Help");
   const locale = await getLocale();
-  const chapters = await guideChapters(locale);
+  const chapters = visibleChapters(await guideChapters(locale), await orgFeatures(getDb(), org.orgId));
   return (
     <>
       <PageHeader title={t("title")} description={<>{t("description")}{t("slOnly") ? <> {t("slOnly")}</> : null}</>}

@@ -260,6 +260,12 @@
       }
     },
     "limitCredits": "Krediti na mesec",
+    "extraFeatures": "Skrite funkcije",
+    "extraFeaturesHint": "Teh funkcij noben paket v prodaji nima in jih stranke ne vidijo. Tukaj jih vklopiš samo tej organizaciji.",
+    "extraFeature": {
+      "ads": "Oglasni seti",
+      "research": "Raziskava konkurence"
+    },
     "credits": {
       "title": "Krediti",
       "intro": "Vsako plačljivo dejanje AI stane kredite po spodnjem ceniku. Organizacija najprej porabi mesečne kredite paketa (Admin → organizacija → Krediti na mesec; prazno = brez omejitve), nato dokupljene pakete, ki veljajo 12 mesecev. Omejitev stroškov v € ostane varnostna meja. Dokler ni plačil (TASK-036), lastnik pakete zaprosi v aplikaciji, ti jih dodeliš po plačilu.",
@@ -1805,8 +1811,9 @@
       "PILOT_USED": "Pilot je mogoč samo enkrat in pred prvo naročnino.",
       "NO_CUSTOMER": "Ni še nobenega plačila za to organizacijo.",
       "NO_PRICE": "Ta cena v Stripe še ni pripravljena. Obvesti nas.",
+      "NOT_ON_SALE": "Ta paket trenutno ni v prodaji.",
       "NO_SUBSCRIPTION": "Dodatke dodaš k aktivni naročnini. Najprej izberi paket.",
-      "ADDON_INVALID": "Vpiši veljavno število dodatkov (Agencija persono že vključuje)."
+      "ADDON_INVALID": "Vpiši veljavno število dodatkov."
     },
     "credits": {
       "title": "Krediti",
@@ -1839,7 +1846,7 @@
       "pilotUntil": "Agencijski pilot velja do {date}. Paket izbereš kadar koli; pilot se takrat konča.",
       "ended": "Naročnina ali pilot je končan. Vse ustvarjeno ostane na voljo za ogled in prenos; za nove objave, slike in videe izberi paket.",
       "manage": "Upravljaj naročnino (kartica, menjava paketa, odpoved)",
-      "limits": "{brands} brandov · {members} članov · {credits} kreditov na mesec",
+      "limits": "{brands, plural, one {# brand} two {# branda} few {# brandi} other {# brandov}} · {members, plural, one {# član} two {# člana} few {# člani} other {# članov}} · {credits} kreditov na mesec",
       "buyMonth": "{price} € / mesec",
       "buyYear": "{price} € / leto",
       "buyMonthLabel": "{plan} mesečno, {price} €",
@@ -2279,12 +2286,13 @@
     },
     "inPlan": "Na voljo v paketu {plan} ({price} € / mesec) in višje.",
     "inPlanOrAddon": "Na voljo v paketu {plan} ali kot dodatek za {price} € / mesec.",
+    "addonOnly": "Na voljo kot dodatek k paketu za {price} € / mesec.",
     "cta": "Izberi paket",
     "askOwner": "Za nadgradnjo prosi lastnika organizacije."
   },
   "Signup": {
     "title": "Preizkusi Postajo {days} dni brezplačno",
-    "intro": "Brez kartice. V preizkusu: {brands} brand, {credits} kreditov, oglasni seti, animacije in raziskava konkurence.",
+    "intro": "Brez kartice. V preizkusu: {brands} brand, {credits} kreditov, objave, slike, karuseli in animacije.",
     "orgName": "Ime podjetja ali agencije",
     "email": "E-pošta",
     "submit": "Pošlji povezavo za začetek",

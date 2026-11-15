@@ -65,7 +65,7 @@ The result is an MP4 video (3–10 s). Every video you create **stays on the pos
 
 ## Reel from several shots
 
-Posts meant as video (Reels, TikTok, Shorts) have **Reel from several shots** (Studio and Agency plans).
+Posts meant as video (Reels, TikTok, Shorts) have **Reel from several shots**.
 
 1. Pick the **length** (8, 12 or 15 s); the highest price is shown with it.
 2. Optionally write **directions** (e.g. "1) dinner, the child slides a drawing across, 2) the app screen @IMG_9208.jpg, 3) the dog at the door"). Without them Claude builds the story from the plan and the post text.

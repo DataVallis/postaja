@@ -15,12 +15,10 @@ V **Ekipa in paket** → **Paket in plačilo** lastnik izbere paket (cene brez D
 | Paket | Mesečno | Letno | Brandi | Člani | Krediti na mesec |
 | --- | --- | --- | --- | --- | --- |
 | Solo | 39 € | 390 € | 2 | 1 | 400 |
-| Studio | 149 € | 1490 € | 6 | 3 | 1500 |
-| Agencija | 499 € | 4990 € | 20 | 10 | 5000 |
 
-Za agencije je na voljo **agencijski pilot**: 99 € enkratno, 30 dni paketa Studio za 3 brande (enkrat, pred prvo naročnino). Plačilo poteka prek Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti. Kartico, menjavo paketa in odpoved urediš z gumbom **Upravljaj naročnino**.
+Plačilo poteka prek Stripe; podjetja vpišejo ID za DDV. Račun vam pošljemo po e-pošti. Kartico in odpoved urediš z gumbom **Upravljaj naročnino**.
 
-**Kaj vključuje paket:** vsi paketi ustvarjajo objave, slike in karusele. **Studio** in **Agencija** dodata oglasne sete, animacije in raziskavo konkurence. **Persona** je v paketu Agencija ali kot dodatek. Agencijski pilot in preizkus vključujeta vse kot Studio. Kjer paket orodja ne vključuje, Postaja namesto njega pokaže, v katerem paketu je, in gumb **Izberi paket** (urednik vidi prošnjo, naj se obrne na lastnika).
+**Kaj vključuje paket:** Solo ustvarja objave, slike, karusele, animacije in reele ter uvaža in načrtuje plan. **Persona** je dodatek k paketu. Preizkus vključuje vse, kar ima Solo. Kjer paket orodja ne vključuje, Postaja namesto njega pokaže, kako ga dobiš, in gumb **Izberi paket** (urednik vidi prošnjo, naj se obrne na lastnika).
 
 **Dodatki** (k aktivni naročnini, v **Paket in plačilo** → **Dodatki**):
 
@@ -28,11 +26,11 @@ Za agencije je na voljo **agencijski pilot**: 99 € enkratno, 30 dni paketa Stu
 | --- | --- | --- |
 | Dodaten brand | 15 € | 150 € |
 | Dodaten član | 9 € | 90 € |
-| Persona (ni za Agencijo, ki jo že vključuje) | 49 € | 490 € |
+| Persona | 49 € | 490 € |
 
 Dodatni brandi in člani se prištejejo omejitvam paketa. Stripe spremembo sorazmerno obračuna; omejitve se posodobijo v nekaj sekundah.
 
-Če plačilo ne uspe, Postaja deluje še 7 dni; nato, ali ko se naročnina ali pilot konča, se novo ustvarjanje ustavi. Vse, kar je bilo ustvarjeno, ostane na voljo za ogled in prenos.
+Če plačilo ne uspe, Postaja deluje še 7 dni; nato, ali ko se naročnina konča, se novo ustvarjanje ustavi. Vse, kar je bilo ustvarjeno, ostane na voljo za ogled in prenos.
 
 ## Krediti
 
@@ -40,13 +38,12 @@ Dodatni brandi in člani se prištejejo omejitvam paketa. Stripe spremembo soraz
 
 | Dejanje | Krediti |
 | --- | --- |
-| Besedilo objave ali oglasni copy | 1 |
+| Besedilo objave | 1 |
 | AI ilustracija (slika, slide) | 2 |
 | Animacija slike | 1 |
 | Slika s persono ali potna slika | 5 |
 | Video s persono 5 s / 10 s | 25 / 40 |
 | Reel iz več prizorov (na sekundo videa iz modela) | 4 |
-| Raziskava konkurence (iskanje ali analiza) | 5 |
 
 Samodejni popravek besedila in pomožni klici (načrt slik, dizajn, ideje, uvoz plana) kreditov ne porabijo. Cenik lahko skrbnik spremeni; velja vedno trenutni.
 

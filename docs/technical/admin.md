@@ -36,3 +36,6 @@ If a session has no active organization (e.g. you were added to an org after sig
 - Unit `src/lib/money/usd.test.ts`: conversion boundaries.
 - E2E `tests/e2e/admin.spec.ts`: full flow (create comped org with 12.5 USD cap, invalid amount error, invite editor, audit visible, `/app` shows org, invitee joins as editor and gets 404 on `/admin`), anonymous 404, axe on every admin page; platform editing (invalid value refused, save, unchanged save, audit row, preset disable/enable, safe zone over the whole height refused).
 - E2E uses a second super admin (`e2e-root@example.test`) and `AUTH_MAGIC_LINK_RATE_MAX=1000`; servers keep 5/min (tested).
+
+## Hidden features per organization (ADR-094) — Built
+/admin → organization → *Skrite funkcije*: checkboxes for the features in `HIDDEN_FEATURES` (ad sets, competitor research). Saved through `updateOrgSettings` (`extraFeatures`, only hidden features, sorted and unique) into `org_settings.extra_features`; audited as `org.settings.update`. Details: [billing.md](billing.md).

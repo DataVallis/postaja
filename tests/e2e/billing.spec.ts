@@ -35,7 +35,7 @@ const serious = async (page: Page) =>
 // plan active with its limits; Studio offers the persona as an upgrade, add-ons raise the limits and unlock it
 // (TASK-053); the portal opens; when Stripe reports the subscription cancelled, creating stops and the
 // app says so; a forged webhook is refused.
-test("payments: Studio through Checkout → webhook → plan and limits; portal; cancelled → banner; bad signature refused", async ({ page, browser }, info) => {
+test("payments: Solo through Checkout → webhook → plan and limits; portal; cancelled → banner; bad signature refused", async ({ page, browser }, info) => {
   test.skip(info.project.name !== "desktop", "one flow is enough");
   test.setTimeout(120_000);
   const stamp = Date.now();
@@ -53,13 +53,17 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   await signIn(p, owner);
   await p.goto("/app/team");
   const billing = p.getByTestId("team-billing");
-  await expect(billing.getByTestId("plan-studio")).toContainText("6 brandov · 3 članov · 1500 kreditov na mesec");
+  // Launch scope (ADR-094): only Solo is offered — no Studio, no Agencija, no pilot.
+  await expect(billing.getByTestId("plan-solo")).toContainText("2 branda · 1 član · 400 kreditov na mesec");
+  await expect(billing.getByTestId("plan-studio")).toHaveCount(0);
+  await expect(billing.getByTestId("plan-agency")).toHaveCount(0);
+  await expect(billing.getByRole("button", { name: /pilot/i })).toHaveCount(0);
   expect(await serious(p)).toEqual([]);
-  await billing.getByRole("button", { name: "Studio mesečno, 149 €" }).click();
+  await billing.getByRole("button", { name: "Solo mesečno, 39 €" }).click();
   await expect(p).toHaveURL(/\/stripe-page\/checkout-/);
   const log = await (await fetch("http://127.0.0.1:3199/stripe-log")).json() as { path: string; form: Record<string, string> }[];
-  const co = log.filter((l) => l.path === "/v1/checkout/sessions" && l.form["metadata[plan]"] === "studio").at(-1)!;
-  expect(co.form).toMatchObject({ mode: "subscription", "line_items[0][price]": "price_postaja_studio_month", "tax_id_collection[enabled]": "true" });
+  const co = log.filter((l) => l.path === "/v1/checkout/sessions" && l.form["metadata[plan]"] === "solo").at(-1)!;
+  expect(co.form).toMatchObject({ mode: "subscription", "line_items[0][price]": "price_postaja_solo_month", "tax_id_collection[enabled]": "true" });
   const orgId = co.form["metadata[orgId]"];
   const customer = co.form.customer;
 
@@ -67,18 +71,19 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   expect((await p.request.post("/api/stripe/webhook", { data: "{}", headers: { "stripe-signature": "t=1,v1=bad" } })).status()).toBe(400);
   const sub = (status: string) => ({
     id: `sub_${stamp}`, object: "subscription", customer, status, cancel_at_period_end: false, metadata: { orgId },
-    items: { data: [{ price: { lookup_key: "postaja_studio_month" }, current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400 }] },
+    items: { data: [{ price: { lookup_key: "postaja_solo_month" }, current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400 }] },
   });
-  expect(await webhook(p, "checkout.session.completed", { id: `cs_${stamp}`, object: "checkout.session", mode: "subscription", payment_status: "paid", customer, client_reference_id: orgId, metadata: { orgId, kind: "plan", plan: "studio" } })).toBe(200);
+  expect(await webhook(p, "checkout.session.completed", { id: `cs_${stamp}`, object: "checkout.session", mode: "subscription", payment_status: "paid", customer, client_reference_id: orgId, metadata: { orgId, kind: "plan", plan: "solo" } })).toBe(200);
   expect(await webhook(p, "customer.subscription.created", sub("active"))).toBe(200);
 
   await p.goto("/app/team?billing=success");
   await expect(p.getByRole("status").filter({ hasText: "Hvala! Plačilo je prejeto" })).toBeVisible();
   await expect(p.getByTestId("billing-state")).toContainText("Naročnina je aktivna (mesečno)");
-  await expect(p.getByRole("heading", { name: "Paket: Studio" })).toBeVisible();
-  await expect(p.getByTestId("team-usage")).toContainText("0 / 6");
+  await expect(p.getByRole("heading", { name: "Paket: Solo" })).toBeVisible();
+  await expect(p.getByTestId("team-usage")).toContainText("0 / 2");
 
-  // Studio has no persona (TASK-053): the brand's Persona tab offers the upgrade instead of the tool.
+  // Solo has no persona (TASK-053): the brand's Persona tab offers the add-on instead of the tool. Hidden tools
+  // (ads, competitor research; ADR-094) leave no trace: no tab, no upgrade card, and their address shows the posts.
   await p.goto("/app/brands/new");
   await p.getByLabel("Ime", { exact: true }).fill("Plačila brand");
   await p.getByRole("button", { name: "Ustvari" }).click();
@@ -86,10 +91,18 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   await expect(p).toHaveURL(/\/app\/brands\/[\w-]+$/);
   const brandUrl = p.url().replace(/[?#].*$/, "");
   await p.goto(`${brandUrl}?tab=persona`);
-  await expect(p.getByTestId("upgrade-persona")).toContainText("Na voljo v paketu Agencija ali kot dodatek za 49 € / mesec.");
+  await expect(p.getByTestId("upgrade-persona")).toContainText("Na voljo kot dodatek k paketu za 49 € / mesec.");
   await expect(p.getByTestId("persona-manual")).toHaveCount(0);
-  await p.goto(`${brandUrl}?tab=ads`);
-  await expect(p.getByTestId("upgrade-ads")).toHaveCount(0);
+  const tabs = p.getByRole("navigation", { name: "Razdelki branda" });
+  await expect(tabs.getByRole("link", { name: /Persona/ })).toBeVisible();
+  await expect(tabs.getByRole("link", { name: /Oglasi/ })).toHaveCount(0);
+  await expect(tabs.getByRole("link", { name: /Konkurenca/ })).toHaveCount(0);
+  for (const hidden of ["ads", "competitors"]) {
+    await p.goto(`${brandUrl}?tab=${hidden}`);
+    await expect(p.getByTestId("upgrade-ads")).toHaveCount(0);
+    await expect(p.getByTestId("upgrade-research")).toHaveCount(0);
+    await expect(p.getByRole("heading", { name: "Nova objava" })).toBeVisible();
+  }
 
   // Add-ons on the live subscription: two extra brands and the persona; Stripe's webhook then raises the limits.
   await p.goto("/app/team");
@@ -106,7 +119,7 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
   ] } };
   expect(await webhook(p, "customer.subscription.updated", withAddons)).toBe(200);
   await p.reload();
-  await expect(p.getByTestId("team-usage")).toContainText("1 / 8");
+  await expect(p.getByTestId("team-usage")).toContainText("1 / 4");
   await expect(addons.getByLabel(/Dodatni brandi/)).toHaveValue("2");
   await p.goto(`${brandUrl}?tab=persona`);
   await expect(p.getByTestId("persona-manual")).toBeVisible();
@@ -117,21 +130,21 @@ test("payments: Studio through Checkout → webhook → plan and limits; portal;
 
   // The paid invoice is listed for the owner's own invoice; he records its number.
   expect(await webhook(p, "invoice.paid", {
-    id: `in_${stamp}`, object: "invoice", customer, subscription: `sub_${stamp}`, total: 18178, subtotal: 14900, total_excluding_tax: 14900, currency: "eur",
+    id: `in_${stamp}`, object: "invoice", customer, subscription: `sub_${stamp}`, total: 4758, subtotal: 3900, total_excluding_tax: 3900, currency: "eur",
     customer_name: `Plačnik ${stamp} d.o.o.`, customer_email: owner, customer_address: { line1: "Glavna 1", postal_code: "2000", city: "Maribor", country: "SI" },
-    customer_tax_ids: [], status_transitions: { paid_at: Math.floor(Date.now() / 1000) }, lines: { data: [{ price: { lookup_key: "postaja_studio_month" }, period: { start: Math.floor(Date.now() / 1000), end: Math.floor(Date.now() / 1000) + 30 * 86400 } }] },
+    customer_tax_ids: [], status_transitions: { paid_at: Math.floor(Date.now() / 1000) }, lines: { data: [{ price: { lookup_key: "postaja_solo_month" }, period: { start: Math.floor(Date.now() / 1000), end: Math.floor(Date.now() / 1000) + 30 * 86400 } }] },
   })).toBe(200);
   await page.goto("/admin/billing");
   const pay = page.getByTestId("billing-payment").filter({ hasText: `Plačnik ${stamp} d.o.o.` });
-  await expect(pay).toContainText("neto 149,00 € · DDV 32,78 € · skupaj 181,78 €");
+  await expect(pay).toContainText("neto 39,00 € · DDV 8,58 € · skupaj 47,58 €");
   await pay.getByLabel(`Številka računa za Plačnik ${stamp} d.o.o.`).fill(`R-${stamp}`);
   await pay.getByRole("button", { name: "Shrani" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Številka računa je shranjena." })).toBeVisible();
   await expect(page.getByTestId("billing-payment").filter({ hasText: `Plačnik ${stamp} d.o.o.` })).toHaveCount(0); // invoiced → not in the open list
   const csv = await (await page.request.get("/admin/billing/payments.csv")).text();
-  expect(csv).toContain(`Plačnik ${stamp} d.o.o.;Glavna 1, 2000 Maribor, SI;SI;;ne;${owner};149,00;32,78;181,78;EUR;R-${stamp}`);
-  await expect(page.getByTestId("billing-subs")).toContainText(`Plačila E2E ${stamp} · studio · active`);
-  await expect(page.getByTestId("billing-events")).toContainText("subscription:active:studio");
+  expect(csv).toContain(`Plačnik ${stamp} d.o.o.;Glavna 1, 2000 Maribor, SI;SI;;ne;${owner};39,00;8,58;47,58;EUR;R-${stamp}`);
+  await expect(page.getByTestId("billing-subs")).toContainText(`Plačila E2E ${stamp} · solo · active`);
+  await expect(page.getByTestId("billing-events")).toContainText("subscription:active:solo");
   expect(await serious(page)).toEqual([]);
 
   expect(await webhook(p, "customer.subscription.deleted", sub("canceled"))).toBe(200);

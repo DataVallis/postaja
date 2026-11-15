@@ -15,12 +15,10 @@ In **Team and plan** → **Plan and payment** the owner picks a plan (prices exc
 | Plan | Monthly | Yearly | Brands | Members | Credits a month |
 | --- | --- | --- | --- | --- | --- |
 | Solo | €39 | €390 | 2 | 1 | 400 |
-| Studio | €149 | €1490 | 6 | 3 | 1500 |
-| Agency | €499 | €4990 | 20 | 10 | 5000 |
 
-Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 3 brands (once, before the first subscription). Payment goes through Stripe; companies enter their VAT id. We email you the invoice. Card, plan changes and cancelling are under **Manage subscription**.
+Payment goes through Stripe; companies enter their VAT id. We email you the invoice. Card and cancelling are under **Manage subscription**.
 
-**What each plan includes:** every plan makes posts, images and carousels. **Studio** and **Agency** add ad sets, animations and competitor research. The **persona** comes with Agency or as an add-on. The agency pilot and the trial include everything Studio has. Where a plan lacks a tool, Postaja shows which plan has it and a **Choose a plan** button instead (editors are asked to contact the owner).
+**What the plan includes:** Solo makes posts, images, carousels, animations and reels, and imports and schedules the plan. The **persona** is an add-on to the plan. The trial includes everything Solo has. Where the plan lacks a tool, Postaja shows how to get it and a **Choose a plan** button instead (editors are asked to contact the owner).
 
 **Add-ons** (on an active subscription, under **Plan and payment** → **Add-ons**):
 
@@ -28,11 +26,11 @@ Agencies can start with the **agency pilot**: €99 once, 30 days of Studio for 
 | --- | --- | --- |
 | Extra brand | €15 | €150 |
 | Extra member | €9 | €90 |
-| Persona (not for Agency, which includes it) | €49 | €490 |
+| Persona | €49 | €490 |
 
 Extra brands and members are added to the plan's limits. Stripe prorates the change; the limits update within seconds.
 
-If a payment fails, Postaja keeps working for 7 days; after that, or when the subscription or pilot ends, creating new content stops. Everything already made stays viewable and downloadable.
+If a payment fails, Postaja keeps working for 7 days; after that, or when the subscription ends, creating new content stops. Everything already made stays viewable and downloadable.
 
 ## Credits
 
@@ -40,13 +38,12 @@ If your plan has monthly credits, every paid AI action uses credits:
 
 | Action | Credits |
 | --- | --- |
-| Post text or ad copy | 1 |
+| Post text | 1 |
 | AI illustration (image, slide) | 2 |
 | Image animation | 1 |
 | Persona image or passport picture | 5 |
 | Persona video 5 s / 10 s | 25 / 40 |
 | Reel from several shots (per second of model video) | 4 |
-| Competitor research (find or analyse) | 5 |
 
 The automatic text fix and helper calls (image plan, design, ideas, plan import) use no credits. The administrator can change the price list; the current one always applies.
 

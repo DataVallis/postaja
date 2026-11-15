@@ -11,11 +11,11 @@ import { billingPayments, orgBilling, orgSettings, stripeEvents, user, type Subs
 import type { Actor } from "../orgs/service";
 import { insertPack } from "../credits/service";
 import type { OrgContext } from "../tenancy/context";
-import { ADDON_KEYS, ADDONS, addonFromLookupKey, CREDIT_PACK_PRICES, lookupKey, type Addons, PAID_PLANS, PILOT, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
+import { ADDON_KEYS, ADDONS, addonFromLookupKey, CREDIT_PACK_PRICES, lookupKey, type Addons, ON_SALE, PAID_PLANS, PILOT, PILOT_ON_SALE, PLAN_CATALOG, planFromLookupKey, type Interval, type PaidPlan } from "./catalog";
 import { automaticTax, pricesByLookupKey } from "./stripe";
 
 export class BillingError extends Error {
-  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE" | "NO_SUBSCRIPTION" | "ADDON_INVALID") {
+  constructor(public readonly code: "FORBIDDEN" | "NOT_CONFIGURED" | "INVALID" | "HAS_SUBSCRIPTION" | "PILOT_USED" | "NO_CUSTOMER" | "NO_PRICE" | "NO_SUBSCRIPTION" | "ADDON_INVALID" | "NOT_ON_SALE") {
     super(code);
   }
 }
@@ -49,8 +49,10 @@ export async function checkoutUrl(db: Db, stripe: Stripe | null, ctx: OrgContext
   const b = await billingFor(db, ctx.orgId);
   if (item.kind === "plan") {
     if (!PAID_PLANS.includes(item.plan) || (item.interval !== "month" && item.interval !== "year")) throw new BillingError("INVALID");
+    if (!ON_SALE.includes(item.plan)) throw new BillingError("NOT_ON_SALE"); // ADR-094: only Solo is sold
     if (b && LIVE.includes(b.status) && b.stripeSubscriptionId) throw new BillingError("HAS_SUBSCRIPTION"); // changes go through the portal
   }
+  if (item.kind === "pilot" && !PILOT_ON_SALE) throw new BillingError("NOT_ON_SALE");
   if (item.kind === "pilot" && (b?.pilotEndsAt || (b && b.status !== "none"))) throw new BillingError("PILOT_USED");
   if (item.kind === "pack" && !(item.pack in CREDIT_PACK_PRICES)) throw new BillingError("INVALID");
   const key = item.kind === "plan" ? lookupKey.plan(item.plan, item.interval) : item.kind === "pilot" ? lookupKey.pilot : lookupKey.pack(item.pack);

@@ -1,3 +1,4 @@
+import { HIDDEN_FEATURES } from "@/server/billing/catalog";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { microToUsd } from "@/lib/money/usd";
@@ -25,7 +26,7 @@ export default async function OrgPage({ params }: { params: Promise<{ id: string
       </div>
       <section aria-labelledby="settings-h">
         <h2 id="settings-h" className="mb-4 text-lg font-semibold">{t("settings")}</h2>
-        <SettingsForm orgId={org.id} plan={org.plan} status={org.status} capUsd={microToUsd(org.spendCapMicroUsd)} limits={org.limits} />
+        <SettingsForm orgId={org.id} plan={org.plan} status={org.status} capUsd={microToUsd(org.spendCapMicroUsd)} limits={org.limits} extraFeatures={org.extraFeatures} hiddenFeatures={HIDDEN_FEATURES} />
       </section>
       <section aria-labelledby="credits-h" data-testid="org-credits">
         <h2 id="credits-h" className="mb-2 text-lg font-semibold">{t("credits.title")}</h2>

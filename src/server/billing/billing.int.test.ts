@@ -36,7 +36,7 @@ beforeEach(async () => {
 afterAll(async () => { await sql.end({ timeout: 5 }); });
 
 /** A stand-in for the Stripe client: records requests, knows the catalogue's lookup keys. */
-function fakeStripe(prices: string[] = ["postaja_studio_month", "postaja_studio_year", "postaja_pilot", "postaja_credits_500"]) {
+function fakeStripe(prices: string[] = ["postaja_solo_year", "postaja_studio_month", "postaja_studio_year", "postaja_pilot", "postaja_credits_500"]) {
   const calls: { what: string; args: unknown }[] = [];
   let n = 0;
   const stripe = {
@@ -59,19 +59,24 @@ const billing = async () => (await db.select().from(orgBilling).where(eq(orgBill
 const spend = (now = NOW) => reserve(db, { orgId: orgA, brandId: null, postId: null, provider: "x", model: "m", estimate: 1n, action: "assist", now });
 
 describe("checkout", () => {
-  it("owners only; one customer per org; the price by lookup key; plan changes go through the portal", async () => {
+  it("owners only; one customer per org; the price by lookup key; plan changes go through the portal; only Solo is sold (ADR-094)", async () => {
     const f = fakeStripe();
-    await expect(checkoutUrl(db, f.stripe, editorA, { kind: "plan", plan: "studio", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(checkoutUrl(db, null, A, { kind: "plan", plan: "studio", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
-    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "agency", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NO_PRICE" });
+    await expect(checkoutUrl(db, f.stripe, editorA, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(checkoutUrl(db, null, A, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NO_PRICE" });
+    // Studio, Agencija and the pilot have prices in Stripe but are not on sale: refused before anything reaches Stripe.
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "studio", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NOT_ON_SALE" });
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "agency", interval: "year" }, "https://app")).rejects.toMatchObject({ code: "NOT_ON_SALE" });
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "pilot" }, "https://app")).rejects.toMatchObject({ code: "NOT_ON_SALE" });
+    expect(f.calls.filter((c) => c.what === "customer")).toHaveLength(0);
     await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "gold" as "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "INVALID" });
-    expect(await checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "studio", interval: "year" }, "https://app")).toMatch(/^https:\/\/checkout\.stripe\.test\//);
+    expect(await checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "solo", interval: "year" }, "https://app")).toMatch(/^https:\/\/checkout\.stripe\.test\//);
     await checkoutUrl(db, f.stripe, A, { kind: "pack", pack: "small" }, "https://app");
     expect(f.calls.filter((c) => c.what === "customer")).toHaveLength(1);
     const [sub, pack] = f.calls.filter((c) => c.what === "checkout").map((c) => c.args as Record<string, unknown>);
     expect(sub).toMatchObject({
-      mode: "subscription", customer: "cus_1", client_reference_id: orgA, line_items: [{ price: "price_postaja_studio_year", quantity: 1 }],
-      metadata: { orgId: orgA, kind: "plan", plan: "studio" }, subscription_data: { metadata: { orgId: orgA, kind: "plan", plan: "studio" } },
+      mode: "subscription", customer: "cus_1", client_reference_id: orgA, line_items: [{ price: "price_postaja_solo_year", quantity: 1 }],
+      metadata: { orgId: orgA, kind: "plan", plan: "solo" }, subscription_data: { metadata: { orgId: orgA, kind: "plan", plan: "solo" } },
       tax_id_collection: { enabled: true }, billing_address_collection: "required", success_url: "https://app/app/team?billing=success",
     });
     expect(pack).toMatchObject({ mode: "payment", metadata: { kind: "pack", pack: "small" }, payment_intent_data: { metadata: { kind: "pack" } } });
@@ -81,8 +86,7 @@ describe("checkout", () => {
     await expect(portalUrl(db, f.stripe, editorA, "https://app")).rejects.toBeInstanceOf(BillingError);
 
     await handleStripeEvent(db, event("customer.subscription.created", subscription({ status: "active" })), NOW);
-    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "studio", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "HAS_SUBSCRIPTION" });
-    await expect(checkoutUrl(db, f.stripe, A, { kind: "pilot" }, "https://app")).rejects.toMatchObject({ code: "PILOT_USED" });
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "HAS_SUBSCRIPTION" });
   });
 });
 
@@ -117,13 +121,11 @@ describe("webhooks", () => {
     await spend(new Date(NOW.getTime() + 8 * DAY));
   });
 
-  it("the pilot: 30 days of Studio with 3 brands, once; afterwards work stops until a plan is bought", async () => {
-    const f = fakeStripe();
-    await checkoutUrl(db, f.stripe, A, { kind: "pilot" }, "https://app");
+  it("a pilot paid earlier still runs (not sold any more, ADR-094): 30 days with 3 brands; afterwards work stops until a plan is bought", async () => {
+    await db.insert(orgBilling).values({ orgId: orgA, stripeCustomerId: "cus_1" });
     await handleStripeEvent(db, event("checkout.session.completed", { id: "cs_9", mode: "payment", payment_status: "paid", customer: "cus_1", client_reference_id: orgA, metadata: { orgId: orgA, kind: "pilot" } }), NOW);
     expect(await settings()).toMatchObject({ plan: "pilot", limits: { brands: 3, members: 3, creditsPerMonth: 1500 } });
     expect((await billing()).pilotEndsAt!.toISOString()).toBe("2026-11-07T10:00:00.000Z");
-    await expect(checkoutUrl(db, f.stripe, A, { kind: "pilot" }, "https://app")).rejects.toMatchObject({ code: "PILOT_USED" });
     await spend(new Date(NOW.getTime() + 29 * DAY));
     await expect(spend(new Date(NOW.getTime() + 31 * DAY))).rejects.toMatchObject({ reason: "ENDED" });
     await handleStripeEvent(db, event("customer.subscription.created", subscription({ status: "active", key: "postaja_studio_month" })), new Date(NOW.getTime() + 31 * DAY));

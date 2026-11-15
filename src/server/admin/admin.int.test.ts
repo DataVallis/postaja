@@ -44,6 +44,19 @@ describe("audit log", () => {
     expect(row.meta).toEqual({ plan: { from: "trial", to: "pro" }, spendCapMicroUsd: { from: "50000000", to: "12500000" } });
   });
 
+  it("hidden features switched on per organization (ADR-094): only hidden ones, stored sorted and unique, audited", async () => {
+    const actor = await boss();
+    const { orgId } = await createOrganization(db, deps, actor, { name: "Acme", slug: "acme", plan: "trial", ownerEmail: "o@acme.si" });
+    const after = await updateOrgSettings(db, actor, orgId, { extraFeatures: ["research", "ads", "ads"] });
+    expect(after.extraFeatures).toEqual(["ads", "research"]);
+    const [row] = await db.select().from(auditLog).where(eq(auditLog.action, "org.settings.update"));
+    expect(row.meta).toEqual({ extraFeatures: { from: "[]", to: '["ads","research"]' } });
+    await expect(updateOrgSettings(db, actor, orgId, { extraFeatures: ["persona"] })).rejects.toThrow();
+    await expect(updateOrgSettings(db, actor, orgId, { extraFeatures: ["gold"] })).rejects.toThrow();
+    expect((await sql`select extra_features from org_settings`)[0].extra_features).toEqual(["ads", "research"]);
+    expect((await updateOrgSettings(db, actor, orgId, { extraFeatures: [] })).extraFeatures).toEqual([]);
+  });
+
   it("refused actions write nothing — no change, no audit row", async () => {
     const actor = await boss();
     const { orgId } = await createOrganization(db, deps, actor, { name: "Acme", slug: "acme", plan: "trial", ownerEmail: "o@acme.si" });

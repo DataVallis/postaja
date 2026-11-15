@@ -1,6 +1,6 @@
 # Getting started
 
-Postaja writes and prepares social media posts for several brands at once. From the brand's guidelines (CGP), materials and plan it creates texts, images, animations, ads and videos with an AI influencer. You then download the posts and publish them yourself.
+Postaja writes and prepares social media posts for several brands at once. From the brand's guidelines (CGP), materials and plan it creates texts, images, carousels, animations and videos. You then download the posts and publish them yourself.
 
 ## Signing in
 
@@ -16,14 +16,14 @@ There is no password. You can sign in if a Postaja administrator or an organizat
 2. Enter your company or agency name and your email and click **Send the link to start**.
 3. Open the link in the email (valid for 10 minutes), check the name and click **Start the 7-day trial**.
 
-The trial lasts 7 days and needs no card: 1 brand, 1 member, 50 credits, plus ad sets, animations and competitor research (like Studio; the persona is not included). The top of every page shows how many trial days are left; a day or two before the end you get an email. When the trial ends, creating new content stops; everything made stays viewable and downloadable. Choose a plan any time under **Team and plan**.
+The trial lasts 7 days and needs no card: 1 brand, 1 member and 50 credits, with everything the Solo plan has (the persona is not included). The top of every page shows how many trial days are left; a day or two before the end you get an email. When the trial ends, creating new content stops; everything made stays viewable and downloadable. Choose a plan any time under **Team and plan**.
 
 ## Organization and roles
 
 All work happens in an **organization**. A Postaja administrator sets up the organization and its plan (limits and monthly spending cap); the owner invites members.
 
 - **Owner** creates brands, edits the CGP, channels, files, visual identity and persona, and invites members.
-- **Editor** creates and edits posts, images, animations, ads and videos. Can only view brand settings.
+- **Editor** creates and edits posts, images, animations and videos. Can only view brand settings.
 
 ## Team and plan
 
@@ -57,7 +57,7 @@ After a free trial, **First steps** sit at the top: add a brand, write the CGP, 
 
 ## Nothing gets lost
 
-What you create (images, videos, passport pictures, ad copy) stays until you delete it yourself. Each new creation or revision adds a new version, and the earlier ones remain available. Deleting is always a separate step with a confirmation.
+What you create (texts, images, videos, passport pictures) stays until you delete it yourself. Each new creation or revision adds a new version, and the earlier ones remain available. Deleting is always a separate step with a confirmation.
 
 ## Language and theme
 

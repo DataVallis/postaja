@@ -260,6 +260,12 @@
       }
     },
     "limitCredits": "Credits per month",
+    "extraFeatures": "Hidden features",
+    "extraFeaturesHint": "No plan on sale includes these and customers do not see them. Switch them on here for this organization only.",
+    "extraFeature": {
+      "ads": "Ad sets",
+      "research": "Competitor research"
+    },
     "credits": {
       "title": "Credits",
       "intro": "Every paid AI action costs credits from the price list below. An organization first uses its plan's monthly credits (Admin → organization → Credits per month; empty = unlimited), then bought packs, valid 12 months. The € spend cap stays as the safety limit. Until payments exist (TASK-036) owners request packs in the app and you grant them once paid.",
@@ -1805,8 +1811,9 @@
       "PILOT_USED": "The pilot is available once, before the first subscription.",
       "NO_CUSTOMER": "There is no payment for this organization yet.",
       "NO_PRICE": "This price is not set up in Stripe yet. Please let us know.",
+      "NOT_ON_SALE": "This plan is not on sale right now.",
       "NO_SUBSCRIPTION": "Add-ons go on an active subscription. Choose a plan first.",
-      "ADDON_INVALID": "Enter a valid number of add-ons (Agency already includes the persona)."
+      "ADDON_INVALID": "Enter a valid number of add-ons."
     },
     "credits": {
       "title": "Credits",
@@ -1839,7 +1846,7 @@
       "pilotUntil": "The agency pilot runs until {date}. Choose a plan any time; the pilot then ends.",
       "ended": "The subscription or pilot has ended. Everything made stays viewable and downloadable; choose a plan to create new posts, images and videos.",
       "manage": "Manage subscription (card, change plan, cancel)",
-      "limits": "{brands} brands · {members} members · {credits} credits a month",
+      "limits": "{brands, plural, one {# brand} other {# brands}} · {members, plural, one {# member} other {# members}} · {credits} credits a month",
       "buyMonth": "€{price} / month",
       "buyYear": "€{price} / year",
       "buyMonthLabel": "{plan} monthly, €{price}",
@@ -2279,12 +2286,13 @@
     },
     "inPlan": "Included in {plan} (€{price} / month) and up.",
     "inPlanOrAddon": "Included in {plan}, or as an add-on for €{price} / month.",
+    "addonOnly": "Available as an add-on to your plan for €{price} / month.",
     "cta": "Choose a plan",
     "askOwner": "Ask the organization's owner to upgrade."
   },
   "Signup": {
     "title": "Try Postaja free for {days} days",
-    "intro": "No card needed. The trial includes {brands} brand, {credits} credits, ad sets, animations and competitor research.",
+    "intro": "No card needed. The trial includes {brands} brand, {credits} credits, posts, images, carousels and animations.",
     "orgName": "Company or agency name",
     "email": "Email",
     "submit": "Send the link to start",

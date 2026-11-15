@@ -26,3 +26,6 @@ E2E `help.spec.ts` (PDF in both languages, English chapters).
 ## Keeping it current
 Every PR that changes what a customer sees updates the matching chapter (DEVELOPMENT-RULES §7). Use the exact labels of
 the UI (from `messages/sl.json`) in **bold**.
+
+## Chapters by feature (ADR-094) — Built
+`CHAPTER_FEATURE` in `src/server/guide/guide.ts` ties a chapter to a plan feature (`oglasi` → ads, `konkurenca` → research, `persona` → persona). `visibleChapters` leaves out chapters whose tool the organization neither has nor can buy; the contents page, the chapter page (404 for a hidden one) and the PDF use it. A test checks that no chapter Solo sees links into a hidden one (sl, en).

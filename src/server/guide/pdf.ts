@@ -5,7 +5,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { guideChapters } from "./guide";
+import type { Feature } from "../billing/catalog";
+import { guideChapters, visibleChapters } from "./guide";
 import type { Block, Inline } from "./markdown";
 
 const A4 = { w: 595.28, h: 841.89 };
@@ -132,8 +133,9 @@ class Writer {
 export type GuidePdfText = { title: string; subtitle: string; contents: string; page: string };
 
 /** The whole guide in `locale` as a PDF. */
-export async function guidePdf(locale: string, text: GuidePdfText): Promise<Uint8Array> {
-  const chapters = await guideChapters(locale);
+export async function guidePdf(locale: string, text: GuidePdfText, features?: ReadonlySet<Feature>): Promise<Uint8Array> {
+  const all = await guideChapters(locale);
+  const chapters = features ? visibleChapters(all, features) : all; // ADR-094: no chapters about tools the organization cannot use
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const load = async (n: string) => doc.embedFont(await readFile(/*turbopackIgnore: true*/ path.join(fontDir(), n)), { subset: true });

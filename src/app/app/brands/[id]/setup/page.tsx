@@ -5,6 +5,8 @@ import { Check, CircleAlert, CircleDashed } from "lucide-react";
 import { AutoRefresh } from "@/app/app/plan/auto-refresh";
 import { Badge, buttonClass, Card, PageHeader, textareaClass } from "@/components/ui";
 import { requireOrgPage } from "@/server/auth/require";
+import { featureVisible } from "@/server/billing/catalog";
+import { orgFeatures } from "@/server/billing/features";
 import { listBrandFiles } from "@/server/brands/files";
 import { brandReadiness, CGP_MIN_CHARS, EXAMPLES_MIN, SETUP_STEPS, type SetupStep, type StepState } from "@/server/brands/readiness";
 import { BrandError, getBrandDetail } from "@/server/brands/service";
@@ -30,6 +32,7 @@ export default async function BrandSetupPage({ params, searchParams }: { params:
   const sp = await searchParams;
   if (org.role !== "owner") redirect(`/app/brands/${id}`);
   const db = getDb();
+  const features = await orgFeatures(db, org.orgId); // ADR-094: no links to tools the organization cannot use
   const detail = await getBrandDetail(db, org, id).catch((e) => { if (e instanceof BrandError) return null; throw e; });
   if (!detail) notFound();
   const { brand, profile, channels } = detail;
@@ -223,8 +226,8 @@ export default async function BrandSetupPage({ params, searchParams }: { params:
                 </div>
                 <p className="mt-2 text-sm font-medium">{t("done.extrasTitle")}</p>
                 <ul className="grid list-disc gap-1 pl-5 text-sm">
-                  <li><Link href={`/app/brands/${id}?tab=persona`} className="underline underline-offset-4">{t("done.persona")}</Link></li>
-                  <li><Link href={`/app/brands/${id}?tab=competitors`} className="underline underline-offset-4">{t("done.competitors")}</Link></li>
+                  {featureVisible("persona", features) ? <li><Link href={`/app/brands/${id}?tab=persona`} className="underline underline-offset-4">{t("done.persona")}</Link></li> : null}
+                  {featureVisible("research", features) ? <li><Link href={`/app/brands/${id}?tab=competitors`} className="underline underline-offset-4">{t("done.competitors")}</Link></li> : null}
                   <li><Link href={`/app/brands/${id}?tab=files`} className="underline underline-offset-4">{t("done.partners")}</Link></li>
                   <li><Link href="/app/connect" className="underline underline-offset-4">{t("done.claude")}</Link></li>
                 </ul>

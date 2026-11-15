@@ -1,6 +1,6 @@
 # Brand
 
-A brand is a project in Postaja. Each brand has its own CGP, channels, files, visual identity, posts, ads and, optionally, a persona. You find brands in the **Brands** menu.
+A brand is a project in Postaja. Each brand has its own CGP, channels, files, visual identity, posts and, optionally, a persona. You find brands in the **Brands** menu.
 
 ## New brand
 
