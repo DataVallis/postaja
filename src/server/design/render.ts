@@ -184,6 +184,38 @@ export function colourUnder(spec: DesignSpec, t: Template, box: { x: number; y: 
   return color(spec, t.background.color);
 }
 
+/**
+ * Where a template's main text sits (headline, subhead, body, number, cta; labels and footers do not count), as the side
+ * of the canvas it occupies and how far it reaches in % — or "all" when no side stays free (TASK-062).
+ */
+export function textBand(t: Template): { side: "top" | "bottom" | "left" | "right"; edge: number } | { side: "all" } | null {
+  const main = t.elements.filter((e) => e.type === "text" && ["headline", "subhead", "body", "number", "cta"].includes(e.slot));
+  if (!main.length) return null;
+  const top = Math.min(...main.map((e) => e.y)), bottom = Math.max(...main.map((e) => e.y + e.h));
+  const left = Math.min(...main.map((e) => e.x)), right = Math.max(...main.map((e) => e.x + e.w));
+  if (bottom <= 72) return { side: "top", edge: bottom };
+  if (top >= 28) return { side: "bottom", edge: top };
+  if (right <= 66) return { side: "left", edge: right };
+  if (left >= 34) return { side: "right", edge: left };
+  return { side: "all" };
+}
+
+/**
+ * Readability over a full-bleed picture (TASK-062): image models draw the subject where they like, also under the text,
+ * whatever the prompt says. A template without its own strong overlay gets a soft fade in the brand's background colour
+ * over the side where its main text sits (a light even veil when the text is everywhere).
+ */
+export function textScrim(t: Template, bgHex: string): string | null {
+  if (t.background.type !== "illustration" || (t.background.overlay && t.background.overlay.opacity >= 0.5)) return null;
+  const band = textBand(t);
+  if (!band) return null;
+  if (band.side === "all") return `linear-gradient(0deg, ${rgba(bgHex, 0.55)}, ${rgba(bgHex, 0.55)})`;
+  const deg = { top: 180, bottom: 0, left: 90, right: 270 }[band.side];
+  const reach = band.side === "top" || band.side === "left" ? band.edge : 100 - band.edge;
+  const solid = Math.max(0, reach - 6), clear = Math.min(100, reach + 16);
+  return `linear-gradient(${deg}deg, ${rgba(bgHex, 0.9)} 0%, ${rgba(bgHex, 0.9)} ${solid}%, ${rgba(bgHex, 0)} ${clear}%)`;
+}
+
 /** "Prvi *poudarjen* del" → words with an emphasis flag; explicit line breaks are kept as separate lines. */
 export function parseEmphasis(text: string): { word: string; em: boolean }[][] {
   let em = false;
@@ -212,8 +244,12 @@ export function parseEmphasis(text: string): { word: string; em: boolean }[][] {
 export function fitText(lines: string[][], boxW: number, boxH: number, o: { max: number; min: number; lineHeight: number; widthEm: number; letterSpacing: number; measure?: (word: string) => number | null }): number {
   const em = (w: string) => o.measure?.(w) ?? [...w].length * o.widthEm;
   const fits = (size: number) => {
-    const wordW = (w: string) => (em(w) + [...w].length * o.letterSpacing) * size;
     const gap = size * (0.27 + Math.max(0, o.letterSpacing));
+    // A kept group ("h\u00a0konkurenci") is drawn as its words with the normal gap between them (textNode).
+    const wordW = (w: string): number => {
+      const parts = w.split("\u00a0");
+      return parts.reduce((n, p) => n + (em(p) + [...p].length * o.letterSpacing) * size, 0) + gap * (parts.length - 1);
+    };
     const width = boxW * (o.measure ? 0.97 : 1);
     let rows = 0;
     for (const words of lines) {
@@ -251,7 +287,13 @@ function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H:
   let k = 0;
   const rows = lines.map((words) =>
     el("div", { display: "flex", flexWrap: "wrap", justifyContent: justify, width: "100%" },
-      words.map((w) => el("span", { color: color(spec, w.em && e.emphasis ? e.emphasis : e.color), marginRight: gap, ...(k++ >= visible ? { opacity: 0 } : {}) }, w.word))),
+      words.map((w) => {
+        const style = { color: color(spec, w.em && e.emphasis ? e.emphasis : e.color), marginRight: gap, ...(k++ >= visible ? { opacity: 0 } : {}) };
+        const parts = w.word.split("\u00a0");
+        // A kept group never breaks: one flex box of its words, spaced like any other words (no wide no-break space).
+        return parts.length === 1 ? el("span", style, w.word)
+          : el("span", { ...style, display: "flex" }, parts.map((p, i) => el("span", { marginRight: i < parts.length - 1 ? gap : 0 }, p)));
+      })),
   );
   const inner = el("div", {
     display: "flex", flexDirection: "column", maxWidth: "100%",
@@ -362,6 +404,8 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
         : `linear-gradient(0deg, ${rgba(c, a)}, ${rgba(c, a)})`;
       children.push(el("div", { position: "absolute", left: 0, top: 0, width: W, height: H, backgroundImage: grad }));
     }
+    const scrim = textScrim(t, s.palette.background);
+    if (scrim) children.push(el("div", { position: "absolute", left: 0, top: 0, width: W, height: H, backgroundImage: scrim }));
   }
   // Elements live in the safe box (the whole canvas when no insets are given); sizes in % of the box.
   const ox = input.safe?.left ?? 0, oy = input.safe?.top ?? 0;

@@ -11,7 +11,7 @@ import type { Db } from "../db/client";
 import { brandProfileVersions, brands, formatPresets, modelRegistry, postImageRuns, posts, postMedia, usageLedger, type Platform, type PostVisual } from "../db/schema";
 import { getBrandDetail } from "../brands/service";
 import { postVisualRequest, postVisualSchema, issues, type VisualRevision } from "../design/ai";
-import { renderTemplate } from "../design/render";
+import { renderTemplate, textBand } from "../design/render";
 import { brandAssetBytes, brandExamples, currentDesign, isPartnerLogo, partnerLogoBytes, toBlock } from "../design/service";
 import { needsIllustration, SLOTS, type DesignSpec, type Template } from "../design/spec";
 import type { Storage } from "../files/storage";
@@ -75,16 +75,14 @@ export async function assertSize(png: Uint8Array, size: { width: number; height:
  */
 export function compositionHint(t: Template): string | null {
   if (t.background.type !== "illustration") return null;
-  const main = t.elements.filter((e) => e.type === "text" && ["headline", "subhead", "body", "number", "cta"].includes(e.slot));
-  if (!main.length) return null;
-  const top = Math.min(...main.map((e) => e.y)), bottom = Math.max(...main.map((e) => e.y + e.h));
-  const left = Math.min(...main.map((e) => e.x)), right = Math.max(...main.map((e) => e.x + e.w));
+  const band = textBand(t);
+  if (!band || band.side === "all") return null;
   const pct = (n: number) => `${Math.round(Math.min(100, Math.max(0, n)))}%`;
-  if (bottom <= 72) return `Composition: the top ${pct(bottom + 4)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only in the bottom ${pct(96 - bottom)}.`;
-  if (top >= 28) return `Composition: the bottom ${pct(104 - top)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only in the top ${pct(top - 4)}.`;
-  if (right <= 66) return `Composition: the left ${pct(right + 4)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only on the right ${pct(96 - right)}.`;
-  if (left >= 34) return `Composition: the right ${pct(104 - left)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only on the left ${pct(left - 4)}.`;
-  return null;
+  const plain = "of the picture carries text later, so keep it plain, calm background with no objects;";
+  if (band.side === "top") return `Composition: the top ${pct(band.edge + 4)} ${plain} place the subject only in the bottom ${pct(96 - band.edge)}.`;
+  if (band.side === "bottom") return `Composition: the bottom ${pct(104 - band.edge)} ${plain} place the subject only in the top ${pct(band.edge - 4)}.`;
+  if (band.side === "left") return `Composition: the left ${pct(band.edge + 4)} ${plain} place the subject only on the right ${pct(96 - band.edge)}.`;
+  return `Composition: the right ${pct(104 - band.edge)} ${plain} place the subject only on the left ${pct(band.edge - 4)}.`;
 }
 
 /** What the image model gets: Claude's subject, where to leave room for the text, the design's style, never letters (ADR-009). */

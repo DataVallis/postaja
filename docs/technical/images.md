@@ -73,6 +73,9 @@ Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
   ties → oldest. `logo` (first upload) is the fallback and what Claude sees when designing.
 - **Composition** (`images/service.ts` `compositionHint`): full-bleed illustration templates tell the image model
   which side stays plain for the main text (headline, subhead, body, number, cta).
+- **Readability** (ADR-097, `render.ts` `textBand`, `textScrim`): full-bleed picture templates without an overlay of at
+  least 50 % get a fade in the background colour under the side of the main text. Kept word groups are rendered as
+  separate words with the normal gap.
 - **Made-up writing**: `generateIllustration` checks every picture (`hasDrawnText`, image up to 1568 px), checks a
   redraw again, and makes a last abstract-only try (`ABSTRACT_ONLY`); redraws are `assist` (no credits).
 

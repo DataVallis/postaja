@@ -34,5 +34,19 @@ Texts 8/8 usable; images 4/8 usable. Cost of the pilot: 1.60 € (dev spend 2.02
 Defects → fixes (ADR-096): D1 text fitting and one-letter words; D2 logo choice by contrast; D3 composition hint for
 full-bleed pictures; D4 every illustration checked at a readable size, checked again after a redraw.
 
+## Pilot re-run (2026-11-15, after ADR-096 on dev, "Nove slike" on the four failed posts)
+| # | Post | Result |
+|---|---|---|
+| 1 | inzenirji.si · Instagram | fixed: headline fits, nothing overlaps |
+| 3 | aibuilders.si · Instagram carousel | logo visible (white mark); subtitle no longer on the objects; faint picture shapes behind the headline; "of a  weekend" double gap (kept word) |
+| 5 | davidtacer.com · LinkedIn | fixed: no lettering in the illustration |
+| 8 | aibuilders.si · X | logo visible; the model still drew the subject under the headline and subtitle |
+
+→ ADR-097: a fade under the text on full-bleed pictures (the model does not reliably follow the composition hint) and
+kept words drawn with the normal gap. Images after the re-run: 6/8 usable, the two remaining defects fixed in ADR-097.
+
+Open design note (not a renderer bug): aibuilders.si's closing slide draws the button text with its own blue fill on an
+orange button shape — a design-version choice; a revision in words fixes it ("Vizualna podoba → Popravi").
+
 Also seen: a carousel asked for "4 slides" has 6 images (cover + 4 + closing) — acceptable; the aibuilders.si
 Instagram channel is set to Slovenian while the brand writes English (warning shown on the channel).
