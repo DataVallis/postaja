@@ -225,8 +225,8 @@ describe("creatives (TASK-021b)", () => {
     const claude = plans(visuals);
     const images = fal();
     expect(await runAdImageJob(db, { llm: claude.client, images: images.client, storage }, jobs[0])).toBe("done");
-    expect(claude.calls).toHaveLength(1);
-    expect(claude.calls[0].tool.name).toBe("plan_ad_visuals");
+    // TASK-062: each drawn illustration is checked for made-up writing (one look each).
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_ad_visuals", "check_illustration", "check_illustration"]);
     expect(claude.calls[0].user).toContain("<headline>Zgradi v vikendu</headline>");
     expect(images.calls).toHaveLength(2); // the "points" variant has no illustration
     expect(images.calls[0].width).toBe(images.calls[0].height); // square, ~1 MP, cropped into each placement's box

@@ -8,7 +8,7 @@ import { cardDesign, monoDesign } from "../../../tests/fixtures/design";
 import { inspectFont, isVariableFont, staticInstance, woffToSfnt } from "../files/font";
 import { fontRenderError } from "./font-check";
 import { createDesignRequest, postVisualRequest, postVisualSchema, reviseDesignRequest, type DesignInputs } from "./ai";
-import { fitText, parseEmphasis, renderTemplate } from "./render";
+import { fitText, fontMeasure, keepShortWords, parseEmphasis, renderTemplate } from "./render";
 import { color, designJsonSchema, designSpecSchema, needsIllustration, templateSlots } from "./spec";
 
 const card = designSpecSchema.parse(cardDesign);
@@ -59,14 +59,37 @@ describe("text", () => {
     expect(parseEmphasis("brez")).toEqual([[{ word: "brez", em: false }]]);
   });
 
-  it("fits text into its box: smaller for longer text, never below the minimum", () => {
+  it("fits text into its box: smaller for longer text; below the minimum only when nothing else fits (down to half)", () => {
     const o = { max: 100, min: 30, lineHeight: 1.1, widthEm: 0.56, letterSpacing: 0 };
     const short = fitText([["Kratko"]], 900, 400, o);
     const long = fitText([["To", "je", "precej", "daljši", "naslov", "ki", "gre", "čez", "več", "vrstic", "zagotovo"]], 900, 400, o);
     expect(short).toBe(100);
     expect(long).toBeLessThan(short);
     expect(long).toBeGreaterThanOrEqual(30);
-    expect(fitText([["x".repeat(200)]], 900, 100, o)).toBe(30);
+    expect(fitText([["x".repeat(200)]], 900, 100, o)).toBe(15);
+  });
+
+  // TASK-062 quality round: inzenirji.si's headline "Stranka ne čaka. Odide h konkurenci_" wrapped to five rows and ran
+  // over the line below it: the design's minimum headline size (~10 % of the width) did not fit the box, and fitText
+  // stopped at the minimum instead of going smaller.
+  it("a headline that does not fit at the design's minimum goes smaller instead of running out of its box", async () => {
+    const fonts = [{ name: "brand", data: fs.readFileSync(path.join(process.cwd(), "assets", "fonts", "JetBrainsMono-Bold.woff")), weight: 700 as const, style: "normal" as const }];
+    const measure = fontMeasure(fonts);
+    expect(measure("brand", 700, "abcd")).toBeCloseTo(2.4, 2); // 4 × 0.6 em, read from the font
+    expect(measure("sans", 700, "abcd")).toBeNull(); // no such font → the average is used
+    const lines = parseEmphasis("Stranka ne čaka.\n*Odide* h konkurenci_").map((l) => keepShortWords(l).map((w) => w.word));
+    expect(lines).toEqual([["Stranka", "ne", "čaka."], ["Odide", "h\u00a0konkurenci_"]]);
+    const box = { w: 650, h: 420 };
+    const o = { max: 150, min: 108, lineHeight: 1.05, widthEm: 0.6 * 1.06, letterSpacing: 0, measure: (w: string) => measure("brand", 700, w) };
+    const rows = (size: number) => lines.reduce((n, words) => { // Satori's layout with the real widths
+      let r = 1, used = 0;
+      for (const w of words) { const ww = measure("brand", 700, w)! * size; if (used && used + size * 0.27 + ww > box.w) { r++; used = ww; } else used += (used ? size * 0.27 : 0) + ww; }
+      return n + r;
+    }, 0);
+    expect(rows(o.min) * o.min * o.lineHeight).toBeGreaterThan(box.h); // at the design's minimum it overflows
+    const size = fitText(lines, box.w, box.h, o);
+    expect(size).toBeLessThan(o.min);
+    expect(rows(size) * size * o.lineHeight).toBeLessThanOrEqual(box.h);
   });
 });
 

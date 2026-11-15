@@ -137,15 +137,17 @@ export async function restoreDesignTemplate(db: Db, ctx: OrgContext, fromDesignI
   return id;
 }
 
-/** The brand's logo and font bytes (first uploaded of each), for rendering and for Claude. */
+/** The brand's logos (oldest first) and font bytes (first uploaded), for rendering and for Claude. */
 export async function brandAssetBytes(db: Db, storage: Storage, ctx: OrgContext, brandId: string) {
   const rows = (await forOrg(db, ctx).select(brandAssets, eq(brandAssets.brandId, brandId))) as (typeof brandAssets.$inferSelect)[];
   rows.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const logoRow = rows.find((a) => a.kind === "logo");
+  const logoRows = rows.filter((a) => a.kind === "logo").slice(0, 12);
   const fontRow = rows.find((a) => a.kind === "font");
-  const [logo, raw] = await Promise.all([logoRow ? storage.get(logoRow.storageKey) : null, fontRow ? storage.get(fontRow.storageKey) : null]);
+  const [logos, raw] = await Promise.all([Promise.all(logoRows.map((r) => storage.get(r.storageKey))), fontRow ? storage.get(fontRow.storageKey) : null]);
   const font = raw ? await renderableFont(raw) : null;
-  return { logo, font, fontFamily: font && fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
+  // `logo` = the first upload (what Claude sees when designing); `logos` = all of them, so each template can draw the one
+  // that reads best on its colours (TASK-062).
+  return { logo: logos[0] ?? null, logos, font, fontFamily: font && fontRow ? (fontRow.meta.family ?? fontRow.filename) : null };
 }
 
 /**
@@ -202,10 +204,10 @@ export const toBlock = (jpeg: Uint8Array): ImageBlock => ({ mediaType: "image/jp
 const pngToBlock = async (png: Uint8Array): Promise<ImageBlock> => toBlock(new Uint8Array(await sharp(png).resize({ width: 540 }).jpeg({ quality: 80 }).toBuffer()));
 
 /** One template of a design as a PNG with its sample content, the brand logo and font, and a stand-in illustration. */
-export async function renderPreview(spec: DesignSpec, templateId: string, shape: Shape, assets: { logo: Uint8Array | null; font: Uint8Array | null }) {
+export async function renderPreview(spec: DesignSpec, templateId: string, shape: Shape, assets: { logo: Uint8Array | null; logos?: Uint8Array[]; font: Uint8Array | null }) {
   const t = spec.templates.find((x) => x.id === templateId);
   if (!t) throw new DesignError("NOT_FOUND");
-  return renderTemplate(spec, t, SHAPES[shape], { slots: t.sample, logo: assets.logo, brandFont: assets.font });
+  return renderTemplate(spec, t, SHAPES[shape], { slots: t.sample, logo: assets.logo, logos: assets.logos, brandFont: assets.font });
 }
 
 type DesignDeps = { llm: LlmClient; storage: Storage; now?: Date };
@@ -265,7 +267,7 @@ export async function runDesignJob(db: Db, deps: DesignDeps, job: DesignJob): Pr
     if (!parsed.success) { invalid = { draft: out.input, errors: issues(parsed.error) }; reason = "schema"; continue; }
     // A design that cannot be rendered is not saved.
     try {
-      for (const t of parsed.data.templates) await renderTemplate(parsed.data, t, SHAPES.square, { slots: t.sample, logo: assets.logo, brandFont: assets.font });
+      for (const t of parsed.data.templates) await renderTemplate(parsed.data, t, SHAPES.square, { slots: t.sample, logo: assets.logo, logos: assets.logos, brandFont: assets.font });
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").slice(0, 120);
       console.warn(`[design] ${d.id} attempt ${attempt + 1} could not be rendered: ${msg}`);

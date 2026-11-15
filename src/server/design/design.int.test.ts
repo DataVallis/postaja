@@ -15,7 +15,7 @@ import { orgSettings, posts } from "../db/schema";
 import { createS3Storage, s3ConfigFromEnv } from "../files/storage";
 import { ImageError, type ImageClient, type ImageRequest } from "../images/fal";
 import { handleDesignPreview, handleMedia } from "../images/http";
-import { deleteImageVersion, listImageVersions, listPostMedia, NO_WRITING, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
+import { deleteImageVersion, listImageVersions, listPostMedia, NO_WRITING, ABSTRACT_ONLY, requestImages, restoreImageVersion, restoreSlideFromVersion, runImageJob, setPostPartnerLogo, setSlideTexts, type PostImageJob } from "../images/service";
 import { aiPersonPosts, postArchive } from "../download/service";
 import { animatablePositions, requestAnimation, runVideoJob, type PostVideoJob } from "../video/service";
 import { probeVideo } from "../video/ffmpeg";
@@ -548,7 +548,8 @@ describe("post images from the design", () => {
     fal = fakeImages();
     await runImages(j.jobs, claude, fal.client);
     expect(await state(id2)).toEqual({ media_status: "ready", media_error: null });
-    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration"]);
+    // TASK-062: the picture drawn again is looked at too.
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration", "check_illustration"]);
     expect(fal.calls).toHaveLength(2);
     expect(fal.calls[0].model).toBe("fal-ai/ideogram/v3");
     expect(fal.calls[1].references).toBeUndefined();
@@ -559,6 +560,27 @@ describe("post images from the design", () => {
     expect(rows.map((r) => r.action)).toEqual(["illustration", "assist"]); // the second drawing costs no credits
     const checks = await sql`select action from usage_ledger where post_id = ${id2} and model like 'claude%' and action = 'assist'`;
     expect(checks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // TASK-062 quality round: a wireframe drawn without style references came back with "Your MVP" in it and was never
+  // looked at; a picture drawn again could still have writing.
+  it("every illustration is checked, also without references; writing twice → a last try with abstract shapes only, no credits", async () => {
+    await design();
+    const id = await post({ plan: { topic: "MVP" } });
+    const j = memoryQueue();
+    await requestImages(db, j.q, A, id, "new");
+    const claude = fakeClaude({ textInPicture: [true, true] });
+    const fal = fakeImages();
+    await runImages(j.jobs, claude, fal.client);
+    expect(await state(id)).toEqual({ media_status: "ready", media_error: null });
+    expect(claude.calls.map((c) => c.tool.name)).toEqual(["plan_post_images", "check_illustration", "check_illustration"]);
+    expect(fal.calls).toHaveLength(3);
+    expect(fal.calls.every((c) => c.references === undefined)).toBe(true); // no past posts: no style references at all
+    expect(fal.calls[1].prompt).toContain("Absolutely no text of any kind");
+    expect(fal.calls[2].prompt).toContain(ABSTRACT_ONLY);
+    const rows = await sql`select action from usage_ledger where post_id = ${id} and model like 'fal-ai/%' order by created_at`;
+    expect(rows.map((r) => r.action)).toEqual(["illustration", "assist", "assist"]);
+    expect((await media(id)).filter((m) => m.kind === "background")).toHaveLength(1);
   });
 
   it("ADR-076: a correction can ask for the same picture to be drawn again (made-up letters); the flag is never stored", async () => {

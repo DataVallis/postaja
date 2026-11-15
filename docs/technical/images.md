@@ -64,6 +64,18 @@ clients; Postaja only renders what the design says.
 
 Downloads: `/api/post-media/[id]` (`?download=1` → `<brand>-<day>-<n>.png`).
 
+## Quality fixes (ADR-096, TASK-062) — Built
+- **Text fitting** (`render.ts` `fitText`): rows are laid out with the real glyph widths of the fonts Satori gets
+  (`fontMeasure`, fontkit), with a 3 % margin; when the text does not fit at the element's `minSize`, the size keeps
+  shrinking down to half of it. `keepShortWords` joins one-letter words to the next with a no-break space.
+- **Logo** (`pickLogo`, `colourUnder`): renders get `logos` (all brand logos, oldest first); per logo box the logo with
+  the highest contrast to the colour under it wins, then the best fit to the box's shape (transparent padding trimmed),
+  ties → oldest. `logo` (first upload) is the fallback and what Claude sees when designing.
+- **Composition** (`images/service.ts` `compositionHint`): full-bleed illustration templates tell the image model
+  which side stays plain for the main text (headline, subhead, body, number, cta).
+- **Made-up writing**: `generateIllustration` checks every picture (`hasDrawnText`, image up to 1568 px), checks a
+  redraw again, and makes a last abstract-only try (`ABSTRACT_ONLY`); redraws are `assist` (no credits).
+
 ## Notes
 - Render speed: no `overflow:hidden` (Satori masks make librsvg ~10× slower); only the used font families are passed.
 - `satori` is in `serverExternalPackages`; Docker and `scripts/start-standalone.sh` copy `assets/` (fonts).
