@@ -8,6 +8,12 @@
 
 Postaja napiše objavo iz CGP-ja in materialov ter jo preveri po pravilih platforme, kanala in branda. Če pravila krši, jo enkrat sama popravi.
 
+## Pogovor ob objavi
+
+Na strani objave je levo **Pogovor** (na telefonu pod objavo), desno objava. Tvoja zahteva je prvo sporočilo; Postaja odgovori, da je besedilo pripravljeno, in hkrati začne slike, če jih kanal ima.
+
+V polje **Sporočilo** napiši, kaj želiš spremeniti, npr. »naj bo krajše«, »dodaj, da je vpis odprt« ali »na sliki naj bo drug naslov«, in klikni **Pošlji** (ali Ctrl/Cmd + Enter). Postaja sama presodi, ali spremeni besedilo, slike ali oboje, ali pa samo odgovori na vprašanje. Vprašanje je brezplačno; novo besedilo stane 1 kredit, slike kot pri popravku slik. Med pripravo besedila ali slik počakaj, da se konča. Pogovor ostane shranjen ob objavi.
+
 ## Urejanje in pravila
 
 - Besedilo urejaš na strani objave in klikneš **Shrani spremembe**. Števec pokaže znake in hashtage.

@@ -318,9 +318,17 @@ http
         }
         return reply(tool, { sharedImageStyle: "Minimal 3D, navy background", items });
       }
+      // Conversation next to the post (TASK-061): words about pictures ("slik") go to the images, the rest to the text.
+      if (tool === "route_message") {
+        const said = user.split("The owner's message:\n")[1]?.trim() ?? "";
+        const images = /slik/i.test(said);
+        return reply(tool, { text: images ? "" : said, images: images ? said : "", reply: images ? "Popravim slike." : "Prav, popravim besedilo." });
+      }
       const brief = user.split("\n")[1] ?? "objava";
       const thread = r.tools?.[0]?.input_schema?.required?.includes("parts");
-      const caption = user.includes("POCENI") ? `Poceni ${brief}` : `${brief}. Link v bio`;
+      // A correction (TASK-061) keeps the post and adds the owner's change, so the e2e test can see it was used.
+      const change = user.match(/The owner asks for this change:\n(.*)/)?.[1];
+      const caption = user.includes("POCENI") ? `Poceni ${brief}` : change ? `${brief}. ${change}. Link v bio` : `${brief}. Link v bio`;
       const input = thread ? { parts: [caption], hashtags: ["e2e"], topic_summary: brief } : { caption, hashtags: ["e2e"], topic_summary: brief };
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({

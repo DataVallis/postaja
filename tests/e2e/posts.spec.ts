@@ -68,6 +68,20 @@ test("owner asks for a post, gets it checked against the rules, edits, approves 
   await expect(p.getByTestId("status")).toHaveText("pripravljena");
   await expect(p.getByLabel("Besedilo")).toHaveValue("Jesenski tečaj se začne. Link v bio\n\n#e2e");
   await expect(p.getByText(/\/ 2200 znakov/)).toBeVisible();
+  // TASK-061: the request opens the post's conversation; a correction in words rewrites the text in place.
+  const chat = p.getByTestId("chat-messages");
+  await expect(chat.locator('[data-role="user"]').first()).toContainText("Jesenski tečaj se začne");
+  await expect(chat.locator('[data-role="assistant"]').first()).toContainText("Besedilo je pripravljeno.");
+  await expect(chat.locator('[data-role="assistant"]').first()).toContainText("Brand še nima vizualne podobe");
+  await p.getByLabel("Sporočilo").fill("Dodaj, da je vpis odprt");
+  await p.getByRole("button", { name: "Pošlji" }).click();
+  await expect(chat.locator('[data-role="assistant"]').last()).toContainText("Prav, popravim besedilo.");
+  await expect(p.getByLabel("Besedilo")).toHaveValue("Jesenski tečaj se začne. Dodaj, da je vpis odprt. Link v bio\n\n#e2e");
+  await expect(p.getByLabel("Sporočilo")).toHaveValue("");
+  // Pictures without a brand design: the reason is answered, nothing breaks.
+  await p.getByLabel("Sporočilo").fill("Na sliki naj bo drug naslov");
+  await p.getByRole("button", { name: "Pošlji" }).click();
+  await expect(chat.locator('[data-role="assistant"]').last()).toContainText("Brand še nima vizualne podobe");
   expect(await serious(p)).toEqual([]);
   await p.screenshot({ path: info.outputPath("post-ready.png"), fullPage: true });
 

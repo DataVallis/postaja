@@ -33,6 +33,15 @@ Status: **Built** (TASK-007). Decisions: ADR-010, ADR-015, ADR-022, ADR-035, ADR
 - Integration `src/server/posts/generate.int.test.ts` (real Postgres + S3 stand-in, fake LLM `src/server/llm/fake.ts`): ready path with exact cost, fix round, needs_review, invalid output, provider error releases the reservation, X thread, knowledge base (PDF/DOCX/XLSX/PPTX/CSV in; image, unreadable PDF, other brand/org out), lazy read of pre-TASK-009 sources (and not by another org), over-budget selection by brief, editor allowed / other org / archived / bad brief, cap refusal without a call, cap boundary (= passes, +1 refused, last month ignored), 5 parallel reservations vs cap, edit re-check, transitions, cross-tenant harness for `posts`.
 - E2E `tests/e2e/posts.spec.ts` with `tests/e2e/mock-anthropic.mjs` (started by Playwright, reached via `ANTHROPIC_BASE_URL`).
 
+## Conversation next to the post (TASK-061, ADR-099)
+- `post_messages` (org_id, post_id, role user/assistant, body, meta `{created?, text?, images?, error?}`), listed by time.
+- `startConversation` after `generatePost`: request + answer; images "new" when the channel takes images and `FAL_KEY` is set.
+- `chatTurn`: refuses while the text is generating or images are queued/rendering (`BUSY`); stores the message; one
+  `route_message` call (action `assist`) with the post text, slide words and the last 8 messages → `{text, images, reply}`;
+  `text` → `revisePostText` (writing loop with `PromptInput.revision`, action `text`; failure restores status and text);
+  `images` → `requestImages` "revise" (or "new" without images); errors go to the answer's `meta.error`.
+- UI `src/app/app/posts/[id]/chat-panel.tsx`; the editor remounts only when a conversation rewrite happened.
+
 ## No-repeat and published link (TASK-029, ADR-059)
 - `src/server/posts/repeat.ts` `repeatFor()`: the brand's written posts of the window (org `repeat_thresholds.windowDays`)
   vs the new post's topic, with `ideas/similar.ts` (TF-IDF over stems; warn 0.4, block 0.6). Called at the end of the

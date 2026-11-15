@@ -8,6 +8,12 @@
 
 Postaja writes the post from the CGP and materials and checks it against the platform, channel and brand rules. If it breaks a rule, Postaja fixes it once by itself.
 
+## Conversation next to the post
+
+The post page shows the **Conversation** on the left (below the post on a phone) and the post on the right. Your request is the first message; Postaja answers that the text is ready and starts the images at the same time if the channel has them.
+
+In **Message** write what to change, e.g. "make it shorter", "add that sign-up is open" or "use another headline on the image", and click **Send** (or Ctrl/Cmd + Enter). Postaja decides whether to change the text, the images or both, or just answers a question. A question is free; a new text costs 1 credit, images cost the same as an image correction. While the text or images are being made, wait until they are done. The conversation stays with the post.
+
 ## Editing and rules
 
 - You edit the text on the post page and click **Save changes**. A counter shows characters and hashtags.
