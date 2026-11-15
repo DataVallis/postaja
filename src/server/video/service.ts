@@ -111,7 +111,7 @@ export async function animatePost(db: Db, deps: Omit<ImageDeps, "images">, ctx: 
   const cache = new Map<string, string>();
   const count = Math.round(Math.min(motion.durationS, MAX_S) * FPS);
   const { bytes, probe } = await encodeFrames(count, (i) => renderTemplate(spec, t, size, {
-    slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font, motion: { spec: motion!, t: i / FPS }, cache,
+    slots: slide.slots, illustration, logo: assets.logo, logos: assets.logos, ...partner, brandFont: assets.font, motion: { spec: motion!, t: i / FPS }, cache,
   }), { ...size, fps: FPS, metadata: bg?.aiPerson ? AI_VIDEO_METADATA : undefined }); // TASK-045: the persona is disclosed
 
   const k = key(ctx.orgId, postId);

@@ -133,7 +133,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
         kept.add(prev.id);
       } else {
         references ??= (await brandExamples(db, deps.storage, ctx, a.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
-        const prompt = illustrationPrompt(v.illustration ?? a.offer, spec);
+        const prompt = illustrationPrompt(v.illustration ?? a.offer, spec, t);
         const out = await generateIllustration(db, deps, ctx, { brandId: a.brandId, postId: null }, prompt, ILLUSTRATION, references);
         illustration = out.bytes;
         const k = key(ctx.orgId, id, "jpg");
@@ -142,7 +142,7 @@ export async function renderAdImages(db: Db, deps: ImageDeps, ctx: OrgContext, i
       }
     }
     for (const p of presets) {
-      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font, safe: p.safeZone });
+      const png = await renderTemplate(spec, t, { width: p.width, height: p.height }, { slots: v.slots, illustration, logo: assets.logo, logos: assets.logos, ...partner, brandFont: assets.font, safe: p.safeZone });
       const k = key(ctx.orgId, id, "png");
       await deps.storage.put(k, png, "image/png");
       rows.push({ id: crypto.randomUUID(), adSetId: id, kind: "creative", variant: i, placement: p.key, storageKey: k, contentType: "image/png", width: p.width, height: p.height, sizeBytes: png.byteLength });

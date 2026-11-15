@@ -67,9 +67,30 @@ export async function assertSize(png: Uint8Array, size: { width: number; height:
   if (meta.width !== size.width || meta.height !== size.height) throw new ImageJobError("INVALID_OUTPUT");
 }
 
-/** What the image model gets: Claude's subject, the design's illustration style, never letters (ADR-009). */
-export function illustrationPrompt(subject: string, spec: DesignSpec): string {
-  return [subject.trim().slice(0, 1500), `Style: ${spec.illustrationStyle}`, "No text, no letters, no numbers, no logos, no watermarks."].join("\n");
+/**
+ * Where the text of a full-bleed illustration template sits, as a composition instruction for the image model
+ * (TASK-062: a cover's subtitle stood on top of the drawn objects). Only the main text (headline, subhead, body, number,
+ * cta) counts; small labels and footers do not. Null when the template has no full-bleed picture or the text is spread
+ * so that no side stays free.
+ */
+export function compositionHint(t: Template): string | null {
+  if (t.background.type !== "illustration") return null;
+  const main = t.elements.filter((e) => e.type === "text" && ["headline", "subhead", "body", "number", "cta"].includes(e.slot));
+  if (!main.length) return null;
+  const top = Math.min(...main.map((e) => e.y)), bottom = Math.max(...main.map((e) => e.y + e.h));
+  const left = Math.min(...main.map((e) => e.x)), right = Math.max(...main.map((e) => e.x + e.w));
+  const pct = (n: number) => `${Math.round(Math.min(100, Math.max(0, n)))}%`;
+  if (bottom <= 72) return `Composition: the top ${pct(bottom + 4)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only in the bottom ${pct(96 - bottom)}.`;
+  if (top >= 28) return `Composition: the bottom ${pct(104 - top)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only in the top ${pct(top - 4)}.`;
+  if (right <= 66) return `Composition: the left ${pct(right + 4)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only on the right ${pct(96 - right)}.`;
+  if (left >= 34) return `Composition: the right ${pct(104 - left)} of the picture carries text later, so keep it plain, calm background with no objects; place the subject only on the left ${pct(left - 4)}.`;
+  return null;
+}
+
+/** What the image model gets: Claude's subject, where to leave room for the text, the design's style, never letters (ADR-009). */
+export function illustrationPrompt(subject: string, spec: DesignSpec, t?: Template): string {
+  const hint = t ? compositionHint(t) : null;
+  return [subject.trim().slice(0, 1500), ...(hint ? [hint] : []), `Style: ${spec.illustrationStyle}`, "No text, no letters, no numbers, no logos, no watermarks."].join("\n");
 }
 
 /** The illustration's shape: the whole slide for a full-bleed background, else the image box of the template. */
@@ -241,11 +262,18 @@ export async function generateIllustration(db: Db, deps: ImageDeps, ctx: OrgCont
   // prompts about contracts, notes or screens otherwise come back with made-up lettering (owner, 2026-10-13).
   const asked = opts.verbatim ? `${prompt}\n${NO_WRITING}` : prompt;
   const first = await drawIllustration(db, deps, ctx, who, asked, shape, refs, opts, "illustration");
-  // Style references (past posts full of words) and the owner's own prompts are where made-up letters come from.
-  // Claude looks at every such picture; one with writing is drawn once more without references, at no credit.
-  if ((!refs.length && !opts.verbatim && !opts.check) || !(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
-  return drawIllustration(db, deps, ctx, who, `${prompt}\n${NO_TEXT_AGAIN}`, shape, [], opts, "assist");
+  // TASK-062: Claude looks at every picture (before, only those drawn with style references or the owner's prompt — a
+  // wireframe drawn without references came back with "Your MVP" in it). One with writing is drawn again without
+  // references, at no credit, and looked at again; still writing → a last try with abstract shapes only.
+  if (!(await hasDrawnText(db, deps, ctx, who, first.bytes))) return first;
+  const again = `${prompt}\n${NO_TEXT_AGAIN}`;
+  const second = await drawIllustration(db, deps, ctx, who, again, shape, [], opts, "assist");
+  if (!(await hasDrawnText(db, deps, ctx, who, second.bytes))) return second;
+  return drawIllustration(db, deps, ctx, who, `${again}\n${ABSTRACT_ONLY}`, shape, [], opts, "assist");
 }
+
+/** The last try after two pictures with writing (TASK-062): nothing that usually carries words. */
+export const ABSTRACT_ONLY = "Draw it with abstract shapes, lines, blocks and light only: no screens, interfaces, documents, papers, signs, labels or boxes that could hold words.";
 
 /** Added to the owner's own image prompt (TASK-052 keeps the prompt itself unchanged). */
 export const NO_WRITING = "No readable writing anywhere: papers, screens, signs and labels show only blank areas, scribbles or simple shapes — never letters, words or numbers.";
@@ -254,7 +282,8 @@ const NO_TEXT_AGAIN = "Absolutely no text of any kind: no letters, words, number
 /** Claude's look at a drawn illustration: does it contain letters, numbers or logos? Errors count as "no" (best effort). */
 export async function hasDrawnText(db: Db, deps: ImageDeps, ctx: OrgContext, who: { brandId: string; postId: string | null }, jpeg: Uint8Array, allowed: ImageBlock[] = []): Promise<boolean> {
   try {
-    const small = new Uint8Array(await sharp(jpeg).resize(768, 768, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer());
+    // TASK-062: large enough that small made-up labels stay readable (768 px hid "Your MVP" in a wide wireframe).
+    const small = new Uint8Array(await sharp(jpeg).resize(1568, 1568, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer());
     const out = await cappedCall(db, deps.llm, { orgId: ctx.orgId, brandId: who.brandId, postId: who.postId, now: deps.now, action: "assist" }, {
       system: [{ text: "You check background illustrations for social media posts. The post's words are added later by software, so the illustration itself must not contain any writing.", cache: true }],
       user: allowed.length
@@ -456,7 +485,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         } else {
           references ??= (await brandExamples(db, deps.storage, ctx, p.brandId, 4)).map((b) => `data:image/jpeg;base64,${Buffer.from(b).toString("base64")}`);
           // The owner's image prompt goes to the model as written (TASK-052); otherwise the brand's style is added.
-          prompt = slide.verbatim && slide.illustration ? slide.illustration : illustrationPrompt(slide.illustration ?? p.brief, spec);
+          prompt = slide.verbatim && slide.illustration ? slide.illustration : illustrationPrompt(slide.illustration ?? p.brief, spec, t);
           out = await generateIllustration(db, deps, ctx, { brandId: p.brandId, postId: p.id }, prompt, illustrationShape(t, size), references, { verbatim: !!(slide.verbatim && slide.illustration) });
         }
         illustration = out.bytes;
@@ -466,7 +495,7 @@ export async function renderPostImages(db: Db, deps: ImageDeps, ctx: OrgContext,
         if (persona) aiSlides.add(i);
       }
     }
-    const png = await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, ...partner, brandFont: assets.font });
+    const png = await renderTemplate(spec, t, size, { slots: slide.slots, illustration, logo: assets.logo, logos: assets.logos, ...partner, brandFont: assets.font });
     // TASK-045: a slide showing the persona says so in its metadata (IPTC digital source type).
     pngs.push(aiSlides.has(i) ? await markAiPng(png) : png);
   }

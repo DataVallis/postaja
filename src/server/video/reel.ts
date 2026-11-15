@@ -152,7 +152,7 @@ async function endCard(p: PostRow, spec: DesignSpec, assets: Awaited<ReturnType<
   const slide = p.visual?.slides[0];
   const t = slide && spec.templates.find((x) => x.id === slide.templateId);
   if (!slide || !t) return null;
-  return renderTemplate(spec, t, REEL_SIZE, { slots: slide.slots, illustration, logo: assets.logo, brandFont: assets.font, safe: REEL_SAFE });
+  return renderTemplate(spec, t, REEL_SIZE, { slots: slide.slots, illustration, logo: assets.logo, logos: assets.logos, brandFont: assets.font, safe: REEL_SAFE });
 }
 
 /**

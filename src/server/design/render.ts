@@ -5,6 +5,7 @@ import path from "node:path";
 import satori from "satori";
 import { backgroundState, elementState, type MotionSpec } from "../video/motion";
 import sharp from "sharp";
+import fontkit from "@pdf-lib/fontkit";
 import { MAX_INPUT_PIXELS } from "../files/images";
 import { fontRenderError } from "./font-check";
 import { color, type DesignSpec, type Slot, type Template, type TextElement } from "./spec";
@@ -52,6 +53,11 @@ export type RenderInput = {
    * Polygon" — gets the partner's logo in that text's place instead, and the brand logo stays alone.
    */
   partnerName?: string | null;
+  /**
+   * All the brand's logos, oldest first (TASK-062). When given, each template draws the one that stands out best from
+   * the colour under its logo box (a navy logo on a navy slide was a single orange dot); `logo` is the fallback.
+   */
+  logos?: Uint8Array[] | null;
   /** TTF/OTF of the brand font (used where the design says "brand"). */
   brandFont?: Uint8Array | null;
   /**
@@ -75,6 +81,109 @@ const el = (type: string, style: Record<string, unknown>, children?: unknown, ex
 const dataUri = (b: Uint8Array, type: string) => `data:${type};base64,${Buffer.from(b).toString("base64")}`;
 const rgba = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
 
+/** Width of a text in em (1 = the font size) for one family and weight; null when the font cannot measure it. */
+export type Measure = (family: string, weight: number, text: string) => number | null;
+
+type MeasuredFont = { unitsPerEm: number; layout: (text: string) => { advanceWidth: number } };
+
+/**
+ * Real glyph advances from the fonts Satori draws with (TASK-062), instead of a per-family average width: brand fonts
+ * range from about 0.45 to 0.65 em per letter, so the average makes text either too small or too large for its box.
+ */
+export function fontMeasure(fonts: FontFace[]): Measure {
+  const parsed = new Map<Buffer, MeasuredFont | null>();
+  const widths = new Map<string, number | null>();
+  return (family, weight, text) => {
+    const key = `${family}|${weight}|${text}`;
+    if (widths.has(key)) return widths.get(key)!;
+    const face = fonts.find((f) => f.name === family && f.weight === weight) ?? fonts.find((f) => f.name === family);
+    let out: number | null = null;
+    if (face) {
+      if (!parsed.has(face.data)) {
+        try { parsed.set(face.data, fontkit.create(face.data) as unknown as MeasuredFont); } catch { parsed.set(face.data, null); }
+      }
+      const font = parsed.get(face.data);
+      if (font) {
+        try { out = font.layout(text).advanceWidth / font.unitsPerEm; } catch { out = null; }
+      }
+    }
+    widths.set(key, out);
+    return out;
+  };
+}
+
+/**
+ * Words that may not end a line: one-letter words (Slovenian prepositions and conjunctions "v z s k h a i o u", English
+ * "a", "I") stay with the next word, so a line never ends in "h" or "v" (TASK-062).
+ */
+export function keepShortWords<T extends { word: string }>(words: T[]): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if ([...w.word].length === 1 && /\p{L}/u.test(w.word) && i + 1 < words.length) {
+      out.push({ ...words[i + 1], word: `${w.word}\u00a0${words[i + 1].word}` });
+      i++;
+    } else out.push(w);
+  }
+  return out;
+}
+
+const luminance = (r: number, g: number, b: number) => {
+  const c = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
+};
+const hexLum = (hex: string) => luminance(parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16));
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+type LogoLook = { lum: number; aspect: number };
+const logoLooks = new WeakMap<Uint8Array, Promise<LogoLook | null>>();
+/** A logo's visible colour (mean luminance of its opaque pixels) and the shape of its visible part. */
+function logoLook(bytes: Uint8Array): Promise<LogoLook | null> {
+  let p = logoLooks.get(bytes);
+  if (!p) {
+    p = (async () => {
+      try {
+        const trimmed = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).ensureAlpha().trim({ threshold: 1 }).toBuffer({ resolveWithObject: true }).catch(() => null);
+        const src = trimmed ? trimmed.data : Buffer.from(bytes);
+        const { data, info } = await sharp(src).ensureAlpha().resize({ width: 200, height: 200, fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
+        let sum = 0, n = 0;
+        for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 128) { sum += luminance(data[i], data[i + 1], data[i + 2]); n++; }
+        return n ? { lum: sum / n, aspect: trimmed ? trimmed.info.width / trimmed.info.height : info.width / info.height } : null;
+      } catch { return null; }
+    })();
+    logoLooks.set(bytes, p);
+  }
+  return p;
+}
+
+/**
+ * The logo that reads best on `bgHex` in a box of `boxAspect` (TASK-062): the highest contrast, then the one that fills
+ * the box best; on a tie the first (oldest) upload. Logos that cannot be read are skipped.
+ */
+export async function pickLogo(logos: Uint8Array[], bgHex: string, boxAspect: number): Promise<Uint8Array | null> {
+  const bg = hexLum(bgHex);
+  let best: { bytes: Uint8Array; score: number } | null = null;
+  for (const bytes of logos) {
+    const look = await logoLook(bytes);
+    if (!look) continue;
+    const fill = Math.min(look.aspect, boxAspect) / Math.max(look.aspect, boxAspect); // share of the box it can fill
+    const score = Math.log(contrast(look.lum, bg)) + 0.35 * Math.log(fill);
+    if (!best || score > best.score + 1e-9) best = { bytes, score };
+  }
+  return best?.bytes ?? null;
+}
+
+/** The colour under a box: the last filled shape drawn below it that covers its centre, else the slide's background. */
+export function colourUnder(spec: DesignSpec, t: Template, box: { x: number; y: number; w: number; h: number }, upTo: number): string {
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  for (let i = upTo - 1; i >= 0; i--) {
+    const e = t.elements[i];
+    if (e.type === "shape" && e.opacity >= 0.5 && cx >= e.x && cx <= e.x + e.w && cy >= e.y && cy <= e.y + e.h) return color(spec, e.color);
+  }
+  if (t.background.type === "illustration") return t.background.overlay && t.background.overlay.opacity >= 0.5 ? color(spec, t.background.overlay.color) : spec.palette.background;
+  return color(spec, t.background.color);
+}
+
 /** "Prvi *poudarjen* del" → words with an emphasis flag; explicit line breaks are kept as separate lines. */
 export function parseEmphasis(text: string): { word: string; em: boolean }[][] {
   let em = false;
@@ -93,35 +202,46 @@ export function parseEmphasis(text: string): { word: string; em: boolean }[][] {
   }).filter((l) => l.length);
 }
 
-/** Largest size (px) between min and max at which the wrapped text fits the box (estimate; Satori clips the rest). */
-export function fitText(lines: string[][], boxW: number, boxH: number, o: { max: number; min: number; lineHeight: number; widthEm: number; letterSpacing: number }): number {
+/**
+ * Largest size (px) between min and max at which the wrapped text fits the box. With `measure` (em width of a word, from
+ * the font itself) the rows are laid out like Satori does — word, then a gap of (0.27 + letter spacing) em — with a 3 %
+ * margin; without it, an average glyph width (`widthEm`) is the estimate. When even `min` does not fit, the size keeps
+ * shrinking down to half of it: smaller text is better than text running into the next element (TASK-062: a design's
+ * headline minimum of ~10 % left a five-row headline over the line below it).
+ */
+export function fitText(lines: string[][], boxW: number, boxH: number, o: { max: number; min: number; lineHeight: number; widthEm: number; letterSpacing: number; measure?: (word: string) => number | null }): number {
+  const em = (w: string) => o.measure?.(w) ?? [...w].length * o.widthEm;
   const fits = (size: number) => {
-    const charW = size * (o.widthEm + o.letterSpacing);
+    const wordW = (w: string) => (em(w) + [...w].length * o.letterSpacing) * size;
+    const gap = size * (0.27 + Math.max(0, o.letterSpacing));
+    const width = boxW * (o.measure ? 0.97 : 1);
     let rows = 0;
     for (const words of lines) {
       let used = 0;
       rows++;
       for (const w of words) {
-        const need = (w.length + (used ? 1 : 0)) * charW;
-        if (used && used + need > boxW) { rows++; used = w.length * charW; } else used += need;
-        if (w.length * charW > boxW * 1.02) return false; // a single word wider than the box
+        const ww = wordW(w);
+        if (ww > width * 1.02) return false; // a single word wider than the box
+        if (used && used + gap + ww > width) { rows++; used = ww; } else used += (used ? gap : 0) + ww;
       }
     }
     return rows * size * o.lineHeight <= boxH;
   };
   for (let s = o.max; s > o.min; s *= 0.94) if (fits(s)) return Math.floor(s);
-  return Math.floor(o.min);
+  for (let s = o.min; s > o.min * 0.5; s *= 0.94) if (fits(s)) return Math.floor(s);
+  return Math.floor(o.min * 0.5);
 }
 
-function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number, ox = 0, oy = 0, wordsShown = 1): Node | null {
+function textNode(spec: DesignSpec, e: TextElement, value: string, W: number, H: number, ox = 0, oy = 0, wordsShown = 1, measure?: Measure): Node | null {
   if (!value.trim()) return null;
   const family = e.font === "heading" ? spec.typography.heading : spec.typography.body;
   const pad = (e.padding / 100) * W;
   const bw = (e.w / 100) * W, bh = (e.h / 100) * H;
-  const lines = parseEmphasis(e.uppercase ? value.toUpperCase() : value);
+  const lines = parseEmphasis(e.uppercase ? value.toUpperCase() : value).map(keepShortWords);
   const widthEm = (WIDTH[family] ?? 0.55) * (e.weight === 700 ? 1.06 : 1) * (e.uppercase ? 1.12 : 1);
   const size = fitText(lines.map((l) => l.map((w) => w.word)), bw - pad * 2, bh - pad * 2, {
     max: (e.maxSize / 100) * W, min: (Math.min(e.minSize, e.maxSize) / 100) * W, lineHeight: e.lineHeight, widthEm, letterSpacing: e.letterSpacing,
+    measure: measure ? (word) => measure(family, e.weight, word) : undefined,
   });
   const gap = size * (0.27 + Math.max(0, e.letterSpacing));
   const justify = e.align === "center" ? "center" : e.align === "right" ? "flex-end" : "flex-start";
@@ -222,6 +342,7 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
   const used = new Set<string>([s.typography.heading, s.typography.body]);
   const fonts = (await builtinFonts()).filter((f) => used.has(f.name) || f.name === "symbols");
   if (brandFont && used.has("brand")) for (const weight of [400, 700] as const) fonts.push({ name: "brand", data: Buffer.from(brandFont), weight, style: "normal" });
+  const measure = fontMeasure(fonts);
 
   const b = t.background;
   const children: (Node | null)[] = [];
@@ -260,13 +381,15 @@ export async function renderTemplate(spec: DesignSpec, t: Template, size: { widt
     } else if (e.type === "image" && e.source === "logo" && input.partnerLogo && partnerSpot < 0) {
       node = await logoPair(input.logo ?? null, input.partnerLogo, { x, y, w, h, opacity: e.opacity }, input.cache);
     } else if (e.type === "image") {
-      const src = e.source === "logo" ? input.logo : picture;
+      const src = e.source === "logo"
+        ? (input.logos?.length ? (await pickLogo(input.logos, colourUnder(s, t, e, index), (e.w * BW) / Math.max(1, e.h * BH))) ?? input.logo : input.logo)
+        : picture;
       if (!src) continue;
       node = el("img", { position: "absolute", left: x, top: y, width: w, height: h, borderRadius: (e.radius / 100) * BW, opacity: e.opacity }, undefined,
         { src: await fitted(src, w, h, e.source === "logo" ? "contain" : e.fit, e.source === "logo", input.cache), width: w, height: h });
     } else {
       const value = e.slot === "static" ? e.text ?? "" : input.slots[e.slot] ?? "";
-      node = textNode(s, e, value, BW, BH, ox, oy, st?.words ?? 1);
+      node = textNode(s, e, value, BW, BH, ox, oy, st?.words ?? 1, measure);
     }
     // Animation frame: the element's entrance/loop state on top of its own opacity (TASK-023).
     if (node && st) {

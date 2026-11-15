@@ -35,7 +35,7 @@ enough that users are satisfied. Anything hidden is asked about first.
 | 1 | Simplify: hide ads and research, only Solo | TASK-059 | Done |
 | 1b | Terms of use in the app, business-buyer confirmation (30-day deletion stays manual, ADR-095) | TASK-060 | Done |
 | 2 | One creation path: conversation next to the post | TASK-061 | Planned |
-| 3 | Quality round: ~60 posts scored, defects fixed with regression tests, ≥ 90 % usable | TASK-062 | Planned |
+| 3 | Quality round: pilot 8 posts (texts 8/8, images 4/8) → 4 fixes (ADR-096); then ~60 posts scored, ≥ 90 % usable | TASK-062 | In progress |
 | 4 | Production: secrets (owner), Stripe live prices (owner), `dev → main`, first deploy, restore drill, monitoring | TASK-035 (rest) | Planned |
 | 5 | Soft launch by invitation, then public signup | — | Planned |
 
