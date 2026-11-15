@@ -23,7 +23,7 @@ import { repeatFor, topicOf } from "./repeat";
 export const MAX_OUTPUT_TOKENS = 2000;
 
 export class PostError extends Error {
-  constructor(public readonly code: "NOT_FOUND" | "ARCHIVED" | "NO_MODEL" | "BAD_STATE" | "BAD_URL") {
+  constructor(public readonly code: "NOT_FOUND" | "ARCHIVED" | "NO_MODEL" | "BAD_STATE" | "BAD_URL" | "SPEND_CAP" | "REVISION_FAILED") {
     super(code);
   }
 }
@@ -112,10 +112,12 @@ async function defaultModel(db: Db, brandId: string): Promise<Model> {
  * The writing loop (ADR-036) for a post row that is already "generating": prompt → Claude → schema → rule check →
  * at most one automatic fix → ready | needs_review | failed. Every call is reserved against the spend cap.
  */
-async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: string, r: Awaited<ReturnType<typeof rulesFor>>, model: Model, brief: string) {
+async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: string, r: Awaited<ReturnType<typeof rulesFor>>, model: Model, brief: string, revise?: { current: string; instruction: string; back: PostStatus }): Promise<true | string> {
   const materials = await materialsFor(db, deps.storage, ctx, r.brand.id, brief);
   const s = forOrg(db, ctx);
   const finish = (set: Partial<typeof posts.$inferInsert>) => s.update(posts, { ...set, model: model.modelKey, updatedAt: new Date() }, eq(posts.id, postId));
+  // A correction that fails leaves the post as it was (its text and status); the error goes back to the caller.
+  const fail = async (set: Partial<typeof posts.$inferInsert>) => { await finish(revise ? { status: revise.back } : set); return set.error ?? "FAILED"; };
   const thread = r.rules.threadPartMax !== undefined;
   let previous: { draft: unknown; violations: Violation[]; invalid?: boolean } | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -127,6 +129,7 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
       materials,
       brief,
       previous,
+      revision: revise ? { current: revise.current, instruction: revise.instruction } : undefined,
     });
     const chars = prompt.system.reduce((n, b) => n + b.text.length, 0) + prompt.user.length + JSON.stringify(prompt.tool).length;
     let ledgerId: string;
@@ -134,8 +137,7 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
       ledgerId = await reserve(db, { orgId: ctx.orgId, brandId: r.brand.id, postId, provider: model.provider, model: model.modelKey, estimate: worstCaseMicroUsd(chars, MAX_OUTPUT_TOKENS, model), now: deps.now, action: attempt === 0 ? "text" : "assist" });
     } catch (e) {
       if (e instanceof SpendCapError) {
-        await finish({ status: "failed", error: "SPEND_CAP", fixAttempts: attempt });
-        return;
+        return fail({ status: "failed", error: "SPEND_CAP", fixAttempts: attempt });
       }
       throw e;
     }
@@ -144,16 +146,14 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
       out = await deps.llm.structured({ ...prompt, model: model.modelKey, maxTokens: MAX_OUTPUT_TOKENS });
     } catch (e) {
       await release(db, ledgerId);
-      await finish({ status: "failed", error: e instanceof LlmError ? e.code : "PROVIDER", fixAttempts: attempt });
-      return;
+      return fail({ status: "failed", error: e instanceof LlmError ? e.code : "PROVIDER", fixAttempts: attempt });
     }
     await settle(db, ledgerId, out.usage, costMicroUsd(out.usage, model));
 
     const parsed = (thread ? threadOutput : textOutput).safeParse(out.input);
     if (!parsed.success) {
       if (attempt === 0) { previous = { draft: out.input, violations: [], invalid: true }; continue; }
-      await finish({ status: "failed", error: "INVALID_OUTPUT", fixAttempts: attempt });
-      return;
+      return fail({ status: "failed", error: "INVALID_OUTPUT", fixAttempts: attempt });
     }
     const content = composeContent(parsed.data);
     const violations = checkPost(content, r.rules, r.cta);
@@ -161,8 +161,32 @@ async function writeInto(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: st
     // No-repeat (TASK-029): a close repeat of an earlier post goes to review; approving it is the override.
     const repeatOf = await repeatFor(db, ctx, { id: postId, brandId: r.brand.id, topic: parsed.data.topic_summary }, deps.now);
     await finish({ status: violations.length || repeatOf?.blocks ? "needs_review" : "ready", content, topicSummary: parsed.data.topic_summary, repeatOf, ruleFailures: violations, fixAttempts: attempt, error: null });
-    return;
+    return true;
   }
+  return "FAILED";
+}
+
+/** The post's text as one string: thread parts separated by blank lines, hashtags at the end. */
+export function postText(c: PostContent): string {
+  return c.parts?.length ? c.parts.map((p, i) => `[${i + 1}] ${p}`).join("\n\n") : c.caption; // hashtags are already in it
+}
+
+/**
+ * TASK-061: the owner's correction of a written post, in words. The same writing loop (CGP, rules, one automatic fix)
+ * runs with the current text and the correction; a changed post needs approving again. On failure the post keeps its
+ * text and status and the error code is thrown.
+ */
+export async function revisePostText(db: Db, deps: GenerateDeps, ctx: OrgContext, postId: string, instruction: string): Promise<void> {
+  const words = z.string().trim().min(1).max(2000).parse(instruction);
+  const p = await ownPost(db, ctx, postId);
+  if (!p.content || !p.channelId || !["ready", "needs_review", "approved"].includes(p.status)) throw new PostError("BAD_STATE");
+  const r = await rulesFor(db, ctx, p.brandId, p.channelId);
+  if (r.brand.archivedAt) throw new PostError("ARCHIVED");
+  const model = await defaultModel(db, p.brandId);
+  const claimed = await forOrg(db, ctx).update(posts, { status: "generating", updatedAt: new Date() }, and(eq(posts.id, postId), eq(posts.status, p.status))!);
+  if (!claimed.length) throw new PostError("BAD_STATE");
+  const out = await writeInto(db, deps, ctx, postId, r, model, p.brief, { current: postText(p.content), instruction: words, back: p.status });
+  if (out !== true) throw new PostError(out === "SPEND_CAP" ? "SPEND_CAP" : "REVISION_FAILED");
 }
 
 /** Any member (owner or editor) may generate. Returns the post id; the post row carries the outcome. */

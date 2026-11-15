@@ -17,6 +17,8 @@ export type PromptInput = {
   materials: { name: string; text: string }[];
   brief: string;
   previous?: { draft: unknown; violations: Violation[]; invalid?: boolean };
+  /** TASK-061: the post as it is now and the owner's correction in words; the rest of the post stays as it is. */
+  revision?: { current: string; instruction: string };
 };
 
 const BASE = `You write social media posts for a brand. You work only from the brand's CGP (its own instructions) and the
@@ -92,6 +94,9 @@ export function buildPostPrompt(i: PromptInput): Omit<StructuredRequest, "model"
     `Hard limits:\n${limitsText(i.rules, i.profile.ctaPhrases) || "- none beyond the CGP"}`,
   ].join("\n");
   let user = `Request from the brand owner:\n${i.brief.trim()}`;
+  if (i.revision) {
+    user += `\n\nThe post as it is now:\n<post>\n${i.revision.current.trim()}\n</post>\n\nThe owner asks for this change:\n${i.revision.instruction.trim()}\n\nChange only what the owner asks for; keep everything else as it is, word for word where you can. Submit the whole post.`;
+  }
   if (i.previous?.invalid) {
     user += `\n\nYour previous answer did not match the submit_post schema: ${JSON.stringify(i.previous.draft).slice(0, 2000)}\nAnswer again with valid fields only.`;
   } else if (i.previous) {

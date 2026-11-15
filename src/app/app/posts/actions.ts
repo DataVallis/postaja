@@ -10,12 +10,13 @@ import { POST_STATUSES } from "@/server/db/schema";
 import { getStorage } from "@/server/files/storage";
 import { createAnthropicClient } from "@/server/llm/anthropic";
 import { reschedulePost } from "@/server/posts/calendar";
-import { editPost, generateForPost, generatePost, getPost, PostError, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
+import { editPost, generateForPost, generatePost, getPost, PostError, rulesFor, setPostStatus, setPublishedUrl } from "@/server/posts/generate";
 import { deleteImageVersion, ImageJobError, requestImages, restoreImageVersion, restoreSlideFromVersion, setPostPartnerLogo, setSlideTexts } from "@/server/images/service";
 import { deletePostVideo } from "@/server/video/media";
 import { requestPersonaVideo } from "@/server/video/persona";
 import { requestAnimation } from "@/server/video/service";
 import { bossQueue, getBoss } from "@/server/jobs/boss";
+import { ChatError, chatTurn, startConversation } from "@/server/chat/service";
 
 export type PostActionState = { error?: string; ok?: string } | undefined;
 
@@ -35,8 +36,35 @@ export async function generatePostAction(_p: PostActionState, f: FormData): Prom
   } catch (e) {
     return { error: code(e) };
   }
+  // TASK-061: the request opens the post's conversation; with a brand design and a channel that posts pictures, the
+  // images are made in the same step. Failing here never loses the written post.
+  await (async () => {
+    const db = getDb();
+    const post = await getPost(db, ctx, id);
+    const channel = post.channelId ? (await rulesFor(db, ctx, post.brandId, post.channelId)).channel : null;
+    // Without a brand design the answer says so (and where to set it up), instead of staying silent.
+    const images = !!process.env.FAL_KEY && !!channel?.allowedTypes.some((t) => t !== "text");
+    await startConversation(db, { queue: bossQueue(await getBoss()) }, ctx, id, { images });
+  })().catch(() => undefined);
   revalidatePath(`/app/brands/${String(f.get("brandId") ?? "")}`);
   redirect(`/app/posts/${id}`);
+}
+
+export type ChatActionState = { error?: string; at?: number } | undefined;
+
+/** TASK-061: one message in the post's conversation; text changes land in the request, images follow on the page. */
+export async function chatAction(_p: ChatActionState, f: FormData): Promise<ChatActionState> {
+  const ctx = await orgContextForAction();
+  if (!ctx) return { error: "FORBIDDEN" };
+  const id = String(f.get("postId") ?? "");
+  try {
+    await chatTurn(getDb(), { llm: createAnthropicClient(), storage: getStorage(), queue: bossQueue(await getBoss()) }, ctx, id, String(f.get("message") ?? ""));
+  } catch (e) {
+    revalidatePath(`/app/posts/${id}`);
+    return { error: e instanceof ChatError ? e.code : "FAILED", at: Date.now() };
+  }
+  revalidatePath(`/app/posts/${id}`);
+  return { at: Date.now() };
 }
 
 export async function retryPostAction(f: FormData): Promise<void> {

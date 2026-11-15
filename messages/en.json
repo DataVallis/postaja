@@ -2365,5 +2365,35 @@
       "REEL_VIDEO_BLOCKED": "The video provider (Kling) refused shot {shots}. Kling is especially strict about children in video. Change the reel directions (e.g. only adults in frame, the child only as the camera's point of view) and try again."
     },
     "reason": "Provider's reason: {reason}"
+  },
+  "Chat": {
+    "title": "Conversation",
+    "hint": "Write what you want changed — the text, the images or both.",
+    "empty": "No messages yet. Write what to change.",
+    "you": "You",
+    "working": "Postaja is making the change …",
+    "label": "Message",
+    "placeholder": "e.g. Make it shorter and more personal. A different headline on image 2.",
+    "busyPlaceholder": "Images are being made — wait until they are ready.",
+    "send": "Send",
+    "costHint": "A text change costs 1 credit, images the price of the illustrations.",
+    "readOnly": "This post has no text yet or can no longer be changed.",
+    "didText": "The text is updated.",
+    "didImages": "Images are being made and will show in the preview.",
+    "errors": {
+      "FAILED": "That could not be done. Try again.",
+      "INVALID": "Write a message (at most 2,000 characters).",
+      "BUSY": "The post is still being prepared — wait for the images.",
+      "BAD_STATE": "This post can no longer be changed.",
+      "NOT_FOUND": "Post not found.",
+      "FORBIDDEN": "No access.",
+      "SPEND_CAP": "The monthly spend limit is reached.",
+      "TEXT_FAILED": "The text could not be changed; it stays as it was.",
+      "IMAGES_NO_DESIGN": "The brand has no visual identity yet, so there are no images. Set it up under Visual identity.",
+      "IMAGES_BAD_STATE": "Images are already being made.",
+      "IMAGES_INVALID": "The image change was unclear; write it differently.",
+      "IMAGES_FAILED": "Images could not be started."
+    },
+    "didCreate": "The text is ready."
   }
 }

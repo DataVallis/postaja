@@ -29,6 +29,8 @@ import { PERSONA_DURATIONS, personaVideoEstimate } from "@/server/video/persona"
 import { listPostVideos } from "@/server/video/media";
 import { getBrandPersona } from "@/server/personas/service";
 import { PersonaVideoSection } from "./persona-video-section";
+import { ChatPanel } from "./chat-panel";
+import { listMessages } from "@/server/chat/service";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +72,12 @@ export default async function PostPage({ params, searchParams }: { params: Promi
     id: v.id, width: v.width, height: v.height, createdAt: v.createdAt, poster: false, label: tv("videoLabel", { n: (v.slidePosition ?? 0) + 1 }),
   }));
   const design = await currentDesign(db, org, post.brandId);
+  const messages = await listMessages(db, org, post.id);
+  // The editor starts over only when the conversation rewrote the text; a hand save keeps its "saved" note.
+  const textRev = messages.filter((m) => m.role === "assistant" && m.meta?.text).at(-1)?.id ?? "start";
+  // TASK-061: corrections in words go through the conversation once the post has text.
+  const canChat = !!post.content && ["ready", "needs_review", "approved"].includes(post.status);
+  const chatBusy = post.mediaStatus === "queued" || post.mediaStatus === "rendering";
   // Persona video (TASK-025): offered when the brand has a persona with at least one passport picture.
   const persona = await getBrandPersona(db, org, post.brandId);
   const personaVideo = persona?.images.length
@@ -168,8 +176,14 @@ export default async function PostPage({ params, searchParams }: { params: Promi
           </form>
         </Card>
       ) : null}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+      {/* TASK-061: the conversation on the left (below the preview on a phone), the post as it will look on the right. */}
+      <div className="order-2 lg:sticky lg:top-4 lg:order-1">
+        <ChatPanel postId={post.id} canWrite={canChat} busy={chatBusy} messages={messages.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }))} />
+      </div>
+      <div className="order-1 grid min-w-0 gap-6 lg:order-2">
       {ctx && (post.content || post.status === "planned") ? (
-        <Card className="p-5"><PostEditor key={post.content ? "text" : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
+        <Card className="p-5"><PostEditor key={post.content ? `text:${textRev}` : "empty"} postId={post.id} caption={post.content?.caption ?? ""} parts={post.content?.parts} rules={ctx.rules} readOnly={!editable} /></Card>
       ) : null}
 
       {clientReviews.length ? (
@@ -212,6 +226,8 @@ export default async function PostPage({ params, searchParams }: { params: Promi
         persona={persona?.images.length && features.has("persona") ? { name: persona.persona.name, checked: post.imagesWithPersona ?? persona.persona.useInPosts } : null}
         partners={{ options: partnerLogos, selected: post.partnerLogoId }}
       />
+      </div>
+      </div>
       {persona && personaVideo && features.has("persona") ? (
         <PersonaVideoSection
           postId={post.id} brandId={post.brandId} personaName={persona.persona.name}

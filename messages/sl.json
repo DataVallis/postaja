@@ -2365,5 +2365,35 @@
       "REEL_VIDEO_BLOCKED": "Ponudnik videa (Kling) je zavrnil kader {shots}. Kling je še posebej strog pri otrocih v videu. Spremeni navodila za reel (npr. v kadru so samo odrasli, otrok le kot pogled kamere) in poskusi znova."
     },
     "reason": "Razlog ponudnika: {reason}"
+  },
+  "Chat": {
+    "title": "Pogovor",
+    "hint": "Napiši, kaj želiš spremeniti — besedilo, slike ali oboje.",
+    "empty": "Še ni sporočil. Napiši, kaj naj spremenim.",
+    "you": "Ti",
+    "working": "Postaja pripravlja spremembo …",
+    "label": "Sporočilo",
+    "placeholder": "npr. Naj bo krajše in bolj osebno. Na drugi sliki drug naslov.",
+    "busyPlaceholder": "Slike nastajajo — počakaj, da so gotove.",
+    "send": "Pošlji",
+    "costHint": "Popravek besedila stane 1 kredit, slike po ceni ilustracij.",
+    "readOnly": "Objava še nima besedila ali je ni mogoče spreminjati.",
+    "didText": "Besedilo je posodobljeno.",
+    "didImages": "Slike nastajajo in se pokažejo v predogledu.",
+    "errors": {
+      "FAILED": "Tega ni bilo mogoče narediti. Poskusi znova.",
+      "INVALID": "Napiši sporočilo (največ 2000 znakov).",
+      "BUSY": "Objava se še pripravlja — počakaj, da so slike gotove.",
+      "BAD_STATE": "Te objave ni mogoče več spreminjati.",
+      "NOT_FOUND": "Objave ni.",
+      "FORBIDDEN": "Nimaš dostopa.",
+      "SPEND_CAP": "Dosežena je mesečna omejitev porabe.",
+      "TEXT_FAILED": "Besedila ni bilo mogoče spremeniti; ostalo je, kot je bilo.",
+      "IMAGES_NO_DESIGN": "Brand še nima vizualne podobe, zato slik ni. Nastavi jo v Vizualna podoba.",
+      "IMAGES_BAD_STATE": "Slike se že pripravljajo.",
+      "IMAGES_INVALID": "Popravek slik ni bil jasen; napiši ga drugače.",
+      "IMAGES_FAILED": "Slik ni bilo mogoče začeti."
+    },
+    "didCreate": "Besedilo je pripravljeno."
   }
 }
