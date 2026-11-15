@@ -59,6 +59,14 @@ test("payments: Solo through Checkout → webhook → plan and limits; portal; c
   await expect(billing.getByTestId("plan-agency")).toHaveCount(0);
   await expect(billing.getByRole("button", { name: /pilot/i })).toHaveCount(0);
   expect(await serious(p)).toEqual([]);
+  await expect(billing.getByRole("button", { name: "Solo mesečno, 39 €" })).toBeDisabled();
+  await expect(billing.getByTestId("terms-accept")).toContainText("Plačila se ne vračajo");
+  // Terms of use first (TASK-060): the owner confirms buying for the business; until then nothing can be bought.
+  await billing.getByTestId("terms-accept").getByLabel(/Kupujem za svojo dejavnost/).check();
+  await billing.getByTestId("terms-accept").getByRole("button", { name: "Potrjujem" }).click();
+  await expect(billing.getByTestId("terms-accept")).toHaveCount(0);
+  await page.goto(page.url());
+  await expect(page.getByTestId("org-terms")).toContainText("Pogoji uporabe 2026-11-15 sprejeti");
   await billing.getByRole("button", { name: "Solo mesečno, 39 €" }).click();
   await expect(p).toHaveURL(/\/stripe-page\/checkout-/);
   const log = await (await fetch("http://127.0.0.1:3199/stripe-log")).json() as { path: string; form: Record<string, string> }[];

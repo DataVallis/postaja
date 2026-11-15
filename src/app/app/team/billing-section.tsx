@@ -3,10 +3,11 @@ import { buttonClass, Card, inputClass } from "@/components/ui";
 import { billingBlock } from "@/server/billing/block";
 import { ADDONS, ON_SALE, PILOT, PILOT_ON_SALE, PLAN_CATALOG, planFeatures, YEAR_MONTHS } from "@/server/billing/catalog";
 import type { BillingRow } from "@/server/billing/service";
-import { checkoutAction, portalAction, setAddonsAction } from "./actions";
+import Link from "next/link";
+import { acceptTermsAction, checkoutAction, portalAction, setAddonsAction } from "./actions";
 
 /** Plan and subscription (TASK-036): the state from Stripe, plans to buy, the pilot, the customer portal. */
-export async function BillingSection({ billing, isOwner, configured, now }: { billing: BillingRow | null; isOwner: boolean; configured: boolean; now: Date }) {
+export async function BillingSection({ billing, isOwner, configured, now, termsAccepted }: { billing: BillingRow | null; isOwner: boolean; configured: boolean; now: Date; termsAccepted: boolean }) {
   const t = await getTranslations("Team.billing");
   const tu = await getTranslations("Upgrade");
   const f = await getFormatter();
@@ -57,6 +58,19 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
       ) : null}
       {configured && isOwner && !live ? (
         <>
+          {!termsAccepted ? (
+            <Card className="grid max-w-2xl gap-3 border-signal/50 p-4 text-sm" data-testid="terms-accept">
+              <p className="font-semibold">{t("terms.title")}</p>
+              <form action={acceptTermsAction} className="grid gap-3">
+                <label className="flex items-start gap-2">
+                  <input type="checkbox" name="business" value="1" required className="mt-1" />
+                  <span>{t.rich("terms.business", { terms: (c) => <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-4">{c}</Link> })}</span>
+                </label>
+                <p className="text-muted">{t("terms.noRefunds")}</p>
+                <div><button type="submit" className={buttonClass("primary", "sm")}>{t("terms.accept")}</button></div>
+              </form>
+            </Card>
+          ) : null}
           <div className={`grid gap-3 ${ON_SALE.length > 1 ? "md:grid-cols-3" : "max-w-md"}`}>
             {ON_SALE.map((p) => {
               const c = PLAN_CATALOG[p];
@@ -72,8 +86,8 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
                   </ul>
                   <form action={checkoutAction} className="flex flex-wrap gap-2">
                     <input type="hidden" name="kind" value="plan" /><input type="hidden" name="plan" value={p} />
-                    <button type="submit" name="interval" value="month" className={buttonClass("primary", "sm")} aria-label={t("buyMonthLabel", { plan: c.name, price: c.priceEur })}>{t("buyMonth", { price: c.priceEur })}</button>
-                    <button type="submit" name="interval" value="year" className={buttonClass("secondary", "sm")} aria-label={t("buyYearLabel", { plan: c.name, price: c.priceEur * YEAR_MONTHS })}>{t("buyYear", { price: c.priceEur * YEAR_MONTHS })}</button>
+                    <button type="submit" name="interval" value="month" disabled={!termsAccepted} className={buttonClass("primary", "sm")} aria-label={t("buyMonthLabel", { plan: c.name, price: c.priceEur })}>{t("buyMonth", { price: c.priceEur })}</button>
+                    <button type="submit" name="interval" value="year" disabled={!termsAccepted} className={buttonClass("secondary", "sm")} aria-label={t("buyYearLabel", { plan: c.name, price: c.priceEur * YEAR_MONTHS })}>{t("buyYear", { price: c.priceEur * YEAR_MONTHS })}</button>
                   </form>
                 </Card>
               );
@@ -86,7 +100,7 @@ export async function BillingSection({ billing, isOwner, configured, now }: { bi
               <span className="text-muted">{t("pilotHint", { days: PILOT.days, brands: PILOT.limits.brands })}</span>
             </form>
           ) : null}
-          <p className="text-xs text-muted">{t("vatHint")}</p>
+          <p className="text-xs text-muted">{t("vatHint")} <Link href="/terms" target="_blank" className="underline underline-offset-4">{t("terms.link")}</Link></p>
         </>
       ) : null}
     </section>

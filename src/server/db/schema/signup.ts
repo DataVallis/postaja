@@ -10,6 +10,8 @@ export const signupRequests = pgTable(
     orgName: text("org_name").notNull(),
     /** sha256 of the requester's IP with the auth secret — for rate limits only, never the IP itself. */
     ipHash: text("ip_hash").notNull().default(""),
+    /** TASK-060: the terms version accepted with the request (business buyer confirmed); copied to the organization. */
+    termsVersion: text("terms_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** When the trial organization was created from it. */
     usedAt: timestamp("used_at", { withTimezone: true }),

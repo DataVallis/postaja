@@ -2,6 +2,8 @@
 // PUBLIC_SIGNUP=1, rate-limited); confirming creates a trial organization (7 days, 1 brand, 1 member, 50 credits) with
 // the person as owner; when the trial ends without a plan new AI work stops; owners get one email before it ends;
 // first steps come from the organization's data.
+import { TERMS_VERSION } from "@/lib/legal/terms";
+import { termsAccepted } from "../legal/terms";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -33,7 +35,7 @@ afterAll(async () => { await sql.end({ timeout: 5 }); });
 
 /** Signs up like /signup + the magic link + /app/start; returns the owner's context. */
 async function signUp(email: string, orgName: string, now = new Date()): Promise<OrgContext> {
-  await requestSignup(db, { email, orgName, ipHash: "" }, now);
+  await requestSignup(db, { email, orgName, ipHash: "", accept: true }, now);
   const s = (await session((await signIn(email))!))!;
   const orgId = await startTrial(db, { userId: s.user.id, email: s.user.email }, undefined, now);
   return { userId: s.user.id, orgId, orgName, role: "owner", plan: "trial" };
@@ -42,26 +44,34 @@ async function signUp(email: string, orgName: string, now = new Date()): Promise
 describe("signup", () => {
   it("is off without PUBLIC_SIGNUP; a request lets an unknown email sign in; rate limits per email and IP", async () => {
     delete process.env.PUBLIC_SIGNUP;
-    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "" })).rejects.toMatchObject({ code: "DISABLED" });
+    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: true })).rejects.toMatchObject({ code: "DISABLED" });
     process.env.PUBLIC_SIGNUP = "1";
     expect(await canSignUp("ana@pekarna.si", deps)).toBe(false);
     expect(await signIn("ana@pekarna.si")).toBeNull(); // no request → no mail, no account
-    await expect(requestSignup(db, { email: "ni-email", orgName: "Pekarna", ipHash: "" })).rejects.toMatchObject({ code: "INVALID" });
-    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "P", ipHash: "" })).rejects.toMatchObject({ code: "INVALID" });
-    await requestSignup(db, { email: " Ana@Pekarna.si ", orgName: "Pekarna Ana", ipHash: "" });
+    await expect(requestSignup(db, { email: "ni-email", orgName: "Pekarna", ipHash: "", accept: true })).rejects.toMatchObject({ code: "INVALID" });
+    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "P", ipHash: "", accept: true })).rejects.toMatchObject({ code: "INVALID" });
+    await requestSignup(db, { email: " Ana@Pekarna.si ", orgName: "Pekarna Ana", ipHash: "", accept: true });
     expect(await canSignUp("ana@pekarna.si", deps)).toBe(true);
     expect((await pendingSignup(db, "ANA@pekarna.si"))?.orgName).toBe("Pekarna Ana");
     delete process.env.PUBLIC_SIGNUP;
     expect(await canSignUp("ana@pekarna.si", deps)).toBe(false); // switched off → requests no longer count
     process.env.PUBLIC_SIGNUP = "1";
     expect(await pendingSignup(db, "ana@pekarna.si", new Date(Date.now() + 2 * DAY))).toBeNull(); // a day at most
-    for (let i = 1; i < SIGNUP_MAX_PER_EMAIL_DAY; i++) await requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "" });
-    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "" })).rejects.toMatchObject({ code: "TOO_MANY" });
+    for (let i = 1; i < SIGNUP_MAX_PER_EMAIL_DAY; i++) await requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: true });
+    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: true })).rejects.toMatchObject({ code: "TOO_MANY" });
     const ip = hashIp("203.0.113.9", "s");
     expect(ip).toHaveLength(32);
     expect(ip).not.toContain("203");
-    for (let i = 0; i < 10; i++) await requestSignup(db, { email: `x${i}@ex.si`, orgName: "Spam", ipHash: ip });
-    await expect(requestSignup(db, { email: "y@ex.si", orgName: "Spam", ipHash: ip })).rejects.toMatchObject({ code: "TOO_MANY" });
+    for (let i = 0; i < 10; i++) await requestSignup(db, { email: `x${i}@ex.si`, orgName: "Spam", ipHash: ip, accept: true });
+    await expect(requestSignup(db, { email: "y@ex.si", orgName: "Spam", ipHash: ip, accept: true })).rejects.toMatchObject({ code: "TOO_MANY" });
+  });
+
+  it("the box 'for my business + terms' is required (TASK-060): without it no request is stored and the email gets no account", async () => {
+    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: false })).rejects.toMatchObject({ code: "TERMS" });
+    await expect(requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: "yes" as unknown as boolean })).rejects.toMatchObject({ code: "TERMS" });
+    expect((await sql`select count(*)::int n from signup_requests`)[0].n).toBe(0);
+    await requestSignup(db, { email: "ana@pekarna.si", orgName: "Pekarna", ipHash: "", accept: true });
+    expect((await sql`select terms_version from signup_requests`)[0].terms_version).toBe(TERMS_VERSION);
   });
 
   it("confirming creates a trial organization with the person as owner; once; a taken slug gets a suffix", async () => {
@@ -72,9 +82,12 @@ describe("signup", () => {
     expect((await db.select().from(member).where(eq(member.organizationId, A.orgId)))[0]).toMatchObject({ userId: A.userId, role: "owner" });
     expect((await db.select().from(orgBilling).where(eq(orgBilling.orgId, A.orgId)))[0].trialEndsAt!.toISOString()).toBe(new Date(NOW.getTime() + 7 * DAY).toISOString());
     expect((await db.select().from(auditLog).where(eq(auditLog.orgId, A.orgId))).map((r) => r.action)).toEqual(["org.signup"]);
+    // TASK-060: the terms accepted with the request (business buyer) are the organization's, by the person who confirmed.
+    expect((await db.select().from(orgSettings).where(eq(orgSettings.orgId, A.orgId)))[0]).toMatchObject({ termsVersion: TERMS_VERSION, termsAcceptedAt: NOW, termsAcceptedBy: A.userId });
+    expect(await termsAccepted(db, A.orgId)).toBe(true);
     // The request is used: no second organization, and signing up again while a member is refused.
     await expect(startTrial(db, { userId: A.userId, email: "ana@pekarna.si" })).rejects.toMatchObject({ code: "NO_REQUEST" });
-    await requestSignup(db, { email: "ana@pekarna.si", orgName: "Druga", ipHash: "" });
+    await requestSignup(db, { email: "ana@pekarna.si", orgName: "Druga", ipHash: "", accept: true });
     await expect(startTrial(db, { userId: A.userId, email: "ana@pekarna.si" })).rejects.toMatchObject({ code: "HAS_ORG" });
     const B = await signUp("bor@pekarna.si", "Pekarna Ana");
     expect((await db.select().from(organization).where(eq(organization.id, B.orgId)))[0].slug).toMatch(/^pekarna-ana-[a-z0-9]{4}$/);

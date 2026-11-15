@@ -29,3 +29,19 @@ test("health returns ok with sha", async ({ request }) => {
   expect(body).toMatchObject({ status: "ok", db: "ok" });
   expect(typeof body.sha).toBe("string");
 });
+
+// Terms of use (TASK-060): public, readable without an account, in Slovenian and English.
+test("terms of use: public page in both languages", async ({ page, context, baseURL }) => {
+  const res = await page.goto("/terms");
+  expect(res?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 1, name: "Pogoji uporabe" })).toBeVisible();
+  await expect(page.getByTestId("terms")).toContainText("Plačila se ne vračajo.");
+  await expect(page.getByTestId("terms")).toContainText("izključno poslovnim uporabnikom");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(13);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: baseURL! }]);
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of use" })).toBeVisible();
+  await expect(page.getByTestId("terms")).toContainText("Payments are not refunded.");
+});

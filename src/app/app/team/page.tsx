@@ -8,6 +8,7 @@ import { listTeam, orgUsage } from "@/server/orgs/team";
 import { creditStatus, orgCreditRequests } from "@/server/credits/service";
 import { CREDIT_PACKS } from "@/server/db/schema";
 import { billingFor } from "@/server/billing/service";
+import { termsAccepted } from "@/server/legal/terms";
 import { getStripe } from "@/server/billing/stripe";
 import { BillingSection } from "./billing-section";
 import { cancelInvitationAction, checkoutAction, inviteAction, removeMemberAction, requestCreditsAction, setRoleAction } from "./actions";
@@ -20,6 +21,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const db = getDb();
   const [{ members, invites }, usage, credits, requests, billing] = await Promise.all([listTeam(db, org), orgUsage(db, org), creditStatus(db, org.orgId), orgCreditRequests(db, org), billingFor(db, org.orgId)]);
+  const accepted = await termsAccepted(db, org.orgId);
   const stripeOn = !!getStripe();
   const now = new Date();
   const t = await getTranslations("Team");
@@ -44,7 +46,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
       </section>
 
       {sp.billing === "success" ? <p role="status" className="mb-4 text-sm text-signal">{t("billing.success")}</p> : null}
-      <BillingSection billing={billing} isOwner={isOwner} configured={stripeOn} now={now} />
+      <BillingSection billing={billing} isOwner={isOwner} configured={stripeOn} now={now} termsAccepted={accepted} />
 
       <section aria-labelledby="credits-h" className="mb-8 grid gap-3" data-testid="team-credits">
         <h2 id="credits-h" className="text-base font-semibold">{t("credits.title")}</h2>

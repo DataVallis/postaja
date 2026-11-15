@@ -1,6 +1,8 @@
 // Billing with Stripe (TASK-036, ADR-073): checkout for plans, the pilot and credit packs (owners only, one subscription,
 // one pilot); webhooks processed once; a live subscription sets the plan and its limits; past_due keeps working for
 // the grace period, then — like a cancelled plan or an ended pilot — new AI work stops; packs bought are added.
+import { TERMS_VERSION } from "@/lib/legal/terms";
+import { acceptTerms, termsAccepted } from "../legal/terms";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import type Stripe from "stripe";
@@ -63,6 +65,21 @@ describe("checkout", () => {
     const f = fakeStripe();
     await expect(checkoutUrl(db, f.stripe, editorA, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(checkoutUrl(db, null, A, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
+    // TASK-060: nothing is bought before the owner accepted the terms as a business buyer; only the owner can, only with the box ticked.
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "solo", interval: "year" }, "https://app")).rejects.toMatchObject({ code: "TERMS" });
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "pack", pack: "small" }, "https://app")).rejects.toMatchObject({ code: "TERMS" });
+    await expect(acceptTerms(db, editorA, true)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(acceptTerms(db, A, false)).rejects.toMatchObject({ code: "NOT_CONFIRMED" });
+    expect(await termsAccepted(db, orgA)).toBe(false);
+    expect(f.calls).toHaveLength(0);
+    await acceptTerms(db, A, true, NOW);
+    await acceptTerms(db, A, true, new Date(NOW.getTime() + DAY)); // again: nothing new
+    expect((await db.select().from(orgSettings).where(eq(orgSettings.orgId, orgA)))[0]).toMatchObject({ termsVersion: TERMS_VERSION, termsAcceptedAt: NOW, termsAcceptedBy: A.userId });
+    expect((await sql`select action, target from audit_log where action = 'org.terms.accept'`).map((r) => [r.action, r.target])).toEqual([["org.terms.accept", TERMS_VERSION]]);
+    // An older version counts as not accepted (asked again before the next purchase).
+    await db.update(orgSettings).set({ termsVersion: "2020-01-01" }).where(eq(orgSettings.orgId, orgA));
+    await expect(checkoutUrl(db, f.stripe, A, { kind: "pack", pack: "small" }, "https://app")).rejects.toMatchObject({ code: "TERMS" });
+    await acceptTerms(db, A, true, NOW);
     await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "solo", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NO_PRICE" });
     // Studio, Agencija and the pilot have prices in Stripe but are not on sale: refused before anything reaches Stripe.
     await expect(checkoutUrl(db, f.stripe, A, { kind: "plan", plan: "studio", interval: "month" }, "https://app")).rejects.toMatchObject({ code: "NOT_ON_SALE" });

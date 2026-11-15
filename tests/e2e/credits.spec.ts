@@ -56,6 +56,12 @@ test("credits: allowance from the admin, banner, pack bought through Stripe, pri
   await expect(p.getByTestId("credit-banner")).toContainText("Krediti tega meseca so porabljeni.");
   await p.getByTestId("credit-banner").getByRole("link", { name: "Kupi kredite" }).click();
   await expect(p).toHaveURL(/\/app\/team/);
+  await p.getByRole("button", { name: "500 za 25 €" }).click();
+  await expect(p.getByRole("alert").filter({ hasText: "Pred nakupom potrdi pogoje uporabe" })).toBeVisible();
+  // Terms of use first (TASK-060): the owner confirms buying for the business; until then nothing can be bought.
+  await p.getByTestId("terms-accept").getByLabel(/Kupujem za svojo dejavnost/).check();
+  await p.getByTestId("terms-accept").getByRole("button", { name: "Potrjujem" }).click();
+  await expect(p.getByTestId("terms-accept")).toHaveCount(0);
   // Stripe is on in E2E: the pack goes to Checkout; the signed webhook adds the credits.
   await p.getByRole("button", { name: "500 za 25 €" }).click();
   await expect(p).toHaveURL(/\/stripe-page\/checkout-/);
